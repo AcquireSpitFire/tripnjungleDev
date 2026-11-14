@@ -1,0 +1,1088 @@
+/* =====================================================================
+   Tripnjungle – minimales Design, schwarzer Hintergrund
+
+   Aufbau dieser Datei:
+     1. Variablen
+     2. Grundlagen        (gilt überall)
+     3. Seitenaufbau      (Header, Inhalt)
+     4. Medien            (Bilder, Videos)
+     5. Startseite        (index.html – Slideshow)
+     6. Ausstellung       (exhibition.html – Slideshow + Galerie-Band)
+     7. Handy             (schmale Bildschirme)
+     8. Handy hochkant
+     9. Handy quer        (niedrige Bildschirme)
+
+   Die Abschnitte 1–6 gelten für alle Geräte (Desktop-Ansicht).
+   Die Abschnitte 7–9 überschreiben nur, was am Handy anders ist.
+   ===================================================================== */
+
+
+/* ---------- 1. Variablen ---------- */
+
+:root {
+  --bg: #000;
+  --text: #e6e6e6;
+  --muted: #777;
+  --frame: #0d0d0d;          /* Rahmen hinter den Medien, kaum sichtbar */
+  --media-ratio: 3 / 2;      /* Einheitliches Format für alle Bilder/Videos */
+  --gap: 1rem;
+  --page-pad: clamp(1rem, 4vw, 3rem);   /* seitlicher Seitenrand */
+}
+
+
+/* ---------- 2. Grundlagen ---------- */
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: dark;
+  overflow-x: hidden;        /* kein seitliches Scrollen (Rückfall für ältere Browser) */
+  overflow-x: clip;
+  -webkit-text-size-adjust: 100%;   /* keine automatische Schriftvergrößerung am Handy */
+  text-size-adjust: 100%;
+}
+
+body {
+  overflow-x: hidden;        /* zusätzlich am body, mobile Browser ignorieren es am html teilweise */
+  overflow-x: clip;
+  margin: 0;
+  padding: 0 var(--page-pad) 2rem;   /* der obere Rand sitzt im Header (sticky) */
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+h1 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 400;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;   /* lange Titel brechen um, statt die Seite zu verbreitern */
+}
+
+p {
+  margin: 0 0 1.5rem;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+a {
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+a:hover,
+a:focus-visible {
+  color: var(--text);
+}
+
+
+/* ---------- 3. Seitenaufbau ---------- */
+
+/* Der Header bleibt beim Scrollen oben stehen. Er reicht über die volle
+   Breite (negative Ränder gleichen den Seitenrand aus) und hat einen festen
+   Hintergrund, damit nichts durchscheint. Deshalb liegt der obere Seitenrand
+   (2rem) im Header statt am body; der Abstand nach unten (2rem) ebenso. */
+header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  margin: 0 calc(-1 * var(--page-pad));
+  padding: 2rem var(--page-pad);
+  background: var(--bg);
+}
+
+.header_inner {
+  position: relative;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding-right: 3rem;       /* Platz für den Menü-Knopf rechts */
+}
+
+main {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Markenname auf Unterseiten (sieht aus wie die h1 der Startseite) */
+.site_name {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 400;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--text);
+  line-height: 1.6;
+}
+
+.site_name a {
+  color: inherit;
+}
+
+/* Untertitel im Header: Thema der Ausstellung oder Name der Seite (h1 auf Unterseiten) */
+#theme,
+.page_title {
+  margin: 0.25rem 0 0;
+  font-size: 0.85rem;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  text-transform: none;
+  color: var(--muted);
+}
+
+/* Fußzeile: Links für Besucher ohne Menü und für Suchmaschinen */
+.site_footer {
+  max-width: 1200px;
+  margin: 4rem auto 0;
+  padding-top: 1.5rem;
+  border-top: 1px solid #1a1a1a;
+}
+
+.site_footer nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  font-size: 0.8rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+/* Startseite ohne Poster: feste Höhe, die Fußzeile würde den Platz stehlen */
+.fit .site_footer {
+  display: none;
+}
+
+/* Menü-Knopf: drei Striche rechts oben, offen ein × */
+
+.menu_toggle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 5px;
+  width: 2.5rem;
+  height: 1.76rem;           /* Höhe der Titelzeile */
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.menu_toggle span {
+  display: block;
+  width: 22px;
+  height: 2px;
+  background: var(--muted);
+  transition: transform 0.2s, opacity 0.2s, background 0.2s;
+}
+
+.menu_toggle:hover span,
+.menu_toggle:focus-visible span {
+  background: var(--text);
+}
+
+.menu_toggle[aria-expanded="true"] span:nth-child(1) {
+  transform: translateY(7px) rotate(45deg);
+}
+
+.menu_toggle[aria-expanded="true"] span:nth-child(2) {
+  opacity: 0;
+}
+
+.menu_toggle[aria-expanded="true"] span:nth-child(3) {
+  transform: translateY(-7px) rotate(-45deg);
+}
+
+/* Menü: klappt unter dem Header auf, Einträge rechtsbündig */
+
+.menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  padding: 0.5rem var(--page-pad) 1.5rem;
+  background: var(--bg);
+  border-bottom: 1px solid #1a1a1a;
+}
+
+.menu ul {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.75rem;
+}
+
+.menu a {
+  font-size: 0.9rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+}
+
+.menu a[aria-current="page"] {
+  color: var(--text);
+}
+
+
+/* ---------- 4. Medien ---------- */
+
+/* Alle Medien: gleiche Größe, nichts wird abgeschnitten */
+img,
+video {
+  display: block;
+  width: 100%;
+  height: auto;              /* width/height-Attribute nur fürs Seitenverhältnis, nicht als feste Höhe */
+  aspect-ratio: var(--media-ratio);
+  object-fit: contain;
+  background: transparent;   /* kein Rahmen hinter dem Medium, nur der Seitenhintergrund */
+}
+
+
+/* ---------- 5. Startseite (index.html) ---------- */
+
+/* Seitenrahmen: <html class="fit">
+   Die Seite ist genau so groß wie der Bildschirm und fest fixiert:
+   nichts lässt sich scrollen oder verschieben. Das Bild füllt den
+   Platz, der neben Header, Text, Link und Punkten übrig bleibt. */
+
+.fit,
+.fit body {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;   /* kein Nachfedern am Rand */
+}
+
+.fit body {
+  position: fixed;             /* verhindert jedes Verschieben, auch auf dem iPhone */
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.fit header {
+  flex: none;
+}
+
+.fit main {
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.fit main > p {
+  flex: none;
+}
+
+/* Poster der nächsten Ausstellung (Hochformat). Es füllt den ersten
+   Bildschirm, die Slideshow rutscht darunter: <html class="has_poster">
+   ersetzt dann "fit", die Seite scrollt normal. */
+
+.poster {
+  --poster-max-height: max(20rem, 100svh - 12rem);   /* Platz unter Titel und Begrüßungstext */
+
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  /* Platz schon reservieren, bevor das Bild geladen ist (Format ca. 1 : 1.41) */
+  min-height: min(var(--poster-max-height), (100vw - 2 * var(--page-pad)) * 1.41);
+  margin-bottom: 3rem;
+}
+
+.poster a,
+.poster .poster_locked {
+  display: block;
+}
+
+.poster img {
+  width: auto;
+  height: auto;
+  max-width: calc(100vw - 2 * var(--page-pad));
+  max-height: var(--poster-max-height);
+  aspect-ratio: auto;
+}
+
+/* Alle kommenden Poster unter der Slideshow, nach Datum sortiert */
+
+.upcoming {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  gap: 2rem var(--gap);
+  margin-top: 3rem;
+}
+
+.upcoming a,
+.upcoming .poster_locked {
+  display: block;
+}
+
+.upcoming img {
+  width: 100%;
+  height: auto;
+  aspect-ratio: auto;
+}
+
+.upcoming_caption {
+  margin: 0.5rem 0 0;
+  font-size: 0.85rem;
+  letter-spacing: 0.1em;
+}
+
+/* Slideshow unter dem Poster: gleich groß wie ohne Poster */
+.has_poster .slide_content > * {
+  width: min(100%, max(14rem, 100vh - 14.36rem - 6px) * 3 / 2);
+  margin-inline: auto;
+}
+
+.has_poster .slide_content > a:not(.slide_link) {
+  display: block;
+}
+
+/* Slideshow: Pfeil | Bild | Pfeil, darunter die Punkte */
+
+.slideshow {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--gap);
+}
+
+.fit .slideshow {
+  flex: 1;
+  min-height: 0;
+  grid-template-rows: minmax(0, 1fr) auto;
+}
+
+.slide_content {
+  min-width: 0;
+  touch-action: pan-y;   /* senkrecht scrollt die Seite, waagrecht wischt die Slideshow */
+}
+
+/* Der freie Platz für Bild + Link wird gemessen (Container Query) */
+.fit .slide_content {
+  height: 100%;
+  container-type: size;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;   /* Bild mittig im freien Platz */
+  align-items: center;
+}
+
+/* Bild so groß wie möglich: so breit wie der Platz erlaubt, aber nur so
+   hoch, dass der Link (ca. 2.5rem) noch darunter passt */
+.fit .slide_content > * {
+  width: min(100cqw, (100cqh - 2.5rem) * 3 / 2);
+}
+
+.fit .slide_content > a:not(.slide_link) {
+  display: block;
+}
+
+/* Link unter dem Bild (Startseite) bzw. Name des Bildes (Ausstellung) */
+.slide_link,
+.slide_caption {
+  display: block;
+  margin: 0.75rem 0 0;
+  font-size: 0.85rem;
+  letter-spacing: 0.1em;
+}
+
+.slide_caption {
+  min-height: 1.6em;         /* eine Zeile hoch, auch ohne Namen */
+}
+
+/* Pfeile */
+
+.nav {
+  position: relative;
+  align-self: stretch;       /* Klickfläche über die ganze Bildhöhe */
+  padding: 0.5rem;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 2rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.nav:hover,
+.nav:focus-visible {
+  color: var(--text);
+}
+
+/* Unsichtbare Erweiterung der Klickfläche: vom Rand des Mediums bis zum
+   Seitenrand, ohne das Layout zu verschieben */
+.nav::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+}
+
+.prev::before {
+  left: -100vw;                     /* bis weit über den linken Seitenrand */
+  right: calc(-1 * var(--gap));     /* bis an den Rand des Mediums */
+}
+
+.next::before {
+  left: calc(-1 * var(--gap));      /* ab dem Rand des Mediums */
+  right: -100vw;                    /* bis weit über den rechten Seitenrand */
+}
+
+/* Punkte */
+
+#dots {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: center;
+  gap: 0.6rem;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #333;
+  cursor: pointer;
+}
+
+.dot.active {
+  background: var(--text);
+}
+
+
+/* ---------- 6. Ausstellung (exhibition.html) ---------- */
+
+.header_inner > a {
+  display: inline-block;
+  margin-bottom: 1.5rem;
+  font-size: 0.85rem;
+}
+
+/* Breite eines Galeriebildes – die Slideshow ist genauso groß */
+main {
+  --gallery-item-width: min(480px, 80%);
+}
+
+/* Slideshow oben (Deckblatt + alle Bilder): Pfeil | Bild | Pfeil wie auf
+   der Startseite, damit das Bild am Desktop genauso groß ist wie dort */
+.exhibition_slideshow {
+  margin-bottom: 2rem;
+}
+
+/* Gleiche Größe wie auf der Startseite: so breit wie der Platz erlaubt,
+   aber nur so hoch, wie dort der Platz für das Bild ist. Dort bleibt vom
+   Bildschirm übrig, was nicht belegt ist von: Seitenrand oben+unten (4rem),
+   Titel (1.76rem) + Abstand (2rem), Begrüßungstext (1.6rem) + Abstand (1.5rem),
+   Abstand + Punkte (1rem + 6px) und Link unter dem Bild (2.5rem) */
+.exhibition_slideshow .slide_content > * {
+  width: min(100%, (100vh - 14.36rem - 6px) * 3 / 2);
+  margin-inline: auto;
+}
+
+/* Name eines Bildes in der Galerie */
+.caption {
+  margin: 0.5rem 0 0;
+  font-size: 0.85rem;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+
+/* Nur ein Bild: keine Pfeile und Punkte (Platz bleibt gleich) */
+.exhibition_slideshow.single .nav,
+.exhibition_slideshow.single #dots {
+  visibility: hidden;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+#description {
+  max-width: 60ch;
+  margin-bottom: 3rem;
+}
+
+/* Intro-Video der Ausstellung, zum erneuten Anschauen */
+.video_section {
+  margin-bottom: 3rem;
+}
+
+.section_title {
+  margin: 0 0 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 400;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.video_box {
+  width: min(100%, 720px);
+  aspect-ratio: 16 / 9;
+  background: var(--frame);
+}
+
+.video_box iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+/* Galerie als Band: alle Bilder nebeneinander, das Band scrollt seitlich
+   (die Seite selbst nicht). Beim Scrollen rastet jedes Bild ein. */
+.galerie {
+  display: flex;
+  gap: var(--gap);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;   /* am Ende des Bandes nicht „zurück“ blättern */
+  scroll-snap-type: x mandatory;
+  padding-bottom: 0.75rem;          /* Platz für die Scrollleiste */
+  margin-bottom: 3rem;              /* Abstand zum Video darunter */
+  scrollbar-color: #333 transparent;
+}
+
+/* Poster einer gesperrten Ausstellung: sichtbar, aber kein Link */
+.poster_locked {
+  display: block;
+}
+
+.poster_locked img {
+  cursor: default;
+}
+
+.galerie > * {
+  flex: none;
+  width: var(--gallery-item-width);
+  margin: 0;                 /* <figure> hat sonst einen Rand */
+  scroll-snap-align: start;
+}
+
+/* Vollbild-Ansicht: Klick auf ein Bild zeigt es bildschirmfüllend */
+
+.exhibition_slideshow img,
+.galerie img {
+  cursor: zoom-in;
+}
+
+.viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  cursor: zoom-out;
+}
+
+.viewer img {
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+  object-fit: contain;      /* ganzes Bild, nichts abgeschnitten */
+  background: none;
+}
+
+.viewer_close,
+.intro_close {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.75rem;
+  z-index: 1;
+  padding: 0.25rem 0.5rem;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 2rem;
+  line-height: 1;
+  text-shadow: 0 0 6px #000;   /* auch auf hellen Bildern sichtbar */
+  cursor: pointer;
+}
+
+.viewer_close:hover,
+.viewer_close:focus-visible,
+.intro_close:hover,
+.intro_close:focus-visible {
+  color: var(--text);
+}
+
+/* Seite dahinter nicht scrollen, solange Bild oder Intro offen ist */
+.viewer_open,
+.viewer_open body,
+.intro_open,
+.intro_open body {
+  overflow: hidden;
+}
+
+
+/* ---------- 6b. Intro-Video (Overlay vor der Ausstellung) ---------- */
+
+/* Overlay über der ganzen Seite: Video 16:9 mittig, darunter Titel und
+   der Knopf „Weiter zur Ausstellung“ (nur wenn freigeschaltet) */
+
+.intro {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem var(--page-pad);
+  background: rgba(0, 0, 0, 0.96);
+}
+
+/* So breit, dass Video + Titel + Knopf in die Bildschirmhöhe passen */
+.intro_inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: min(100%, (100vh - 12rem) * 16 / 9);
+}
+
+.intro_player_box {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: var(--frame);
+}
+
+.intro_player_box iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.intro_title {
+  margin: 1rem 0 0.75rem;
+  font-size: 0.85rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--text);
+  text-align: center;
+}
+
+.intro_actions {
+  min-height: 2.5rem;
+  text-align: center;
+}
+
+.intro_button {
+  display: inline-block;
+  padding: 0.5rem 1.25rem;
+  border: 1px solid var(--muted);
+  background: none;
+  font: inherit;
+  font-size: 0.85rem;
+  letter-spacing: 0.1em;
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.intro_button:hover,
+.intro_button:focus-visible {
+  border-color: var(--text);
+}
+
+.intro_locked {
+  margin: 0;
+  font-size: 0.85rem;
+  letter-spacing: 0.1em;
+}
+
+/* Fehlermeldung an Stelle des Videos */
+.intro_player_box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.intro_error {
+  max-width: 40ch;
+  margin: 0;
+  padding: 1rem;
+  text-align: center;
+  font-size: 0.85rem;
+}
+
+
+/* ---------- 6c. Listen (exhibitions.html, events.html, archive.html) ---------- */
+
+/* Exhibitions: Raster aus Karten mit Deckblatt, Titel, Thema */
+
+.card_grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 2rem var(--gap);
+}
+
+.card {
+  display: block;
+}
+
+.card img,
+.card video,
+.card_placeholder {
+  aspect-ratio: var(--media-ratio);
+  background: var(--frame);
+}
+
+.card_title {
+  margin: 0.75rem 0 0;
+  font-size: 0.9rem;
+  font-weight: 400;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.card_theme {
+  margin: 0.25rem 0 0;
+  font-size: 0.85rem;
+  letter-spacing: 0.1em;
+}
+
+/* Events / Archive: pro Ausstellung links die Poster, rechts die Details */
+
+.event_list {
+  display: flex;
+  flex-direction: column;
+  gap: 4rem;
+}
+
+.event {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 2rem;
+  align-items: start;
+}
+
+.event_posters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap);
+}
+
+.event_posters a,
+.event_posters .poster_locked {
+  display: block;
+  flex: 1 1 14rem;
+  max-width: 24rem;
+}
+
+/* Poster hochkant, nichts abgeschnitten */
+.event_posters img {
+  width: 100%;
+  height: auto;
+  max-height: 36rem;
+  aspect-ratio: auto;
+  object-fit: contain;
+  object-position: left top;
+}
+
+.event_title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 400;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+.event_theme {
+  margin: 0.25rem 0 0;
+  font-size: 0.85rem;
+  letter-spacing: 0.1em;
+}
+
+.event_meta {
+  margin: 1rem 0;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.event_description {
+  max-width: 60ch;
+}
+
+.event_link,
+.event_locked {
+  display: inline-block;
+  margin: 0;
+  font-size: 0.85rem;
+  letter-spacing: 0.1em;
+}
+
+.event_locked {
+  color: #555;
+}
+
+/* About: einfacher Text */
+.text_page p {
+  max-width: 60ch;
+}
+
+
+/* ---------- 7. Handy (schmale Bildschirme) ---------- */
+
+@media (max-width: 600px) {
+  /* Pfeile kleiner */
+  .nav {
+    font-size: 1.5rem;
+    padding: 0.25rem;
+  }
+
+  /* Klickflächen enden genau am Bildschirmrand (= Seitenrand des body),
+     damit die Seite nicht breiter als der Bildschirm wird */
+  .prev::before {
+    left: calc(-1 * var(--page-pad));
+  }
+
+  .next::before {
+    right: calc(-1 * var(--page-pad));
+  }
+
+  /* Galeriebilder volle Breite */
+  main {
+    --gallery-item-width: 100%;
+  }
+
+  /* Slideshow der Ausstellung: ohne Pfeile (wischen), volle Breite */
+  .exhibition_slideshow {
+    grid-template-columns: 1fr;
+  }
+
+  .exhibition_slideshow .nav {
+    display: none;
+  }
+
+  .exhibition_slideshow .slide_content > * {
+    width: 100%;
+  }
+
+  /* Galerie: alle Bilder untereinander zum Runterscrollen (statt Band) */
+  .galerie {
+    display: grid;
+    grid-template-columns: 1fr;
+    overflow-x: visible;
+    scroll-snap-type: none;
+    padding-bottom: 0;
+  }
+
+  /* Listen: eine Spalte */
+  .card_grid {
+    grid-template-columns: 1fr;
+  }
+
+  .event {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .event_posters a,
+  .event_posters .poster_locked {
+    max-width: none;
+  }
+
+  /* Intro: Video volle Breite */
+  .intro {
+    padding: 3rem 0;
+  }
+
+}
+
+
+/* ---------- 8. Handy hochkant ---------- */
+
+/* Das Querformat-Bild ist hier immer viel niedriger als der Bildschirm.
+   Statt es mittig zu zeigen, stehen Bild, Link und Punkte als Block
+   direkt unter dem Begrüßungstext. */
+@media (max-width: 600px) and (orientation: portrait) {
+  .fit .slideshow {
+    flex: none;
+    grid-template-rows: auto auto;
+    align-content: start;
+  }
+
+  .fit .slide_content {
+    height: auto;
+    container-type: inline-size;   /* nur die Breite messen, Höhe ergibt sich aus dem Bild */
+  }
+
+  .fit .slide_content > * {
+    width: 100%;
+  }
+}
+
+
+/* ---------- 9. Handy quer (niedrige Bildschirme) ---------- */
+
+/* Weniger Abstände, damit das Bild größer ist */
+@media (max-height: 500px) {
+  .fit body {
+    padding-bottom: 0.75rem;
+  }
+
+  .fit header {
+    padding-top: 0.75rem;
+    padding-bottom: 0.5rem;
+  }
+
+  .fit main > p {
+    margin-bottom: 0.5rem;
+  }
+
+  .fit .slideshow {
+    row-gap: 0.5rem;
+  }
+
+  .fit .slide_link {
+    margin-top: 0.25rem;
+  }
+}
+
+
+/* ---------- 8. YouTube-Hinweis (vor dem ersten Laden eines Videos) ---------- */
+
+.yt_notice {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--frame);
+}
+
+.yt_notice_cover {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.25;
+  filter: blur(2px);
+}
+
+.yt_notice_body {
+  position: relative;
+  max-width: 44ch;
+  padding: 1rem 1.5rem;
+  text-align: center;
+}
+
+.yt_notice_text {
+  margin: 0 0 1rem;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+.yt_notice_text a {
+  text-decoration: underline;
+}
+
+.yt_notice_button {
+  padding: 0.6rem 1.4rem;
+  border: 1px solid var(--text);
+  background: rgba(0, 0, 0, 0.6);
+  font: inherit;
+  font-size: 0.85rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.yt_notice_button:hover,
+.yt_notice_button:focus-visible {
+  background: var(--text);
+  color: var(--bg);
+}
+
+
+/* ---------- 9. Rechtliches (Legal notice, Privacy) ---------- */
+
+.legal_page {
+  line-height: 1.6;
+}
+
+.legal_page h2 {
+  margin: 2rem 0 0.5rem;
+  font-size: 0.85rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.legal_page p,
+.legal_page address,
+.legal_page ul {
+  max-width: 70ch;
+}
+
+.legal_page address {
+  font-style: normal;
+}
+
+.legal_page ul {
+  padding-left: 1.2rem;
+}
+
+.legal_page a {
+  text-decoration: underline;
+}
+
+.legal_sub {
+  margin-top: 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+/* Fehlende Angabe: deutlich sichtbar, bis sie im Admin eingetragen ist */
+.legal_page mark,
+.text_page mark {
+  padding: 0 0.3em;
+  background: #ffd54a;
+  color: #000;
+}
+
+.legal_button {
+  padding: 0.3rem 0.8rem;
+  border: 1px solid var(--muted);
+  background: none;
+  font: inherit;
+  font-size: 0.85rem;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.legal_button:hover,
+.legal_button:focus-visible {
+  border-color: var(--text);
+}
+
+.legal_button:disabled {
+  cursor: default;
+  color: var(--muted);
+}
