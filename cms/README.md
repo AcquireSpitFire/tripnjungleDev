@@ -57,7 +57,7 @@ Einmalige Einrichtung, etwa eine Stunde. Alles Weitere passiert danach im Admin.
 3. Im Service unter **Settings**:
    - **Root Directory: `cms`** (sonst findet Railway kein package.json)
    - **Region: Europe** (Amsterdam). Dann bleiben die Daten in der EU.
-   - Build und Start übernimmt `cms/railway.json` (`npm ci && npm run build`, `npm start`, Healthcheck `/robots.txt`).
+   - Build und Start übernimmt `cms/railway.json` (`npm run build`, `npm start`, Healthcheck `/robots.txt`).
 4. **Volume** anlegen (rechte Maustaste auf den Service → Attach Volume), Mount Path **`/data`**.
    Dort liegen Datenbank und Medien; ohne Volume ist nach jedem Deploy alles weg.
 5. Unter **Variables** eintragen:
