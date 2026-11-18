@@ -4,15 +4,52 @@ import { getYouTubeId } from '../lib/youtube'
 
 // Eine Ausstellung. Entspricht den bisherigen data/exhibitions/exhibition-N.json.
 //
+// Zwei Einstellungen steuern, was Besucher sehen:
+//
+//   release     scheduled   – mit Datum (Events bis zum Datum, danach Archive)
+//               comingSoon  – ohne Datum, steht am Ende der kommenden Events
+//               planning    – nur im Admin sichtbar; für Besucher existiert
+//                             die Ausstellung nicht (auch Poster gesperrt)
+//
+//   visibility  locked      – Poster und Details sichtbar, Inhalt nicht
+//               link        – wie locked, aber /exhibition/<id> zeigt den Inhalt
+//                             (fehlt in Slideshow, Exhibitions-Liste, Sitemap)
+//               public      – freigeschaltet
+//
+// "locked" (true/false) bleibt als abgeleitetes Feld für API und Frontend:
+// locked = visibility !== 'public'. Alte Einträge ohne visibility/release
+// werden aus "locked" bzw. als "scheduled" gelesen.
+//
 // Zugriff ohne Login:
-//   - Die Ausstellung selbst ist lesbar (Events/Archive zeigen auch gesperrte
-//     Ausstellungen mit Poster, Datum, Ort, …).
-//   - Deckblatt und Medien fehlen in der Antwort, solange locked: true ist.
+//   - Ausstellungen in "planning" liefert die API nicht.
+//   - Deckblatt und Medien fehlen in der Antwort, außer bei public und link.
 //   - Die Mediendateien selbst schützt die Media-Collection (Feld "locked",
-//     siehe Hook unten).
+//     siehe syncMediaLock).
 
-// Deckblatt und Medien nur sehen, wenn eingeloggt oder freigeschaltet
-const onlyWhenUnlocked: FieldAccess = ({ req, doc }) => Boolean(req.user) || doc?.locked === false
+type Visibility = 'locked' | 'link' | 'public'
+type Release = 'scheduled' | 'comingSoon' | 'planning'
+
+type Settings = {
+  locked?: boolean | null
+  visibility?: Visibility | null
+  release?: Release | null
+}
+
+function getVisibility(doc: Settings | null | undefined): Visibility {
+  return doc?.visibility || (doc?.locked === false ? 'public' : 'locked')
+}
+
+function getRelease(doc: Settings | null | undefined): Release {
+  return doc?.release || 'scheduled'
+}
+
+// Inhalt (Deckblatt, Medien) für Besucher abrufbar?
+function contentIsOpen(doc: Settings | null | undefined): boolean {
+  return getRelease(doc) !== 'planning' && getVisibility(doc) !== 'locked'
+}
+
+// Deckblatt und Medien nur sehen, wenn eingeloggt, freigeschaltet oder "mit Link"
+const onlyWhenUnlocked: FieldAccess = ({ req, doc }) => Boolean(req.user) || contentIsOpen(doc)
 
 type MediaRef = number | string | { id: number | string } | null | undefined
 
@@ -25,28 +62,29 @@ function toId(ref: MediaRef): number | string | null {
 }
 
 // Setzt "locked" auf allen Medien der Ausstellung:
-// Poster → false (immer öffentlich), Deckblatt + Medien → wie die Ausstellung
+// Poster → öffentlich (außer in "planning"), Deckblatt + Medien → öffentlich
+// bei public und link
 async function syncMediaLock(
   payload: Payload,
   req: PayloadRequest,
-  doc: {
-    locked?: boolean | null
+  doc: Settings & {
     posters?: MediaRef[] | null
     frontPage?: MediaRef
     medien?: { file?: MediaRef }[] | null
   },
 ) {
   const updates = new Map<number | string, boolean>()
+  const planning = getRelease(doc) === 'planning'
 
   for (const poster of doc.posters || []) {
     const id = toId(poster)
 
     if (id !== null) {
-      updates.set(id, false)
+      updates.set(id, planning)
     }
   }
 
-  const locked = doc.locked !== false
+  const locked = !contentIsOpen(doc)
   const frontPageId = toId(doc.frontPage)
 
   if (frontPageId !== null && !updates.has(frontPageId)) {
@@ -80,13 +118,69 @@ export const Exhibitions: CollectionConfig = {
   },
   admin: {
     useAsTitle: 'titel',
-    defaultColumns: ['titel', 'theme', 'date', 'locked', 'updatedAt'],
+    defaultColumns: ['titel', 'release', 'date', 'visibility', 'updatedAt'],
   },
   access: {
-    read: () => true,
+    // Besucher sehen keine Ausstellungen in "planning" (alte Einträge ohne Feld gelten als scheduled)
+    read: ({ req }) =>
+      req.user
+        ? true
+        : { or: [{ release: { not_equals: 'planning' } }, { release: { exists: false } }] },
   },
   defaultSort: 'date',
   hooks: {
+    beforeChange: [
+      async ({ data, originalDoc, req }) => {
+        // Bei Teil-Updates fehlen Felder in data; dann gilt der gespeicherte Stand
+        const visibility = getVisibility({
+          visibility: data.visibility ?? originalDoc?.visibility,
+          locked: data.locked ?? originalDoc?.locked,
+        })
+
+        data.visibility = visibility
+        data.release = data.release ?? originalDoc?.release ?? 'scheduled'
+        data.locked = visibility !== 'public'
+
+        // Massen-Upload: die Dateien als neue Zeilen an "medien" anhängen, Feld leeren
+        const bulk = ((data.bulkMedia as MediaRef[] | undefined) || [])
+          .map(toId)
+          .filter((id): id is number | string => id !== null)
+
+        if (bulk.length) {
+          const rows: { file?: MediaRef; name?: string | null; alt?: string | null }[] = [
+            ...(data.medien ?? originalDoc?.medien ?? []),
+          ]
+          const present = new Set(rows.map((row) => String(toId(row.file))))
+
+          for (const id of bulk) {
+            if (!present.has(String(id))) {
+              // Alt-Text, der im Upload-Dialog eingegeben wurde, in die Zeile übernehmen
+              const media = await req.payload
+                .findByID({ collection: 'media', id, depth: 0, req, overrideAccess: true })
+                .catch(() => null)
+
+              rows.push({ file: id, name: '', alt: media?.alt || '' })
+              present.add(String(id))
+            }
+          }
+
+          data.medien = rows
+        }
+
+        data.bulkMedia = []
+
+        return data
+      },
+    ],
+    afterRead: [
+      ({ doc }) => {
+        // Alte Einträge (Spalten noch leer) mit abgeleiteten Werten ausliefern
+        doc.visibility = getVisibility(doc)
+        doc.release = getRelease(doc)
+
+        return doc
+      },
+    ],
     afterChange: [
       async ({ doc, req }) => {
         await syncMediaLock(req.payload, req, doc)
@@ -96,7 +190,7 @@ export const Exhibitions: CollectionConfig = {
     afterDelete: [
       async ({ doc, req }) => {
         // Medien einer gelöschten Ausstellung wieder sperren
-        await syncMediaLock(req.payload, req, { ...doc, locked: true, posters: [] })
+        await syncMediaLock(req.payload, req, { ...doc, release: 'planning' })
         return doc
       },
     ],
@@ -118,6 +212,15 @@ export const Exhibitions: CollectionConfig = {
           : 'Nur Kleinbuchstaben, Zahlen und Bindestriche.',
     },
     {
+      // Öffentlicher Link mit Kopier-Button (Seitenleiste, erst nach dem ersten Speichern)
+      name: 'publicLink',
+      type: 'ui',
+      admin: {
+        position: 'sidebar',
+        components: { Field: '/components/ExhibitionLink#ExhibitionLink' },
+      },
+    },
+    {
       name: 'titel',
       label: 'Titel',
       type: 'text',
@@ -134,6 +237,23 @@ export const Exhibitions: CollectionConfig = {
       type: 'textarea',
     },
     {
+      name: 'release',
+      label: 'Release',
+      type: 'select',
+      // Default als Funktion: gilt im Formular, aber nicht als Spalten-Default in der Datenbank
+      defaultValue: () => 'scheduled',
+      options: [
+        { label: 'Datum', value: 'scheduled' },
+        { label: 'Coming soon (ohne Datum, am Ende der Events)', value: 'comingSoon' },
+        { label: 'Planning (nur im Admin sichtbar)', value: 'planning' },
+      ],
+      admin: {
+        isClearable: false,
+        description:
+          'Datum: erscheint unter Events, nach dem Datum im Archive. Coming soon: steht ohne Datum am Ende der Events. Planning: schon angelegt, für Besucher aber nirgends sichtbar.',
+      },
+    },
+    {
       type: 'row',
       fields: [
         {
@@ -143,13 +263,18 @@ export const Exhibitions: CollectionConfig = {
           admin: {
             date: { pickerAppearance: 'dayOnly', displayFormat: 'dd.MM.yyyy' },
             width: '34%',
+            condition: (data) => (data?.release || 'scheduled') === 'scheduled',
           },
         },
         {
           name: 'time',
           label: 'Uhrzeit',
           type: 'text',
-          admin: { placeholder: '19:00', width: '33%' },
+          admin: {
+            placeholder: '19:00',
+            width: '33%',
+            condition: (data) => (data?.release || 'scheduled') === 'scheduled',
+          },
           validate: (value: unknown) =>
             !value || (typeof value === 'string' && /^\d{1,2}:\d{2}$/.test(value))
               ? true
@@ -164,14 +289,27 @@ export const Exhibitions: CollectionConfig = {
       ],
     },
     {
+      name: 'visibility',
+      label: 'Sichtbarkeit',
+      type: 'select',
+      defaultValue: () => 'locked',
+      options: [
+        { label: 'Gesperrt', value: 'locked' },
+        { label: 'Gesperrt mit Link', value: 'link' },
+        { label: 'Freigeschaltet', value: 'public' },
+      ],
+      admin: {
+        isClearable: false,
+        description:
+          'Gesperrt: Poster und Details sind sichtbar, die Ausstellung selbst (Deckblatt, Bilder, Videos) nicht. Gesperrt mit Link: wie gesperrt, aber wer die Adresse /exhibition/<ID> kennt, sieht die Ausstellung. Freigeschaltet: für alle sichtbar, auch in Slideshow und Exhibitions.',
+      },
+    },
+    {
+      // Abgeleitet aus "visibility" (siehe beforeChange); bleibt für API und Frontend
       name: 'locked',
-      label: 'Gesperrt',
       type: 'checkbox',
       defaultValue: true,
-      admin: {
-        description:
-          'Gesperrt: Poster und Details sind sichtbar, die Ausstellung selbst (Deckblatt, Bilder, Videos) nicht. Haken entfernen = freischalten.',
-      },
+      admin: { hidden: true },
     },
     {
       name: 'video',
@@ -191,7 +329,7 @@ export const Exhibitions: CollectionConfig = {
       relationTo: 'media',
       hasMany: true,
       admin: {
-        description: 'Poster für Startseite, Events und Archive. Immer öffentlich.',
+        description: 'Poster für Startseite, Events und Archive. Öffentlich, außer im Release „Planning“.',
       },
     },
     {
@@ -202,6 +340,21 @@ export const Exhibitions: CollectionConfig = {
       access: { read: onlyWhenUnlocked },
       admin: {
         description: 'Bild oder Video für Slideshow und Exhibitions-Liste.',
+      },
+    },
+    {
+      // Massen-Upload: "Create New" öffnet Payloads Dialog für mehrere Dateien.
+      // Beim Speichern wandern die Dateien als neue Zeilen ans Ende von "medien"
+      // (beforeChange), dieses Feld ist danach wieder leer.
+      name: 'bulkMedia',
+      label: 'Mehrere Fotos auf einmal hinzufügen',
+      type: 'upload',
+      relationTo: 'media',
+      hasMany: true,
+      access: { read: ({ req }) => Boolean(req.user) },
+      admin: {
+        description:
+          '„Create New“ wählen, alle Dateien auf einmal ablegen (10, 20 oder mehr) und speichern; der Alt-Text kann dabei pro Datei schon eingetragen werden. Nach dem Speichern der Ausstellung stehen sie unten bei „Bilder und Videos“, dort lassen sich Name und Alt-Text jederzeit ändern.',
       },
     },
     {
@@ -225,6 +378,14 @@ export const Exhibitions: CollectionConfig = {
           name: 'name',
           label: 'Name / Bildunterschrift',
           type: 'text',
+        },
+        {
+          // Beim Massen-Upload aus dem Alt-Text der Datei übernommen, danach hier änderbar.
+          // Leer = Alt-Text der Datei (Media-Collection).
+          name: 'alt',
+          label: 'Alt-Text',
+          type: 'text',
+          admin: { description: 'Kurze Bildbeschreibung (Barrierefreiheit, SEO).' },
         },
       ],
     },

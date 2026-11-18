@@ -136,19 +136,24 @@ export interface Exhibition {
   titel: string;
   theme?: string | null;
   description?: string | null;
+  /**
+   * Datum: erscheint unter Events, nach dem Datum im Archive. Coming soon: steht ohne Datum am Ende der Events. Planning: schon angelegt, für Besucher aber nirgends sichtbar.
+   */
+  release?: ('scheduled' | 'comingSoon' | 'planning') | null;
   date?: string | null;
   time?: string | null;
   location?: string | null;
   /**
-   * Gesperrt: Poster und Details sind sichtbar, die Ausstellung selbst (Deckblatt, Bilder, Videos) nicht. Haken entfernen = freischalten.
+   * Gesperrt: Poster und Details sind sichtbar, die Ausstellung selbst (Deckblatt, Bilder, Videos) nicht. Gesperrt mit Link: wie gesperrt, aber wer die Adresse /exhibition/<ID> kennt, sieht die Ausstellung. Freigeschaltet: für alle sichtbar, auch in Slideshow und Exhibitions.
    */
+  visibility?: ('locked' | 'link' | 'public') | null;
   locked?: boolean | null;
   /**
    * Wird vor der Ausstellung abgespielt und auf der Ausstellungsseite eingebettet.
    */
   video?: string | null;
   /**
-   * Poster für Startseite, Events und Archive. Immer öffentlich.
+   * Poster für Startseite, Events und Archive. Öffentlich, außer im Release „Planning“.
    */
   posters?: (number | Media)[] | null;
   /**
@@ -156,12 +161,20 @@ export interface Exhibition {
    */
   frontPage?: (number | null) | Media;
   /**
+   * „Create New“ wählen, alle Dateien auf einmal ablegen (10, 20 oder mehr) und speichern; der Alt-Text kann dabei pro Datei schon eingetragen werden. Nach dem Speichern der Ausstellung stehen sie unten bei „Bilder und Videos“, dort lassen sich Name und Alt-Text jederzeit ändern.
+   */
+  bulkMedia?: (number | Media)[] | null;
+  /**
    * Reihenfolge per Drag & Drop. Erscheint in Slideshow und Galerie.
    */
   medien?:
     | {
         file: number | Media;
         name?: string | null;
+        /**
+         * Kurze Bildbeschreibung (Barrierefreiheit, SEO).
+         */
+        alt?: string | null;
         id?: string | null;
       }[]
     | null;
@@ -334,18 +347,22 @@ export interface ExhibitionsSelect<T extends boolean = true> {
   titel?: T;
   theme?: T;
   description?: T;
+  release?: T;
   date?: T;
   time?: T;
   location?: T;
+  visibility?: T;
   locked?: T;
   video?: T;
   posters?: T;
   frontPage?: T;
+  bulkMedia?: T;
   medien?:
     | T
     | {
         file?: T;
         name?: T;
+        alt?: T;
         id?: T;
       };
   updatedAt?: T;

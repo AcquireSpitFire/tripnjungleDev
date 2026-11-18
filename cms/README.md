@@ -22,9 +22,21 @@ Im Admin unter **Ausstellungen**:
 - Neue Ausstellung: ID (wird Teil der URL, z. B. `brasil-1` → `/exhibition/brasil-1`), Titel, Thema,
   Beschreibung, Datum, Uhrzeit, Ort, Intro-Video (YouTube), Poster, Deckblatt, Bilder und Videos.
 - Nachträglich Fotos/Videos/Poster hinzufügen, umsortieren (Drag & Drop) oder entfernen.
-- **Gesperrt** (Standard: an): Poster und Details sind öffentlich (Events, Startseite), die Ausstellung
-  selbst nicht. Haken entfernen = freischalten. Gesperrte Ausstellungen fehlen in Slideshow,
-  Exhibitions-Liste und Sitemap; ihre Dateien sind nicht abrufbar.
+- **Mehrere Fotos auf einmal**: im Feld „Mehrere Fotos auf einmal hinzufügen“ auf „Create New“, alle
+  Dateien zusammen ablegen (10, 20 oder mehr) und ohne Einträge speichern. Nach dem Speichern der
+  Ausstellung stehen sie als neue Zeilen am Ende von „Bilder und Videos“. Bilder ohne Namen werden
+  ohne Beschriftung angezeigt.
+- **Release**:
+  - *Datum*: erscheint unter Events, nach dem Datum im Archive.
+  - *Coming soon*: ohne Datum, steht immer am Ende der Events und der Poster auf der Startseite.
+  - *Planning*: schon angelegt und hochgeladen, für Besucher aber nirgends sichtbar (auch Poster nicht).
+- **Sichtbarkeit**:
+  - *Gesperrt* (Standard): Poster und Details sind öffentlich (Events, Startseite), die Ausstellung
+    selbst nicht; ihre Dateien sind nicht abrufbar.
+  - *Gesperrt mit Link*: wie gesperrt, aber wer die Adresse `/exhibition/<ID>` kennt, sieht die
+    Ausstellung. Sie fehlt in Slideshow, Exhibitions-Liste und Sitemap und wird nicht indexiert.
+    Kein Passwortschutz: die ID ist erratbar, also nur für unkritische Vorab-Ansichten nutzen.
+  - *Freigeschaltet*: für alle sichtbar, auch in Slideshow, Exhibitions-Liste und Sitemap.
 - Bilder werden beim Upload in drei WebP-Größen (600/1280/2560 px) abgelegt, das Original bleibt.
 - Erlaubte Dateitypen: JPEG, PNG, WebP, AVIF, GIF, MP4, WebM, MOV. Kein SVG, kein HEIC
   (iPhone-Fotos vorher als JPEG exportieren).
