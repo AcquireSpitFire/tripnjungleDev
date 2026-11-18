@@ -215,6 +215,16 @@ function setupGalerie(exhibition) {
       createMedia(item, { sizes: "(max-width: 600px) 100vw, 480px" })
     );
 
+    // Seitenverhältnis des Bildes: auf dem Handy wird die figure danach
+    // bemessen (Hochkant-Bilder größer statt klein in der 3:2-Box, siehe CSS)
+    // Maße aus den erzeugten Größen: die sind richtig gedreht. Das Original
+    // kann quer gespeichert sein und nur per EXIF hochkant stehen.
+    const dims = item.sizes?.medium || item.sizes?.large || item.sizes?.thumb || item;
+
+    if (item.type === "image" && dims.width && dims.height) {
+      figure.style.setProperty("--ratio", dims.width / dims.height);
+    }
+
     if (name) {
       const caption = document.createElement("figcaption");
 

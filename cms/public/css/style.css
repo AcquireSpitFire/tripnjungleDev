@@ -888,6 +888,19 @@ main {
     padding-bottom: 0;
   }
 
+  /* Bilder im eigenen Format statt in der 3:2-Box. Die figure ist so breit
+     wie das Bild: volle Breite, aber höchstens so breit, dass das Bild nicht
+     höher als 85 % des Bildschirms wird (betrifft nur Hochkant-Bilder).
+     Die Bildunterschrift steht dadurch bündig unter dem Bild. */
+  .galerie > figure[style*="--ratio"] {
+    width: min(100%, 85svh * var(--ratio));
+    justify-self: center;
+  }
+
+  .galerie > figure[style*="--ratio"] img {
+    aspect-ratio: var(--ratio);
+  }
+
   /* Listen: eine Spalte */
   .card_grid {
     grid-template-columns: 1fr;
