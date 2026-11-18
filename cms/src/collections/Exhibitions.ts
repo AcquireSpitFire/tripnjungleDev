@@ -212,6 +212,15 @@ export const Exhibitions: CollectionConfig = {
           : 'Nur Kleinbuchstaben, Zahlen und Bindestriche.',
     },
     {
+      // Öffentlicher Link mit Kopier-Button (Seitenleiste, erst nach dem ersten Speichern)
+      name: 'publicLink',
+      type: 'ui',
+      admin: {
+        position: 'sidebar',
+        components: { Field: '/components/ExhibitionLink#ExhibitionLink' },
+      },
+    },
+    {
       name: 'titel',
       label: 'Titel',
       type: 'text',
