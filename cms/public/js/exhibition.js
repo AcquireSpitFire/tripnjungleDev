@@ -6,7 +6,8 @@
 // Darunter: Beschreibung, Galerie mit allen Bildern/Videos
 // (Handy: untereinander, Desktop: seitlich scrollbares Band) und ganz
 // unten das Intro-Video zum erneuten Anschauen.
-// Gesperrte Ausstellungen (locked: true) zeigen nur einen Hinweis.
+// Gesperrte Ausstellungen (locked: true) zeigen nur einen Hinweis,
+// außer bei visibility "link" (Zugang über die direkte Adresse).
 // Die Daten kommen aus dem sessionStorage (von intro.js vorgeladen) oder der API.
 
 const titelElement = document.getElementById("titel");
@@ -214,6 +215,16 @@ function setupGalerie(exhibition) {
       createMedia(item, { sizes: "(max-width: 600px) 100vw, 480px" })
     );
 
+    // Seitenverhältnis des Bildes: auf dem Handy wird die figure danach
+    // bemessen (Hochkant-Bilder größer statt klein in der 3:2-Box, siehe CSS)
+    // Maße aus den erzeugten Größen: die sind richtig gedreht. Das Original
+    // kann quer gespeichert sein und nur per EXIF hochkant stehen.
+    const dims = item.sizes?.medium || item.sizes?.large || item.sizes?.thumb || item;
+
+    if (item.type === "image" && dims.width && dims.height) {
+      figure.style.setProperty("--ratio", dims.width / dims.height);
+    }
+
     if (name) {
       const caption = document.createElement("figcaption");
 
@@ -403,7 +414,8 @@ function setupVideo(exhibition) {
 function showExhibition(exhibition) {
   currentExhibition = exhibition;
 
-  if (isLocked(exhibition)) {
+  // „Gesperrt mit Link“ zählt hier als sichtbar: wer die Adresse hat, sieht den Inhalt
+  if (!canView(exhibition)) {
     showLocked(exhibition);
     return;
   }
