@@ -300,7 +300,7 @@ async function fetchJson(path) {
 }
 
 // Ein Medium aus der API (Upload-Dokument) → Seitenformat
-function mapMedia(media, name) {
+function mapMedia(media, name, alt) {
   if (!media || typeof media !== "object" || !media.url) {
     return null;
   }
@@ -319,7 +319,8 @@ function mapMedia(media, name) {
     id: String(media.id),
     type: (media.mimeType || "").startsWith("video/") ? "video" : "image",
     src: media.url,
-    alt: media.alt || "",
+    // Alt-Text der Zeile in der Ausstellung, sonst der der Datei
+    alt: alt || media.alt || "",
     name: name || media.name || "",
     width: media.width,
     height: media.height,
@@ -344,7 +345,7 @@ function mapExhibition(doc) {
     posters: (doc.posters || []).map((poster) => mapMedia(poster)).filter(Boolean),
     front_page: mapMedia(doc.frontPage),
     medien: (doc.medien || [])
-      .map((row) => mapMedia(row.file, row.name))
+      .map((row) => mapMedia(row.file, row.name, row.alt))
       .filter(Boolean),
   };
 }

@@ -130,7 +130,7 @@ export const Exhibitions: CollectionConfig = {
   defaultSort: 'date',
   hooks: {
     beforeChange: [
-      ({ data, originalDoc }) => {
+      async ({ data, originalDoc, req }) => {
         // Bei Teil-Updates fehlen Felder in data; dann gilt der gespeicherte Stand
         const visibility = getVisibility({
           visibility: data.visibility ?? originalDoc?.visibility,
@@ -147,14 +147,19 @@ export const Exhibitions: CollectionConfig = {
           .filter((id): id is number | string => id !== null)
 
         if (bulk.length) {
-          const rows: { file?: MediaRef; name?: string | null }[] = [
+          const rows: { file?: MediaRef; name?: string | null; alt?: string | null }[] = [
             ...(data.medien ?? originalDoc?.medien ?? []),
           ]
           const present = new Set(rows.map((row) => String(toId(row.file))))
 
           for (const id of bulk) {
             if (!present.has(String(id))) {
-              rows.push({ file: id, name: '' })
+              // Alt-Text, der im Upload-Dialog eingegeben wurde, in die Zeile übernehmen
+              const media = await req.payload
+                .findByID({ collection: 'media', id, depth: 0, req, overrideAccess: true })
+                .catch(() => null)
+
+              rows.push({ file: id, name: '', alt: media?.alt || '' })
               present.add(String(id))
             }
           }
@@ -340,7 +345,7 @@ export const Exhibitions: CollectionConfig = {
       access: { read: ({ req }) => Boolean(req.user) },
       admin: {
         description:
-          '„Create New“ wählen, alle Dateien auf einmal ablegen (10, 20 oder mehr) und ohne Einträge speichern. Nach dem Speichern der Ausstellung stehen sie unten bei „Bilder und Videos“.',
+          '„Create New“ wählen, alle Dateien auf einmal ablegen (10, 20 oder mehr) und speichern; der Alt-Text kann dabei pro Datei schon eingetragen werden. Nach dem Speichern der Ausstellung stehen sie unten bei „Bilder und Videos“, dort lassen sich Name und Alt-Text jederzeit ändern.',
       },
     },
     {
@@ -364,6 +369,14 @@ export const Exhibitions: CollectionConfig = {
           name: 'name',
           label: 'Name / Bildunterschrift',
           type: 'text',
+        },
+        {
+          // Beim Massen-Upload aus dem Alt-Text der Datei übernommen, danach hier änderbar.
+          // Leer = Alt-Text der Datei (Media-Collection).
+          name: 'alt',
+          label: 'Alt-Text',
+          type: 'text',
+          admin: { description: 'Kurze Bildbeschreibung (Barrierefreiheit, SEO).' },
         },
       ],
     },

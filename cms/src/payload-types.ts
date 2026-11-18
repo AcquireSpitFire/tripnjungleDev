@@ -161,7 +161,7 @@ export interface Exhibition {
    */
   frontPage?: (number | null) | Media;
   /**
-   * „Create New“ wählen, alle Dateien auf einmal ablegen (10, 20 oder mehr) und ohne Einträge speichern. Nach dem Speichern der Ausstellung stehen sie unten bei „Bilder und Videos“.
+   * „Create New“ wählen, alle Dateien auf einmal ablegen (10, 20 oder mehr) und speichern; der Alt-Text kann dabei pro Datei schon eingetragen werden. Nach dem Speichern der Ausstellung stehen sie unten bei „Bilder und Videos“, dort lassen sich Name und Alt-Text jederzeit ändern.
    */
   bulkMedia?: (number | Media)[] | null;
   /**
@@ -171,6 +171,10 @@ export interface Exhibition {
     | {
         file: number | Media;
         name?: string | null;
+        /**
+         * Kurze Bildbeschreibung (Barrierefreiheit, SEO).
+         */
+        alt?: string | null;
         id?: string | null;
       }[]
     | null;
@@ -358,6 +362,7 @@ export interface ExhibitionsSelect<T extends boolean = true> {
     | {
         file?: T;
         name?: T;
+        alt?: T;
         id?: T;
       };
   updatedAt?: T;
