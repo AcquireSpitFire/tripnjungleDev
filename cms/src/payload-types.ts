@@ -68,6 +68,7 @@ export interface Config {
   blocks: {};
   collections: {
     exhibitions: Exhibition;
+    artists: Artist;
     media: Media;
     users: User;
     'payload-kv': PayloadKv;
@@ -78,6 +79,7 @@ export interface Config {
   collectionsJoins: {};
   collectionsSelect: {
     exhibitions: ExhibitionsSelect<false> | ExhibitionsSelect<true>;
+    artists: ArtistsSelect<false> | ArtistsSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
     users: UsersSelect<false> | UsersSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
@@ -135,6 +137,10 @@ export interface Exhibition {
   slug: string;
   title: string;
   theme?: string | null;
+  /**
+   * Who made the exhibition. Shown as “by …” with a link to the artist page. Artist accounts of these profiles may edit the exhibition.
+   */
+  artists?: (number | Artist)[] | null;
   description?: string | null;
   /**
    * Date: listed under Events, in the Archive after the date. Coming soon: listed without a date at the end of the events. Planning: already created, but not visible to visitors anywhere.
@@ -175,11 +181,53 @@ export interface Exhibition {
          * Short image description (accessibility, SEO).
          */
         alt?: string | null;
+        /**
+         * Leave empty if it is by the artists of the exhibition.
+         */
+        artist?: (number | null) | Artist;
         id?: string | null;
       }[]
     | null;
   createdBy?: (number | null) | User;
   updatedBy?: (number | null) | User;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * People who make the photos and exhibitions. Each artist has a page at /artist/<slug>.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "artists".
+ */
+export interface Artist {
+  id: number;
+  name: string;
+  /**
+   * Lowercase letters, numbers and hyphens, e.g. tom. The page is /artist/<ID>.
+   */
+  slug: string;
+  /**
+   * Optional. Public as soon as it is saved here.
+   */
+  portrait?: (number | null) | Media;
+  pageType: 'profile' | 'external';
+  /**
+   * /artist/<ID> forwards to this address.
+   */
+  externalUrl?: string | null;
+  /**
+   * A few sentences about the artist. Blank line = new paragraph.
+   */
+  shortText?: string | null;
+  website?: string | null;
+  instagram?: string | null;
+  contactVia?: ('tripnjungle' | 'artist') | null;
+  contactEmail?: string | null;
+  contactPhone?: string | null;
+  /**
+   * Without this tick, e-mail and phone are not shown on the page (privacy).
+   */
+  contactConsent?: boolean | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -254,6 +302,10 @@ export interface User {
    * The sub pages this manager is responsible for.
    */
   sections?: 'exhibitions'[] | null;
+  /**
+   * The profile this account belongs to. The account may edit this profile and every exhibition that credits it.
+   */
+  artist?: (number | null) | Artist;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -301,6 +353,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'exhibitions';
         value: number | Exhibition;
+      } | null)
+    | ({
+        relationTo: 'artists';
+        value: number | Artist;
       } | null)
     | ({
         relationTo: 'media';
@@ -360,6 +416,7 @@ export interface ExhibitionsSelect<T extends boolean = true> {
   slug?: T;
   title?: T;
   theme?: T;
+  artists?: T;
   description?: T;
   release?: T;
   date?: T;
@@ -377,10 +434,31 @@ export interface ExhibitionsSelect<T extends boolean = true> {
         file?: T;
         name?: T;
         alt?: T;
+        artist?: T;
         id?: T;
       };
   createdBy?: T;
   updatedBy?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "artists_select".
+ */
+export interface ArtistsSelect<T extends boolean = true> {
+  name?: T;
+  slug?: T;
+  portrait?: T;
+  pageType?: T;
+  externalUrl?: T;
+  shortText?: T;
+  website?: T;
+  instagram?: T;
+  contactVia?: T;
+  contactEmail?: T;
+  contactPhone?: T;
+  contactConsent?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -447,6 +525,7 @@ export interface UsersSelect<T extends boolean = true> {
   name?: T;
   role?: T;
   sections?: T;
+  artist?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;

@@ -2,10 +2,10 @@
 // /exhibition/exhibition-1  →  exhibition with slug "exhibition-1"
 // (the old form exhibition.html?id=… is redirected by the server).
 //
-// Top: slideshow with the cover + all images/videos.
+// Top: title, theme, "by <artists>" and the slideshow with the cover + all images/videos.
 // Below: description, gallery with all images/videos
-// (phone: stacked, desktop: horizontally scrolling strip) and at the
-// very bottom the intro video to watch again.
+// (phone: stacked, desktop: horizontally scrolling strip), the artists with
+// their short text and at the very bottom the intro video to watch again.
 // Locked exhibitions (locked: true) only show a notice,
 // except with visibility "link" (access via the direct address).
 // The data comes from sessionStorage (preloaded by intro.js) or the API.
@@ -19,6 +19,9 @@ const dotsContainer = document.getElementById("dots");
 const galleryElement = document.getElementById("gallery");
 const videoSection = document.getElementById("video");
 const videoBox = document.getElementById("video_box");
+const artistsElement = document.getElementById("artists");
+const aboutArtistsSection = document.getElementById("about_artists");
+const aboutArtistsList = document.getElementById("about_artists_list");
 
 let slides = [];
 let currentSlide = 0;
@@ -225,11 +228,26 @@ function setupGallery(exhibition) {
       figure.style.setProperty("--ratio", dims.width / dims.height);
     }
 
-    if (name) {
+    // Credit only when the photo is by someone else than the exhibition's artists
+    const otherArtist =
+      item.artist && !(exhibition.artists || []).some((artist) => artist.slug === item.artist.slug)
+        ? item.artist
+        : null;
+
+    if (name || otherArtist) {
       const caption = document.createElement("figcaption");
 
       caption.className = "caption";
       caption.textContent = name;
+
+      if (otherArtist) {
+        const credit = document.createElement("span");
+
+        credit.className = "caption_artist";
+        credit.appendChild(createArtistCredit([otherArtist]));
+        caption.append(name ? " – " : "", credit);
+      }
+
       figure.appendChild(caption);
     }
 
@@ -353,6 +371,64 @@ function setupViewer() {
   });
 }
 
+// ---------- Artists ----------
+
+// "by …" in the header (also for locked exhibitions: the credit is public)
+function setupArtistCredit(exhibition) {
+  const artists = exhibition.artists || [];
+
+  if (!artists.length) {
+    return;
+  }
+
+  artistsElement.appendChild(createArtistCredit(artists));
+  artistsElement.hidden = false;
+}
+
+// Below the gallery: name, short text, link to the artist page
+function setupAboutArtists(exhibition) {
+  const artists = exhibition.artists || [];
+
+  if (!artists.length) {
+    return;
+  }
+
+  document.getElementById("about_artists_title").textContent =
+    artists.length > 1 ? "About the artists" : "About the artist";
+
+  artists.forEach((artist) => {
+    const entry = document.createElement("div");
+    const name = document.createElement("h3");
+
+    entry.className = "about_artist";
+    name.className = "about_artist_name";
+    name.textContent = artist.name;
+    entry.appendChild(name);
+
+    artist.shortText
+      .split(/\n\s*\n/)
+      .map((block) => block.trim())
+      .filter(Boolean)
+      .forEach((block) => {
+        const paragraph = document.createElement("p");
+
+        paragraph.textContent = block;
+        entry.appendChild(paragraph);
+      });
+
+    const link = document.createElement("a");
+
+    link.className = "about_artist_link";
+    link.href = artist.link;
+    link.textContent = artist.shortText ? "More about " + artist.name + " ›" : "Website of " + artist.name + " ›";
+    entry.appendChild(link);
+
+    aboutArtistsList.appendChild(entry);
+  });
+
+  aboutArtistsSection.hidden = false;
+}
+
 // ---------- Loading ----------
 
 function showError(message) {
@@ -369,6 +445,7 @@ function showLocked(exhibition) {
   themeElement.textContent = exhibition.theme || "";
   descriptionElement.textContent = "This exhibition is not available yet.";
   slideshowElement.hidden = true;
+  setupArtistCredit(exhibition);
 }
 
 // Embed the intro video of the exhibition below the gallery.
@@ -443,8 +520,10 @@ function showExhibition(exhibition) {
   themeElement.textContent = exhibition.theme || "";
   descriptionElement.textContent = exhibition.description || "";
 
+  setupArtistCredit(exhibition);
   setupSlideshow(exhibition);
   setupGallery(exhibition);
+  setupAboutArtists(exhibition);
   setupVideo(exhibition);
   setupViewer();
 }

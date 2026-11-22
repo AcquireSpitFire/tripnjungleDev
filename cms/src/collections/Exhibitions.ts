@@ -5,7 +5,9 @@ import {
   clearAccessCache,
   exhibitionManagersOnlyField,
   getAccessibleExhibitionIds,
+  getArtistProfileId,
   idIn,
+  isArtist,
 } from '../access/roles'
 import { auditFields, auditHook } from '../lib/audit'
 import { mediaIdsOf, syncMediaLocks } from '../lib/media-lock'
@@ -37,7 +39,9 @@ import { getYouTubeId } from '../lib/youtube'
 //     (field "locked", kept in sync by src/lib/media-lock.ts).
 //
 // Accounts (see src/access/roles.ts): admins and exhibition managers may do
-// everything; ID, release and visibility can only be changed by them.
+// everything; ID, release, visibility and the credited artists can only be
+// changed by them. Artist accounts create exhibitions (always Planning + Locked,
+// credited to their own profile) and edit the ones that credit them.
 
 // What anonymous visitors may read: everything except "planning"
 // (old entries without the field count as scheduled)
@@ -80,7 +84,8 @@ export const Exhibitions: CollectionConfig = {
 
       return publicWhere
     },
-    create: ({ req }) => canManageExhibitions(req.user),
+    create: ({ req }) =>
+      canManageExhibitions(req.user) || (isArtist(req.user) && getArtistProfileId(req.user) !== null),
     update: async ({ req }) => {
       if (canManageExhibitions(req.user)) {
         return true
@@ -94,6 +99,16 @@ export const Exhibitions: CollectionConfig = {
   hooks: {
     beforeChange: [
       auditHook(),
+      ({ data, operation, req }) => {
+        // An artist creates: credited to their own profile, nothing goes public without a manager
+        if (operation === 'create' && !canManageExhibitions(req.user) && isArtist(req.user)) {
+          data.artists = [getArtistProfileId(req.user)]
+          data.release = 'planning'
+          data.visibility = 'locked'
+        }
+
+        return data
+      },
       async ({ data, originalDoc, req }) => {
         // Partial updates lack fields in data; then the stored state applies
         const visibility = getVisibility({
@@ -199,6 +214,18 @@ export const Exhibitions: CollectionConfig = {
       name: 'theme',
       label: 'Theme',
       type: 'text',
+    },
+    {
+      name: 'artists',
+      label: 'Artists',
+      type: 'relationship',
+      relationTo: 'artists',
+      hasMany: true,
+      access: { create: exhibitionManagersOnlyField, update: exhibitionManagersOnlyField },
+      admin: {
+        description:
+          'Who made the exhibition. Shown as “by …” with a link to the artist page. Artist accounts of these profiles may edit the exhibition.',
+      },
     },
     {
       name: 'description',
@@ -361,6 +388,14 @@ export const Exhibitions: CollectionConfig = {
           label: 'Alt text',
           type: 'text',
           admin: { description: 'Short image description (accessibility, SEO).' },
+        },
+        {
+          // Only needed when this photo is by someone else than the exhibition's artists
+          name: 'artist',
+          label: 'Artist of this photo',
+          type: 'relationship',
+          relationTo: 'artists',
+          admin: { description: 'Leave empty if it is by the artists of the exhibition.' },
         },
       ],
     },

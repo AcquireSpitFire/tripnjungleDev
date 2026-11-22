@@ -9,6 +9,7 @@ import {
   SITE_DESCRIPTION,
   SITE_NAME,
   absolute,
+  artistsJsonLd,
   asMedia,
   eventJsonLd,
   findPublicExhibitions,
@@ -89,6 +90,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
       url: canonical,
       image: images,
       about: exhibition.theme || undefined,
+      creator: artistsJsonLd(exhibition.artists, base),
       isPartOf: { '@type': 'WebSite', name: SITE_NAME, url: base },
     })
   }

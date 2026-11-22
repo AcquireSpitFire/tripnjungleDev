@@ -4,6 +4,7 @@
 //   - as a poster of an exhibition that is not in "planning"
 //   - as cover or gallery item of an exhibition whose content is open
 //     (public or locked with link, not in planning)
+// or as the portrait of an artist profile.
 // Otherwise it is locked. Without login the API and the file route only
 // deliver media with locked: false (see src/collections/Media.ts).
 //
@@ -72,6 +73,23 @@ export async function syncMediaLocks(req: PayloadRequest, mediaIds: Iterable<Id>
           open.add(String(id))
         }
       }
+    }
+  }
+
+  const { docs: artists } = await req.payload.find({
+    collection: 'artists',
+    where: { portrait: { in: ids } },
+    depth: 0,
+    pagination: false,
+    overrideAccess: true,
+    req,
+  })
+
+  for (const artist of artists) {
+    const id = toId(artist.portrait)
+
+    if (id !== null) {
+      open.add(String(id))
     }
   }
 

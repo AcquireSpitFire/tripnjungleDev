@@ -1118,3 +1118,94 @@ main {
   color: #ffd54a;
   font-size: 0.85rem;
 }
+
+/* "by <artist>" below the theme in the header */
+.artist_credit {
+  margin: 0.25rem 0 0;
+  font-size: 0.85rem;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+
+.artist_credit a,
+.caption_artist a {
+  color: var(--text);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+/* Exhibition page: the artists with their short text, below the gallery */
+.about_artists {
+  width: min(100%, 720px);
+  margin: 0 auto 3rem;
+}
+
+.about_artist + .about_artist {
+  margin-top: 2rem;
+}
+
+.about_artist_name {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+}
+
+.about_artist p {
+  max-width: 60ch;
+  line-height: 1.6;
+}
+
+.about_artist_link {
+  font-size: 0.85rem;
+  letter-spacing: 0.1em;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+/* Artist mini page (/artist/<slug>) */
+.artist_page {
+  line-height: 1.6;
+}
+
+.artist_portrait {
+  display: block;
+  width: min(100%, 320px);
+  height: auto;
+  margin: 0 0 1.5rem;
+}
+
+.artist_page h2 {
+  margin: 2rem 0 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 400;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.artist_links,
+.artist_exhibitions {
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.artist_links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+}
+
+.artist_page a {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.artist_exhibitions li + li {
+  margin-top: 0.4rem;
+}
+
+.artist_exhibition_theme {
+  color: var(--muted);
+}

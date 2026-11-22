@@ -7,9 +7,11 @@
 //   id, title, theme, description, date, time, location,
 //   locked (true/false), visibility ("locked"|"link"|"public"),
 //   release ("scheduled"|"comingSoon"), video (YouTube URL or ID),
-//   posters [ medium ], frontPage medium, gallery [ medium ]
+//   posters [ medium ], frontPage medium, gallery [ medium ], artists [ artist ]
 // A medium: { id, type ("image"|"video"), src, alt, name, width, height,
-//             sizes: { thumb, medium, large } (each {url, width, height}) }
+//             sizes: { thumb, medium, large } (each {url, width, height}),
+//             artist (only gallery items by someone else, otherwise null) }
+// An artist: { slug, name, link ("/artist/<slug>"), shortText }
 //
 // For locked exhibitions (locked: true) the API returns neither the cover nor
 // the gallery to anonymous visitors, and the files cannot be fetched.
@@ -307,8 +309,44 @@ async function fetchJson(path) {
   return response.json();
 }
 
+// An artist profile from the API → page format (null if not populated)
+function mapArtist(artist) {
+  if (!artist || typeof artist !== "object" || !artist.slug) {
+    return null;
+  }
+
+  return {
+    slug: artist.slug,
+    name: artist.name || "",
+    link: "/artist/" + encodeURIComponent(artist.slug),
+    // Artists with an external website have no text on Tripnjungle
+    shortText: artist.pageType === "external" ? "" : artist.shortText || "",
+  };
+}
+
+// "by A, B & C" with links to the artist pages, as a DocumentFragment
+function createArtistCredit(artists) {
+  const fragment = document.createDocumentFragment();
+
+  fragment.append("by ");
+
+  artists.forEach((artist, index) => {
+    if (index > 0) {
+      fragment.append(index === artists.length - 1 ? " & " : ", ");
+    }
+
+    const link = document.createElement("a");
+
+    link.href = artist.link;
+    link.textContent = artist.name;
+    fragment.appendChild(link);
+  });
+
+  return fragment;
+}
+
 // A medium from the API (upload document) → page format
-function mapMedia(media, name, alt) {
+function mapMedia(media, name, alt, artist) {
   if (!media || typeof media !== "object" || !media.url) {
     return null;
   }
@@ -333,6 +371,7 @@ function mapMedia(media, name, alt) {
     width: media.width,
     height: media.height,
     sizes,
+    artist: mapArtist(artist),
   };
 }
 
@@ -353,8 +392,9 @@ function mapExhibition(doc) {
     posters: (doc.posters || []).map((poster) => mapMedia(poster)).filter(Boolean),
     frontPage: mapMedia(doc.frontPage),
     gallery: (doc.gallery || [])
-      .map((row) => mapMedia(row.file, row.name, row.alt))
+      .map((row) => mapMedia(row.file, row.name, row.alt, row.artist))
       .filter(Boolean),
+    artists: (doc.artists || []).map(mapArtist).filter(Boolean),
   };
 }
 

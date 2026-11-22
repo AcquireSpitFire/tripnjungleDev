@@ -179,5 +179,17 @@ export const Users: CollectionConfig = {
         description: 'The sub pages this manager is responsible for.',
       },
     },
+    {
+      name: 'artist',
+      label: 'Artist profile',
+      type: 'relationship',
+      relationTo: 'artists',
+      access: { create: adminOnlyField, update: adminOnlyField },
+      admin: {
+        condition: (data) => data?.role === 'artist',
+        description:
+          'The profile this account belongs to. The account may edit this profile and every exhibition that credits it.',
+      },
+    },
   ],
 }

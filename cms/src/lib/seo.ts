@@ -28,6 +28,21 @@ export function imageUrl(media: Media | null, size: 'large' | 'medium' | 'thumb'
   return sizes[size]?.url || sizes.medium?.url || media.url || null
 }
 
+// JSON-LD "Person" entries for the credited artists (only populated profiles)
+export function artistsJsonLd(artists: unknown[] | null | undefined, base: string) {
+  const people = (artists || [])
+    .filter((artist): artist is { name: string; slug: string } =>
+      Boolean(artist && typeof artist === 'object' && 'slug' in artist && 'name' in artist),
+    )
+    .map((artist) => ({
+      '@type': 'Person',
+      name: artist.name,
+      url: `${base}/artist/${encodeURIComponent(artist.slug)}`,
+    }))
+
+  return people.length ? people : undefined
+}
+
 export function absolute(base: string, url: string | null): string | null {
   if (!url) {
     return null

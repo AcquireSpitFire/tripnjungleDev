@@ -1,4 +1,4 @@
-// /sitemap.xml: home page, lists and all public exhibitions
+// /sitemap.xml: home page, lists, all public exhibitions and the artist pages
 import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 
@@ -28,6 +28,23 @@ export async function GET() {
         priority: '0.7',
       })
     }
+  }
+
+  // Artist mini pages (artists with an external website only forward, so they are left out)
+  const { docs: artists } = await payload.find({
+    collection: 'artists',
+    where: { pageType: { equals: 'profile' } },
+    depth: 0,
+    pagination: false,
+    overrideAccess: false,
+  })
+
+  for (const artist of artists) {
+    entries.push({
+      loc: base + '/artist/' + encodeURIComponent(artist.slug),
+      lastmod: artist.updatedAt?.slice(0, 10),
+      priority: '0.4',
+    })
   }
 
   const xml =

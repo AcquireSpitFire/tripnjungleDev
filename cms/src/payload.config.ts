@@ -7,6 +7,7 @@ import sharp from 'sharp'
 import { Users } from './collections/Users'
 import { Media } from './collections/Media'
 import { Exhibitions } from './collections/Exhibitions'
+import { Artists } from './collections/Artists'
 import { Site } from './globals/Site'
 
 const filename = fileURLToPath(import.meta.url)
@@ -22,7 +23,7 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Exhibitions, Media, Users],
+  collections: [Exhibitions, Artists, Media, Users],
   globals: [Site],
   // No rich text editor needed (only text fields) – saves dependencies and attack surface
   secret: process.env.PAYLOAD_SECRET || '',

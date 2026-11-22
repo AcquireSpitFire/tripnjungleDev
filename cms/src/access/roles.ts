@@ -94,9 +94,12 @@ const MEDIA_IDS_KEY = 'tj:accessibleMediaIds'
 // Conditions for the exhibitions an artist or editor works on
 function ownExhibitionsWhere(user: MaybeUser): Where[] {
   const conditions: Where[] = []
+  const artistId = getArtistProfileId(user)
 
-  // Filled in by the artist and editor fields of the exhibitions
-  void user
+  // Artists: every exhibition that credits their profile
+  if (isArtist(user) && artistId !== null) {
+    conditions.push({ artists: { in: [artistId] } })
+  }
 
   return conditions
 }
