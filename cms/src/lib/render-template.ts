@@ -37,10 +37,16 @@ function readTemplate(name: string): string {
   return html
 }
 
+// Version für /css/ und /js/: ändert sich mit jedem Deploy (Railway setzt den
+// Commit), sonst mit jedem Serverstart. Der Browser cached die Dateien (siehe
+// next.config.ts) und holt nach einem Deploy wegen der neuen URL sofort die neuen.
+const assetVersion = (process.env.RAILWAY_GIT_COMMIT_SHA || Date.now().toString(36)).slice(0, 12)
+
 export function renderTemplate(name: string, values: Record<string, string>): string {
   return readTemplate(name)
     .replace(/\{\{\{(\w+)\}\}\}/g, (_, key) => values[key] ?? '')
     .replace(/\{\{(\w+)\}\}/g, (_, key) => escapeHtml(values[key] ?? ''))
+    .replace(/((?:href|src)="\/(?:css|js)\/[^"?#]+)"/g, `$1?v=${assetVersion}"`)
 }
 
 // Kürzt eine Beschreibung auf Meta-Länge
