@@ -411,8 +411,26 @@ function setupVideo(exhibition) {
   videoSection.hidden = false;
 }
 
+// Preview from the admin: mark the page so it is not mistaken for the public view
+function showPreviewNote(exhibition) {
+  const note = document.createElement("p");
+
+  note.className = "preview_note";
+  note.textContent =
+    "Preview with your login – visitors see this exhibition as: " +
+    ({ locked: "locked", link: "locked with link", public: "public" }[exhibition.visibility] || "locked") +
+    (exhibition.release === "planning" ? ", planning (not visible at all)" : "") +
+    ".";
+  document.querySelector("main")?.prepend(note);
+  document.title = "Preview: " + exhibition.title + " – Tripnjungle";
+}
+
 function showExhibition(exhibition) {
   currentExhibition = exhibition;
+
+  if (PREVIEW) {
+    showPreviewNote(exhibition);
+  }
 
   // "Locked with link" counts as visible here: whoever has the address sees the content
   if (!canView(exhibition)) {

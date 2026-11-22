@@ -53,6 +53,18 @@ export function ExhibitionLink() {
       <p className="field-description" style={{ marginTop: '0.5rem' }}>
         With “Locked”, visitors only see the details via this link, not the content.
       </p>
+      <a
+        className="btn btn--style-secondary btn--size-small"
+        href={`${url}?preview`}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{ margin: '0.25rem 0 0' }}
+      >
+        Preview (with your login) ↗
+      </a>
+      <p className="field-description" style={{ marginTop: '0.5rem' }}>
+        Shows the saved state including locked and planned content. Visitors see what the visibility allows.
+      </p>
     </div>
   )
 }

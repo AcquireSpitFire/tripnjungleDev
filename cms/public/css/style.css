@@ -1107,3 +1107,14 @@ main {
   cursor: default;
   color: var(--muted);
 }
+
+/* ---------- 12. Preview, photo and artist pages ---------- */
+
+/* Preview from the admin (?preview): clearly not the public view */
+.preview_note {
+  margin: 0 0 1.5rem;
+  padding: 0.6rem 0.9rem;
+  border: 1px solid #ffd54a;
+  color: #ffd54a;
+  font-size: 0.85rem;
+}

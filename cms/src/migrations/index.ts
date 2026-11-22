@@ -2,7 +2,8 @@ import * as migration_20261113_123912_initial from './20261113_123912_initial';
 import * as migration_20261113_214904_site_settings from './20261113_214904_site_settings';
 import * as migration_20261116_212625_release_visibility from './20261116_212625_release_visibility';
 import * as migration_20261118_165313_medien_alt from './20261118_165313_medien_alt';
-import * as migration_20261123_000000_english_field_names from './20261123_000000_english_field_names';
+import * as migration_20261122_230000_english_field_names from './20261122_230000_english_field_names';
+import * as migration_20261122_233429_roles_accounts from './20261122_233429_roles_accounts';
 
 export const migrations = [
   {
@@ -26,8 +27,13 @@ export const migrations = [
     name: '20261118_165313_medien_alt',
   },
   {
-    up: migration_20261123_000000_english_field_names.up,
-    down: migration_20261123_000000_english_field_names.down,
-    name: '20261123_000000_english_field_names',
+    up: migration_20261122_230000_english_field_names.up,
+    down: migration_20261122_230000_english_field_names.down,
+    name: '20261122_230000_english_field_names',
+  },
+  {
+    up: migration_20261122_233429_roles_accounts.up,
+    down: migration_20261122_233429_roles_accounts.down,
+    name: '20261122_233429_roles_accounts',
   },
 ];

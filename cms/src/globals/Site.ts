@@ -1,16 +1,20 @@
 import type { GlobalConfig } from 'payload'
 
+import { isAdmin } from '../access/roles'
+
 // Site-wide settings: About text, contact, legal notice, privacy policy.
 // Read by the route handlers (/about, /imprint, /privacy) and inserted into
-// the templates. Only logged-in users may read them via the API; the pages
-// themselves load them on the server.
+// the templates. Only admins may read and change them via the API and the
+// admin panel; the pages themselves load them on the server.
 export const Site: GlobalConfig = {
   slug: 'site',
   label: 'Site settings',
   access: {
-    read: ({ req }) => Boolean(req.user),
+    read: ({ req }) => isAdmin(req.user),
+    update: ({ req }) => isAdmin(req.user),
   },
   admin: {
+    hidden: ({ user }) => !isAdmin(user),
     description:
       'Texts for About, the legal notice (Impressum) and the privacy policy. Fill in everything before going live.',
   },

@@ -114,7 +114,7 @@ column was renamed or newly created and cannot run without an interactive termin
 new, the data is lost. In that case write the migration by hand with `ALTER TABLE … RENAME …` and create
 the schema snapshot with
 `PAYLOAD_MIGRATING=true npx tsx --env-file=.env scripts/write-schema-snapshot.ts <yyyymmdd_hhmmss_name>`
-(example: `src/migrations/20261123_000000_english_field_names.ts`). Back up the database first and test
+(example: `src/migrations/20261122_230000_english_field_names.ts`). Back up the database first and test
 the migration on a copy.
 
 ## Files

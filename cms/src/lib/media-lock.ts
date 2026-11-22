@@ -1,0 +1,101 @@
+// Keeps the "locked" flag of media in sync with the exhibitions that use them.
+//
+// A medium is public (locked: false) as soon as ANY exhibition makes it public:
+//   - as a poster of an exhibition that is not in "planning"
+//   - as cover or gallery item of an exhibition whose content is open
+//     (public or locked with link, not in planning)
+// Otherwise it is locked. Without login the API and the file route only
+// deliver media with locked: false (see src/collections/Media.ts).
+//
+// Computing it from all exhibitions (instead of only the one just saved) means
+// that using the same image in two exhibitions, or removing an image from an
+// exhibition, always ends in the right state.
+import type { PayloadRequest } from 'payload'
+
+import { contentIsOpen, getRelease, toId, type Ref } from './visibility'
+
+type ExhibitionMedia = {
+  posters?: Ref[] | null
+  frontPage?: Ref
+  gallery?: { file?: Ref }[] | null
+}
+
+type Id = number | string
+
+// All media ids an exhibition refers to
+export function mediaIdsOf(doc: ExhibitionMedia | null | undefined): Id[] {
+  if (!doc) {
+    return []
+  }
+
+  return [...(doc.posters || []), doc.frontPage, ...(doc.gallery || []).map((row) => row.file)]
+    .map(toId)
+    .filter((id): id is Id => id !== null)
+}
+
+export async function syncMediaLocks(req: PayloadRequest, mediaIds: Iterable<Id>): Promise<void> {
+  const ids = [...new Set([...mediaIds].map(String))]
+
+  if (!ids.length) {
+    return
+  }
+
+  const { docs: exhibitions } = await req.payload.find({
+    collection: 'exhibitions',
+    where: {
+      or: [{ posters: { in: ids } }, { frontPage: { in: ids } }, { 'gallery.file': { in: ids } }],
+    },
+    depth: 0,
+    pagination: false,
+    overrideAccess: true,
+    req,
+  })
+
+  const open = new Set<string>()
+
+  for (const exhibition of exhibitions) {
+    if (getRelease(exhibition) !== 'planning') {
+      for (const poster of exhibition.posters || []) {
+        const id = toId(poster)
+
+        if (id !== null) {
+          open.add(String(id))
+        }
+      }
+    }
+
+    if (contentIsOpen(exhibition)) {
+      for (const ref of [exhibition.frontPage, ...(exhibition.gallery || []).map((row) => row.file)]) {
+        const id = toId(ref)
+
+        if (id !== null) {
+          open.add(String(id))
+        }
+      }
+    }
+  }
+
+  const { docs: media } = await req.payload.find({
+    collection: 'media',
+    where: { id: { in: ids } },
+    depth: 0,
+    pagination: false,
+    overrideAccess: true,
+    req,
+  })
+
+  for (const medium of media) {
+    const locked = !open.has(String(medium.id))
+
+    if (medium.locked !== locked) {
+      await req.payload.update({
+        collection: 'media',
+        id: medium.id,
+        data: { locked },
+        depth: 0,
+        overrideAccess: true,
+        req,
+      })
+    }
+  }
+}

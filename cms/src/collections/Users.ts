@@ -1,13 +1,183 @@
-import type { CollectionConfig } from 'payload'
+import { APIError, ValidationError, type AccessResult, type CollectionConfig, type PayloadRequest } from 'payload'
+
+import {
+  ROLE_OPTIONS,
+  SECTION_OPTIONS,
+  adminOnlyField,
+  canManageExhibitions,
+  getRole,
+  getUserId,
+  isAdmin,
+} from '../access/roles'
+
+// Accounts for the admin panel. Roles and what they may do: src/access/roles.ts.
+//
+// Security:
+//   - The very first account always becomes admin; afterwards only admins create accounts.
+//   - Only admins change roles and sections, also not on their own account.
+//   - The last admin can neither be deleted nor demoted.
+//   - 5 failed logins lock the account for 15 minutes; sessions are stored on the
+//     server, so logging out or locking takes effect immediately.
+//   - Passwords need at least 12 characters.
+
+const MIN_PASSWORD_LENGTH = 12
+
+const serverURL = process.env.PAYLOAD_PUBLIC_SERVER_URL || 'http://localhost:3000'
+
+async function countOtherAdmins(req: PayloadRequest, excludeId: number | string) {
+  const { totalDocs } = await req.payload.count({
+    collection: 'users',
+    where: { and: [{ role: { equals: 'admin' } }, { id: { not_equals: excludeId } }] },
+    overrideAccess: true,
+    req,
+  })
+
+  return totalDocs
+}
+
+const lastAdminMessage = 'At least one admin account has to remain. Make another account admin first.'
 
 export const Users: CollectionConfig = {
   slug: 'users',
+  labels: {
+    singular: 'Account',
+    plural: 'Accounts',
+  },
   admin: {
     useAsTitle: 'email',
+    defaultColumns: ['email', 'name', 'role', 'sections', 'updatedAt'],
+    description:
+      'Admin: everything. Manager: the selected sections (one account per sub page). Artist: own exhibitions, linked to an artist profile. Editor: the exhibitions they are assigned to.',
+    // Only admins manage accounts; everybody reaches their own account via the avatar
+    hidden: ({ user }) => !isAdmin(user),
   },
-  auth: true,
+  auth: {
+    maxLoginAttempts: 5,
+    lockTime: 15 * 60 * 1000,
+    tokenExpiration: 2 * 60 * 60,
+    useSessions: true,
+    cookies: {
+      sameSite: 'Strict',
+      // Only over HTTPS (a local "npm start" on http://localhost still works)
+      secure: serverURL.startsWith('https://'),
+    },
+  },
+  access: {
+    // Admin panel only with a valid role
+    admin: ({ req }) => Boolean(getRole(req.user)),
+    read: ({ req }): AccessResult => {
+      if (isAdmin(req.user)) {
+        return true
+      }
+
+      const id = getUserId(req.user)
+
+      if (id === null) {
+        return false
+      }
+
+      // Managers pick artists and editors for exhibitions
+      if (canManageExhibitions(req.user)) {
+        return { or: [{ id: { equals: id } }, { role: { in: ['artist', 'editor'] } }] }
+      }
+
+      return { id: { equals: id } }
+    },
+    create: ({ req }) => isAdmin(req.user),
+    update: ({ req }): AccessResult => {
+      if (isAdmin(req.user)) {
+        return true
+      }
+
+      const id = getUserId(req.user)
+
+      return id === null ? false : { id: { equals: id } }
+    },
+    delete: ({ req }) => isAdmin(req.user),
+    unlock: ({ req }) => isAdmin(req.user),
+  },
+  hooks: {
+    beforeValidate: [
+      ({ data }) => {
+        const password = data?.password
+
+        if (typeof password === 'string' && password.length > 0 && password.length < MIN_PASSWORD_LENGTH) {
+          throw new ValidationError({
+            collection: 'users',
+            errors: [{ path: 'password', message: `The password needs at least ${MIN_PASSWORD_LENGTH} characters.` }],
+          })
+        }
+
+        return data
+      },
+    ],
+    beforeChange: [
+      async ({ data, operation, originalDoc, req }) => {
+        if (operation === 'create') {
+          const { totalDocs } = await req.payload.count({ collection: 'users', overrideAccess: true, req })
+
+          // First account: always admin (whoever opens /admin first after the deploy)
+          if (totalDocs === 0) {
+            data.role = 'admin'
+          }
+
+          data.role = data.role || 'editor'
+        }
+
+        if (
+          operation === 'update' &&
+          originalDoc?.role === 'admin' &&
+          data.role &&
+          data.role !== 'admin' &&
+          (await countOtherAdmins(req, originalDoc.id)) === 0
+        ) {
+          throw new APIError(lastAdminMessage, 400, null, true)
+        }
+
+        return data
+      },
+    ],
+    beforeDelete: [
+      async ({ id, req }) => {
+        const user = await req.payload.findByID({ collection: 'users', id, depth: 0, overrideAccess: true, req })
+
+        if (user?.role === 'admin' && (await countOtherAdmins(req, id)) === 0) {
+          throw new APIError(lastAdminMessage, 400, null, true)
+        }
+      },
+    ],
+  },
   fields: [
-    // Email added by default
-    // Add more fields as needed
+    // E-mail and password are added by Payload (auth: true)
+    {
+      name: 'name',
+      label: 'Name',
+      type: 'text',
+    },
+    {
+      name: 'role',
+      label: 'Role',
+      type: 'select',
+      required: true,
+      defaultValue: 'editor',
+      options: [...ROLE_OPTIONS],
+      access: { create: adminOnlyField, update: adminOnlyField },
+      admin: {
+        isClearable: false,
+        description: 'Only admins can change roles. The very first account always becomes admin.',
+      },
+    },
+    {
+      name: 'sections',
+      label: 'Sections',
+      type: 'select',
+      hasMany: true,
+      options: [...SECTION_OPTIONS],
+      access: { create: adminOnlyField, update: adminOnlyField },
+      admin: {
+        condition: (data) => data?.role === 'manager',
+        description: 'The sub pages this manager is responsible for.',
+      },
+    },
   ],
 }

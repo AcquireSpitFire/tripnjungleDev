@@ -16,12 +16,19 @@
 // Exception visibility "link": it counts as locked everywhere (no links, not
 // in slideshow and lists), but the exhibition page itself shows the content.
 // Exhibitions in release "planning" are not returned by the API at all.
+//
+// The API is called WITHOUT cookies: a logged-in admin sees the site exactly
+// like a visitor. Only the preview (?preview in the address, "Preview" button
+// in the admin) sends the login, so the account sees what it may see in the
+// admin (also "planning" and locked content). Nothing is cached in preview.
 
 const API_PATH = "/api/exhibitions";
 const CACHE_PREFIX = "tj:exhibition:v2:";
 const CACHE_TTL = 10 * 60 * 1000;   // 10 minutes
 
 let exhibitionsCache = null;   // all exhibitions, once loaded
+
+const PREVIEW = new URLSearchParams(window.location.search).has("preview");
 
 function getExhibitionLink(exhibition) {
   return "/exhibition/" + encodeURIComponent(exhibition.id);
@@ -289,7 +296,9 @@ function isValidId(id) {
 }
 
 async function fetchJson(path) {
-  const response = await fetch(path);
+  const response = await fetch(path, PREVIEW
+    ? { credentials: "same-origin", cache: "no-store" }
+    : { credentials: "omit" });
 
   if (!response.ok) {
     throw new Error("HTTP " + response.status);
@@ -352,6 +361,10 @@ function mapExhibition(doc) {
 // Short-term cache in sessionStorage: intro.js stores the exhibition while the
 // video plays, exhibition.js then renders it without waiting
 function readCachedExhibition(id) {
+  if (PREVIEW) {
+    return null;
+  }
+
   try {
     const raw = sessionStorage.getItem(CACHE_PREFIX + id);
     const entry = raw && JSON.parse(raw);
@@ -367,6 +380,10 @@ function readCachedExhibition(id) {
 }
 
 function cacheExhibition(exhibition) {
+  if (PREVIEW) {
+    return;
+  }
+
   try {
     sessionStorage.setItem(
       CACHE_PREFIX + exhibition.id,

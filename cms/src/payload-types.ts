@@ -178,6 +178,8 @@ export interface Exhibition {
         id?: string | null;
       }[]
     | null;
+  createdBy?: (number | null) | User;
+  updatedBy?: (number | null) | User;
   updatedAt: string;
   createdAt: string;
 }
@@ -196,6 +198,7 @@ export interface Media {
    * Set automatically by the exhibition.
    */
   locked?: boolean | null;
+  createdBy?: (number | null) | User;
   updatedAt: string;
   createdAt: string;
   url?: string | null;
@@ -235,11 +238,22 @@ export interface Media {
   };
 }
 /**
+ * Admin: everything. Manager: the selected sections (one account per sub page). Artist: own exhibitions, linked to an artist profile. Editor: the exhibitions they are assigned to.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "users".
  */
 export interface User {
   id: number;
+  name?: string | null;
+  /**
+   * Only admins can change roles. The very first account always becomes admin.
+   */
+  role: 'admin' | 'manager' | 'artist' | 'editor';
+  /**
+   * The sub pages this manager is responsible for.
+   */
+  sections?: 'exhibitions'[] | null;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -365,6 +379,8 @@ export interface ExhibitionsSelect<T extends boolean = true> {
         alt?: T;
         id?: T;
       };
+  createdBy?: T;
+  updatedBy?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -376,6 +392,7 @@ export interface MediaSelect<T extends boolean = true> {
   alt?: T;
   name?: T;
   locked?: T;
+  createdBy?: T;
   updatedAt?: T;
   createdAt?: T;
   url?: T;
@@ -427,6 +444,9 @@ export interface MediaSelect<T extends boolean = true> {
  * via the `definition` "users_select".
  */
 export interface UsersSelect<T extends boolean = true> {
+  name?: T;
+  role?: T;
+  sections?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;

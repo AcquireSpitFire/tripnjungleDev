@@ -1,5 +1,15 @@
-import type { CollectionConfig, FieldAccess, Payload, PayloadRequest } from 'payload'
+import type { CollectionConfig, FieldAccess, Where } from 'payload'
 
+import {
+  canManageExhibitions,
+  clearAccessCache,
+  exhibitionManagersOnlyField,
+  getAccessibleExhibitionIds,
+  idIn,
+} from '../access/roles'
+import { auditFields, auditHook } from '../lib/audit'
+import { mediaIdsOf, syncMediaLocks } from '../lib/media-lock'
+import { contentIsOpen, getRelease, getVisibility, toId, type Ref } from '../lib/visibility'
 import { getYouTubeId } from '../lib/youtube'
 
 // An exhibition.
@@ -24,91 +34,26 @@ import { getYouTubeId } from '../lib/youtube'
 //   - The API does not return exhibitions in "planning".
 //   - Cover and gallery are missing from the response, except for public and link.
 //   - The media files themselves are protected by the media collection
-//     (field "locked", see syncMediaLock).
+//     (field "locked", kept in sync by src/lib/media-lock.ts).
+//
+// Accounts (see src/access/roles.ts): admins and exhibition managers may do
+// everything; ID, release and visibility can only be changed by them.
 
-type Visibility = 'locked' | 'link' | 'public'
-type Release = 'scheduled' | 'comingSoon' | 'planning'
-
-type Settings = {
-  locked?: boolean | null
-  visibility?: Visibility | null
-  release?: Release | null
+// What anonymous visitors may read: everything except "planning"
+// (old entries without the field count as scheduled)
+const publicWhere: Where = {
+  or: [{ release: { not_equals: 'planning' } }, { release: { exists: false } }],
 }
 
-function getVisibility(doc: Settings | null | undefined): Visibility {
-  return doc?.visibility || (doc?.locked === false ? 'public' : 'locked')
-}
-
-function getRelease(doc: Settings | null | undefined): Release {
-  return doc?.release || 'scheduled'
-}
-
-// Content (cover, gallery) available to visitors?
-function contentIsOpen(doc: Settings | null | undefined): boolean {
-  return getRelease(doc) !== 'planning' && getVisibility(doc) !== 'locked'
-}
-
-// Only see cover and gallery when logged in, public or "with link"
+// Cover and gallery: visible when logged in (the collection read access already
+// limits artists/editors to their own exhibitions), public or "with link"
 const onlyWhenUnlocked: FieldAccess = ({ req, doc }) => Boolean(req.user) || contentIsOpen(doc)
 
-type MediaRef = number | string | { id: number | string } | null | undefined
-
-function toId(ref: MediaRef): number | string | null {
-  if (ref === null || ref === undefined) {
-    return null
-  }
-
-  return typeof ref === 'object' ? ref.id : ref
-}
-
-// Sets "locked" on all media of the exhibition:
-// posters → public (except in "planning"), cover + gallery → public
-// for public and link
-async function syncMediaLock(
-  payload: Payload,
-  req: PayloadRequest,
-  doc: Settings & {
-    posters?: MediaRef[] | null
-    frontPage?: MediaRef
-    gallery?: { file?: MediaRef }[] | null
-  },
-) {
-  const updates = new Map<number | string, boolean>()
-  const planning = getRelease(doc) === 'planning'
-
-  for (const poster of doc.posters || []) {
-    const id = toId(poster)
-
-    if (id !== null) {
-      updates.set(id, planning)
-    }
-  }
-
-  const locked = !contentIsOpen(doc)
-  const frontPageId = toId(doc.frontPage)
-
-  if (frontPageId !== null && !updates.has(frontPageId)) {
-    updates.set(frontPageId, locked)
-  }
-
-  for (const row of doc.gallery || []) {
-    const id = toId(row.file)
-
-    if (id !== null && !updates.has(id)) {
-      updates.set(id, locked)
-    }
-  }
-
-  for (const [id, value] of updates) {
-    await payload.update({
-      collection: 'media',
-      id,
-      data: { locked: value },
-      req,
-      overrideAccess: true,
-    })
-  }
-}
+// Media fields only accept media the account may read. "true" adds no filter of its own,
+// but makes Payload validate every chosen id against the read access of the account
+// (otherwise an editor could enter the id of a locked image of another exhibition and
+// make it public through their own exhibition).
+const readableMediaOnly = () => true as const
 
 export const Exhibitions: CollectionConfig = {
   slug: 'exhibitions',
@@ -121,15 +66,34 @@ export const Exhibitions: CollectionConfig = {
     defaultColumns: ['title', 'release', 'date', 'visibility', 'updatedAt'],
   },
   access: {
-    // Visitors do not see exhibitions in "planning" (old entries without the field count as scheduled)
-    read: ({ req }) =>
-      req.user
-        ? true
-        : { or: [{ release: { not_equals: 'planning' } }, { release: { exists: false } }] },
+    // Managers see everything, artists/editors only their own exhibitions (also in the
+    // admin list), visitors everything except "planning". The public pages call the API
+    // without cookies (public/js/data.js), so a login never changes what the site shows.
+    read: async ({ req }) => {
+      if (canManageExhibitions(req.user)) {
+        return true
+      }
+
+      if (req.user) {
+        return idIn(await getAccessibleExhibitionIds(req))
+      }
+
+      return publicWhere
+    },
+    create: ({ req }) => canManageExhibitions(req.user),
+    update: async ({ req }) => {
+      if (canManageExhibitions(req.user)) {
+        return true
+      }
+
+      return req.user ? idIn(await getAccessibleExhibitionIds(req)) : false
+    },
+    delete: ({ req }) => canManageExhibitions(req.user),
   },
   defaultSort: 'date',
   hooks: {
     beforeChange: [
+      auditHook(),
       async ({ data, originalDoc, req }) => {
         // Partial updates lack fields in data; then the stored state applies
         const visibility = getVisibility({
@@ -142,12 +106,12 @@ export const Exhibitions: CollectionConfig = {
         data.locked = visibility !== 'public'
 
         // Bulk upload: append the files as new rows to "gallery", then empty the field
-        const bulk = ((data.bulkMedia as MediaRef[] | undefined) || [])
+        const bulk = ((data.bulkMedia as Ref[] | undefined) || [])
           .map(toId)
           .filter((id): id is number | string => id !== null)
 
         if (bulk.length) {
-          const rows: { file?: MediaRef; name?: string | null; alt?: string | null }[] = [
+          const rows: { file?: Ref; name?: string | null; alt?: string | null }[] = [
             ...(data.gallery ?? originalDoc?.gallery ?? []),
           ]
           const present = new Set(rows.map((row) => String(toId(row.file))))
@@ -182,15 +146,18 @@ export const Exhibitions: CollectionConfig = {
       },
     ],
     afterChange: [
-      async ({ doc, req }) => {
-        await syncMediaLock(req.payload, req, doc)
+      async ({ doc, previousDoc, req }) => {
+        // Media used now and media removed by this change: both may change their lock state
+        clearAccessCache(req)
+        await syncMediaLocks(req, [...mediaIdsOf(doc), ...mediaIdsOf(previousDoc)])
         return doc
       },
     ],
     afterDelete: [
       async ({ doc, req }) => {
-        // Lock the media of a deleted exhibition again
-        await syncMediaLock(req.payload, req, { ...doc, release: 'planning' })
+        // The deleted exhibition no longer counts, its media are locked unless used elsewhere
+        clearAccessCache(req)
+        await syncMediaLocks(req, mediaIdsOf(doc))
         return doc
       },
     ],
@@ -203,6 +170,8 @@ export const Exhibitions: CollectionConfig = {
       required: true,
       unique: true,
       index: true,
+      // Set when creating; changing it later breaks links and printed QR codes
+      access: { update: exhibitionManagersOnlyField },
       admin: {
         description: 'Lowercase letters, numbers and hyphens only, e.g. exhibition-3. Used in the URL.',
       },
@@ -240,6 +209,7 @@ export const Exhibitions: CollectionConfig = {
       name: 'release',
       label: 'Release',
       type: 'select',
+      access: { create: exhibitionManagersOnlyField, update: exhibitionManagersOnlyField },
       // Default as a function: applies in the form, but not as a column default in the database
       defaultValue: () => 'scheduled',
       options: [
@@ -292,6 +262,7 @@ export const Exhibitions: CollectionConfig = {
       name: 'visibility',
       label: 'Visibility',
       type: 'select',
+      access: { create: exhibitionManagersOnlyField, update: exhibitionManagersOnlyField },
       defaultValue: () => 'locked',
       options: [
         { label: 'Locked', value: 'locked' },
@@ -327,6 +298,7 @@ export const Exhibitions: CollectionConfig = {
       label: 'Posters',
       type: 'upload',
       relationTo: 'media',
+      filterOptions: readableMediaOnly,
       hasMany: true,
       admin: {
         description: 'Posters for the home page, Events and Archive. Public, except in the release “Planning”.',
@@ -337,6 +309,7 @@ export const Exhibitions: CollectionConfig = {
       label: 'Cover',
       type: 'upload',
       relationTo: 'media',
+      filterOptions: readableMediaOnly,
       access: { read: onlyWhenUnlocked },
       admin: {
         description: 'Image or video for the slideshow and the Exhibitions list.',
@@ -350,6 +323,7 @@ export const Exhibitions: CollectionConfig = {
       label: 'Add several photos at once',
       type: 'upload',
       relationTo: 'media',
+      filterOptions: readableMediaOnly,
       hasMany: true,
       access: { read: ({ req }) => Boolean(req.user) },
       admin: {
@@ -372,6 +346,7 @@ export const Exhibitions: CollectionConfig = {
           label: 'File',
           type: 'upload',
           relationTo: 'media',
+          filterOptions: readableMediaOnly,
           required: true,
         },
         {
@@ -389,5 +364,6 @@ export const Exhibitions: CollectionConfig = {
         },
       ],
     },
+    ...auditFields(),
   ],
 }
