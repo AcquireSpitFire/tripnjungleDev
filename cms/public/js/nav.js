@@ -1,6 +1,6 @@
-// Navigation: Hamburger-Knopf (drei Striche) rechts oben im Header,
-// darunter klappt das Menü auf. Das Markup wird hier erzeugt, damit es
-// nur an einer Stelle gepflegt wird und auf jeder Seite gleich ist.
+// Navigation: hamburger button (three bars) top right in the header,
+// the menu opens below it. The markup is created here so it is only
+// maintained in one place and is the same on every page.
 
 const MENU_ITEMS = [
   { label: "Home", href: "/" },
@@ -35,7 +35,7 @@ function setupMenu() {
   menu.setAttribute("aria-label", "Main navigation");
   menu.hidden = true;
 
-  // Aktuelle Seite: "/" oder "/exhibitions" … (ohne .html, ohne Query)
+  // Current page: "/" or "/exhibitions" … (without .html, without query)
   const currentPath = location.pathname.replace(/\.html$/, "").replace(/\/$/, "") || "/";
 
   MENU_ITEMS.forEach((item) => {
@@ -66,7 +66,7 @@ function setupMenu() {
     setOpen(menu.hidden);
   });
 
-  // Schließen: Esc, Klick außerhalb des Headers, Klick auf einen Link
+  // Close: Esc, click outside the header, click on a link
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
       setOpen(false);

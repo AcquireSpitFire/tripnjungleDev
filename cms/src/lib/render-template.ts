@@ -1,11 +1,11 @@
-// HTML-Vorlagen aus src/templates mit Meta-Daten füllen.
+// Fill the HTML templates from src/templates with meta data.
 //   {{key}}   → HTML-escaped
-//   {{{key}}} → roh (für JSON-LD)
+//   {{{key}}} → raw (for JSON-LD)
 import fs from 'fs'
 import path from 'path'
 
-// Relativ zum Arbeitsverzeichnis (cms/), weil der gebündelte Code im Build
-// an anderer Stelle liegt als die Quelldatei
+// Relative to the working directory (cms/), because the bundled code lives
+// somewhere else in the build than the source file
 const templatesDir = path.join(process.cwd(), 'src', 'templates')
 const cache = new Map<string, string>()
 
@@ -18,7 +18,7 @@ export function escapeHtml(value: unknown): string {
     .replace(/'/g, '&#39;')
 }
 
-// "</script>" im JSON-LD darf das Script-Tag nicht beenden
+// "</script>" inside the JSON-LD must not end the script tag
 export function jsonForScript(value: unknown): string {
   return JSON.stringify(value).replace(/</g, '\\u003c')
 }
@@ -37,9 +37,9 @@ function readTemplate(name: string): string {
   return html
 }
 
-// Version für /css/ und /js/: ändert sich mit jedem Deploy (Railway setzt den
-// Commit), sonst mit jedem Serverstart. Der Browser cached die Dateien (siehe
-// next.config.ts) und holt nach einem Deploy wegen der neuen URL sofort die neuen.
+// Version for /css/ and /js/: changes with every deploy (Railway sets the
+// commit), otherwise with every server start. The browser caches the files (see
+// next.config.ts) and fetches the new ones right after a deploy because of the new URL.
 const assetVersion = (process.env.RAILWAY_GIT_COMMIT_SHA || Date.now().toString(36)).slice(0, 12)
 
 export function renderTemplate(name: string, values: Record<string, string>): string {
@@ -49,7 +49,7 @@ export function renderTemplate(name: string, values: Record<string, string>): st
     .replace(/((?:href|src)="\/(?:css|js)\/[^"?#]+)"/g, `$1?v=${assetVersion}"`)
 }
 
-// Kürzt eine Beschreibung auf Meta-Länge
+// Shortens a description to meta length
 export function summarize(text: string | null | undefined, max = 160): string {
   const clean = (text || '').replace(/\s+/g, ' ').trim()
 
@@ -60,12 +60,12 @@ export function summarize(text: string | null | undefined, max = 160): string {
   return clean.slice(0, max - 1).replace(/\s+\S*$/, '') + '…'
 }
 
-// Content-Security-Policy für die Frontend-Seiten (nicht für /admin, das hat eigene Regeln).
-// Erlaubt: eigene Skripte/Styles/Bilder, YouTube-Player (API-Skript + iframe), sonst nichts.
-// Inline-Skripte sind nicht erlaubt; das JSON-LD ist ein Datenblock und wird nicht ausgeführt.
+// Content security policy for the frontend pages (not for /admin, which has its own rules).
+// Allowed: own scripts/styles/images, the YouTube player (API script + iframe), nothing else.
+// Inline scripts are not allowed; the JSON-LD is a data block and is not executed.
 function contentSecurityPolicy(): string {
-  // Medien-URLs sind absolut auf PAYLOAD_PUBLIC_SERVER_URL; falls die Seite unter einer
-  // anderen Adresse aufgerufen wird (z. B. Vorschau-Domain), muss diese Origin erlaubt sein
+  // Media URLs are absolute on PAYLOAD_PUBLIC_SERVER_URL; if the page is opened under a
+  // different address (e.g. a preview domain), that origin has to be allowed
   const serverOrigin = (process.env.PAYLOAD_PUBLIC_SERVER_URL || '').replace(/\/$/, '')
   const self = ["'self'", serverOrigin].filter(Boolean).join(' ')
 

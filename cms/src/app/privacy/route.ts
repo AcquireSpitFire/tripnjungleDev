@@ -1,4 +1,4 @@
-// "/privacy": Datenschutzerklärung aus Admin → Site settings → Privacy
+// "/privacy": privacy policy from Admin → Site settings → Privacy
 import { renderStaticPage } from '@/lib/static-page'
 import { SITE_NAME } from '@/lib/seo'
 import { formatDate, mailLink, paragraphs, required, urlLink } from '@/lib/site'

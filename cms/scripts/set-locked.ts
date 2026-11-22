@@ -1,6 +1,6 @@
-// Sperrt oder entsperrt eine Ausstellung ohne Admin-Oberfläche (z. B. zum Testen):
+// Locks or unlocks an exhibition without the admin UI (e.g. for testing):
 //   cd cms && npx tsx --env-file=.env scripts/set-locked.ts exhibition-2 true
-// Gibt danach aus, welche Medien gesperrt sind.
+// Prints which media are locked afterwards.
 import { getPayload } from 'payload'
 
 import config from '../src/payload.config'
@@ -9,7 +9,7 @@ async function run() {
   const [slug, value] = process.argv.slice(2)
 
   if (!slug || !['true', 'false'].includes(value)) {
-    console.error('Aufruf: tsx --env-file=.env scripts/set-locked.ts <slug> <true|false>')
+    console.error('Usage: tsx --env-file=.env scripts/set-locked.ts <slug> <true|false>')
     process.exit(1)
   }
 
@@ -22,7 +22,7 @@ async function run() {
   const doc = found.docs[0]
 
   if (!doc) {
-    console.error('Nicht gefunden: ' + slug)
+    console.error('Not found: ' + slug)
     process.exit(1)
   }
 

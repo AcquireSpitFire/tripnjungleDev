@@ -1,6 +1,6 @@
-// /exhibition/<id>: liefert src/templates/exhibition.html mit Titel, Beschreibung,
-// Vorschaubild und JSON-LD der Ausstellung. Den Inhalt rendert weiterhin
-// public/js/exhibition.js im Browser (aus sessionStorage oder der API).
+// /exhibition/<id>: serves src/templates/exhibition.html with title, description,
+// preview image and JSON-LD of the exhibition. The content is still rendered by
+// public/js/exhibition.js in the browser (from sessionStorage or the API).
 import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 
@@ -63,7 +63,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
   }
 
   const locked = exhibition.locked !== false
-  // "Gesperrt mit Link": Seite wird ausgeliefert, soll aber nirgends auftauchen
+  // "Locked with link": the page is served, but should not show up anywhere
   const linkOnly = exhibition.visibility === 'link'
   const canonical = base + '/exhibition/' + encodeURIComponent(exhibition.slug)
   const poster = asMedia(exhibition.posters?.[0])
@@ -78,13 +78,13 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
   const graph: Record<string, unknown>[] = []
 
   if (!locked) {
-    const images = (exhibition.medien || [])
+    const images = (exhibition.gallery || [])
       .map((row) => absolute(base, imageUrl(asMedia(row.file), 'large')))
       .filter(Boolean)
 
     graph.push({
       '@type': 'ImageGallery',
-      name: exhibition.titel,
+      name: exhibition.title,
       description: description || undefined,
       url: canonical,
       image: images,
@@ -104,7 +104,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
   return htmlResponse(
     renderTemplate('exhibition.html', {
       ...common,
-      title: `${exhibition.titel}${exhibition.theme ? ' – ' + exhibition.theme : ''} – ${SITE_NAME}`,
+      title: `${exhibition.title}${exhibition.theme ? ' – ' + exhibition.theme : ''} – ${SITE_NAME}`,
       description,
       canonical,
       ogImage,

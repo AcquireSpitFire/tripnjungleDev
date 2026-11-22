@@ -1,24 +1,24 @@
 import type { CollectionConfig } from 'payload'
 
-// Bilder, Videos und Poster.
+// Images, videos and posters.
 //
-// Beim Upload entstehen drei WebP-Größen (das Original bleibt erhalten):
-//   thumb   600 px breit            Admin, Karten, Handy
-//   medium  1280 px längste Seite   Slideshow, Galerie, Poster in Listen
-//   large   2560 px längste Seite   Vollbild, Poster über der Slideshow (4K-Desktop)
-// Kleinere Originale werden nie vergrößert.
+// On upload three WebP sizes are created (the original is kept):
+//   thumb   600 px wide             admin, cards, phones
+//   medium  1280 px longest side    slideshow, gallery, posters in lists
+//   large   2560 px longest side    fullscreen, poster above the slideshow (4K desktop)
+// Smaller originals are never enlarged.
 //
-// "locked" wird nicht von Hand gesetzt, sondern vom Hook der Ausstellungen:
-// Poster sind immer öffentlich, Deckblatt und Medien einer Ausstellung sind
-// genau dann öffentlich, wenn die Ausstellung freigeschaltet ist.
-// Ohne Login liefert die API (und die Datei-Route /api/media/file/…)
-// nur Medien mit locked: false. Neue Uploads sind gesperrt, bis eine
-// Ausstellung sie verwendet.
+// "locked" is not set by hand but by the exhibitions hook:
+// posters are always public, cover and gallery of an exhibition are public
+// exactly when the exhibition is unlocked.
+// Without login the API (and the file route /api/media/file/…) only
+// returns media with locked: false. New uploads are locked until an
+// exhibition uses them.
 export const Media: CollectionConfig = {
   slug: 'media',
   labels: {
     singular: 'Medium',
-    plural: 'Medien',
+    plural: 'Media',
   },
   admin: {
     useAsTitle: 'filename',
@@ -28,10 +28,10 @@ export const Media: CollectionConfig = {
     read: ({ req }) => (req.user ? true : { locked: { equals: false } }),
   },
   upload: {
-    // Ablageort der Dateien; beim Hosting auf ein persistentes Volume zeigen (MEDIA_DIR)
+    // Where the files are stored; when hosting, point it at a persistent volume (MEDIA_DIR)
     staticDir: process.env.MEDIA_DIR || 'media',
-    // Nur echte Foto-/Videoformate. Kein SVG: SVG kann Skripte enthalten und würde
-    // von derselben Origin ausgeliefert (Stored XSS bei kompromittiertem Admin-Konto).
+    // Only real photo/video formats. No SVG: SVG can contain scripts and would be
+    // served from the same origin (stored XSS with a compromised admin account).
     mimeTypes: [
       'image/jpeg',
       'image/png',
@@ -71,15 +71,15 @@ export const Media: CollectionConfig = {
   fields: [
     {
       name: 'alt',
-      label: 'Alt-Text',
+      label: 'Alt text',
       type: 'text',
       admin: {
-        description: 'Kurze Bildbeschreibung (Barrierefreiheit, SEO).',
+        description: 'Short image description (accessibility, SEO).',
       },
     },
     {
       name: 'name',
-      label: 'Name / Bildunterschrift',
+      label: 'Name / caption',
       type: 'text',
     },
     {
@@ -88,7 +88,7 @@ export const Media: CollectionConfig = {
       defaultValue: true,
       admin: {
         readOnly: true,
-        description: 'Wird automatisch von der Ausstellung gesetzt.',
+        description: 'Set automatically by the exhibition.',
       },
     },
   ],

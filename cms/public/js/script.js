@@ -1,8 +1,8 @@
-// Startseite. Die Ausstellungen werden über data.js geladen:
-// jede freigeschaltete Ausstellung ist ein Slide mit ihrem Deckblatt.
-// Gibt es eine kommende Ausstellung mit Poster, steht ihr Poster über der
-// Slideshow, alle weiteren kommenden Poster darunter.
-// Klicks auf Poster mit Video fängt intro.js ab, Slides führen direkt zur Ausstellung.
+// Home page. The exhibitions are loaded via data.js:
+// every public exhibition is a slide with its cover.
+// If there is an upcoming exhibition with a poster, its poster sits above
+// the slideshow, all other upcoming posters below it.
+// Clicks on posters with a video are caught by intro.js, slides lead straight to the exhibition.
 let slides = [];
 
 let currentSlide = 0;
@@ -17,34 +17,34 @@ function showSlide(index) {
   currentSlide = (index + slides.length) % slides.length;
 
   const exhibition = slides[currentSlide];
-  const front_page = exhibition.front_page;
+  const frontPage = exhibition.frontPage;
   const link = getExhibitionLink(exhibition);
 
   slideContent.innerHTML = "";
 
-  if (front_page?.type === "image") {
-    // Das ganze Bild ist ein Link zur Ausstellung
+  if (frontPage?.type === "image") {
+    // The whole image is a link to the exhibition
     const anchor = document.createElement("a");
     anchor.href = link;
 
     const image = document.createElement("img");
 
-    setImageSources(image, front_page, {
+    setImageSources(image, frontPage, {
       size: "medium",
       sizes: "(max-width: 600px) 100vw, min(1200px, 90vw)",
       priority: index === 0,
     });
-    image.alt = front_page.alt || exhibition.titel;
+    image.alt = frontPage.alt || exhibition.title;
 
     anchor.appendChild(image);
     slideContent.appendChild(anchor);
     startTimer(5000);
   }
 
-  if (front_page?.type === "video") {
+  if (frontPage?.type === "video") {
     const video = document.createElement("video");
 
-    video.src = front_page.src;
+    video.src = frontPage.src;
     video.controls = true;
     video.autoplay = true;
     video.muted = true;
@@ -52,18 +52,18 @@ function showSlide(index) {
 
     slideContent.appendChild(video);
 
-    // Nach dem Ende des Videos zum nächsten Slide wechseln
+    // Move to the next slide when the video ends
     video.addEventListener("ended", nextSlide);
-  } else if (!front_page) {
+  } else if (!frontPage) {
     startTimer(5000);
   }
 
-  // Titel als Link unter jedem Slide (bei Videos der einzige Link,
-  // weil die Video-Steuerung Klicks auf das Video selbst abfängt)
+  // Title as a link below every slide (for videos the only link,
+  // because the video controls catch clicks on the video itself)
   const titleLink = document.createElement("a");
   titleLink.href = link;
   titleLink.className = "slide_link";
-  titleLink.textContent = exhibition.titel + " – view exhibition ›";
+  titleLink.textContent = exhibition.title + " – view exhibition ›";
   slideContent.appendChild(titleLink);
 
   updateDots();
@@ -77,7 +77,7 @@ function previousSlide() {
   showSlide(currentSlide - 1);
 }
 
-// Wischen nach links = nächster Slide, nach rechts = vorheriger Slide
+// Swipe left = next slide, swipe right = previous slide
 function setupSwipe() {
   let startX = 0;
   let startY = 0;
@@ -91,7 +91,7 @@ function setupSwipe() {
     const deltaX = event.changedTouches[0].clientX - startX;
     const deltaY = event.changedTouches[0].clientY - startY;
 
-    // Nur deutliche, eher waagrechte Wischer zählen (kein Scrollen, kein Tippen)
+    // Only clear, mostly horizontal swipes count (no scrolling, no tapping)
     if (Math.abs(deltaX) < 50 || Math.abs(deltaX) < Math.abs(deltaY)) {
       return;
     }
@@ -104,11 +104,11 @@ function setupSwipe() {
   });
 }
 
-// Pfeiltaste rechts = nächster Slide, links = vorheriger Slide
+// Arrow right = next slide, arrow left = previous slide
 function setupKeys() {
   document.addEventListener("keydown", (event) => {
-    // Ein Video mit Fokus nutzt die Pfeiltasten selbst zum Spulen,
-    // und solange das Intro offen ist, bleibt die Slideshow stehen
+    // A focused video uses the arrow keys itself for seeking,
+    // and while the intro is open the slideshow stays put
     if (event.target.tagName === "VIDEO" || document.getElementById("intro")) {
       return;
     }
@@ -126,7 +126,7 @@ function startTimer(duration) {
   timer = setTimeout(nextSlide, duration);
 }
 
-// Für intro.js: Slideshow anhalten, solange das Intro-Video läuft
+// For intro.js: pause the slideshow while the intro video plays
 window.pauseSlideshow = () => {
   clearTimeout(timer);
   slideContent.querySelector("video")?.pause();
@@ -167,10 +167,10 @@ function updateDots() {
   });
 }
 
-// ---------- Poster ----------
+// ---------- Posters ----------
 
-// Die Ausstellung mit dem frühesten Datum ab heute,
-// bei gleichem Datum die mit der geringsten Nummer
+// The exhibition with the earliest date from today on,
+// on the same date the one with the lowest number
 function findNextExhibition(exhibitions) {
   const today = getToday();
 
@@ -182,9 +182,9 @@ function findNextExhibition(exhibitions) {
   return upcoming[0];
 }
 
-// Das Poster nimmt den Platz der Slideshow ein, die Slideshow rutscht
-// darunter. Die Seite passt dann nicht mehr auf einen Bildschirm und scrollt.
-// Das Poster ist das wichtigste Bild der Seite: große Version, hohe Priorität.
+// The poster takes the place of the slideshow, the slideshow moves below it.
+// The page then no longer fits on one screen and scrolls.
+// The poster is the most important image of the page: large version, high priority.
 function showPoster(exhibition) {
   posterContainer.appendChild(
     createPosterElement(exhibition, exhibition.posters[0], {
@@ -197,8 +197,8 @@ function showPoster(exhibition) {
   document.documentElement.classList.replace("fit", "has_poster");
 }
 
-// Alle kommenden Poster unter der Slideshow, nach Datum sortiert.
-// Das Poster, das schon oben über der Slideshow steht, wird ausgelassen.
+// All upcoming posters below the slideshow, sorted by date.
+// The poster already shown above the slideshow is skipped.
 function showUpcomingPosters(exhibitions, shownPoster) {
   const container = document.getElementById("upcoming_posters");
   const today = getToday();
@@ -220,7 +220,7 @@ function showUpcomingPosters(exhibitions, shownPoster) {
       const caption = document.createElement("p");
 
       caption.className = "upcoming_caption";
-      caption.textContent = exhibition.titel + " · " + formatDate(exhibition);
+      caption.textContent = exhibition.title + " · " + formatDate(exhibition);
 
       element.appendChild(caption);
       container.appendChild(element);
@@ -230,7 +230,7 @@ function showUpcomingPosters(exhibitions, shownPoster) {
   container.hidden = container.childElementCount === 0;
 }
 
-// ---------- Laden ----------
+// ---------- Loading ----------
 
 async function start() {
   let exhibitions;
@@ -248,7 +248,7 @@ async function start() {
     return;
   }
 
-  // Poster vor der Slideshow einsetzen, damit nichts sichtbar springt
+  // Insert the poster before the slideshow so nothing visibly jumps
   const nextExhibition = findNextExhibition(exhibitions);
 
   if (nextExhibition) {
@@ -257,8 +257,8 @@ async function start() {
 
   showUpcomingPosters(exhibitions, nextExhibition?.posters[0]);
 
-  // In der Slideshow nur freigeschaltete Ausstellungen: gesperrte sind
-  // über ihr Poster sichtbar, ihr Deckblatt soll noch nicht zu sehen sein
+  // Only public exhibitions in the slideshow: locked ones are visible
+  // through their poster, their cover should not be seen yet
   slides = exhibitions
     .filter((exhibition) => !isLocked(exhibition))
     .map(resolveFrontPage);

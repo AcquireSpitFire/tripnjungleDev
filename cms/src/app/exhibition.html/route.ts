@@ -1,5 +1,5 @@
-// Alte Links /exhibition.html?id=<id> dauerhaft auf /exhibition/<id> umleiten
-// (als Route Handler, damit der Query-Parameter nicht mit umgeleitet wird)
+// Permanently redirect old links /exhibition.html?id=<id> to /exhibition/<id>
+// (as a route handler so the query parameter is not carried over)
 export const dynamic = 'force-dynamic'
 
 export function GET(request: Request) {

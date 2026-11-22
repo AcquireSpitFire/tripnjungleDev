@@ -1,126 +1,133 @@
 # Tripnjungle CMS
 
-Payload 3 (Admin + REST-API) mit SQLite, Next.js liefert das Frontend aus. Die Seite
-startet leer: alle Ausstellungen, Poster, Fotos und Videos kommen über das Admin-Panel.
+Payload 3 (admin + REST API) with SQLite; Next.js serves the frontend. The site starts empty:
+all exhibitions, posters, photos and videos come from the admin panel.
 
-## Lokal starten
+## Running locally
 
 ```
 cd cms
-cp .env.example .env        # PAYLOAD_SECRET eintragen
+cp .env.example .env        # fill in PAYLOAD_SECRET
 npm install
 npm run dev
 ```
 
 - Frontend: http://localhost:3000/
-- Admin: http://localhost:3000/admin (beim ersten Aufruf Admin-Nutzer anlegen)
+- Admin: http://localhost:3000/admin (create the admin user on the first visit)
 
-## Inhalte pflegen
+## Managing content
 
-Im Admin unter **Ausstellungen**:
+In the admin under **Exhibitions**:
 
-- Neue Ausstellung: ID (wird Teil der URL, z. B. `brasil-1` → `/exhibition/brasil-1`), Titel, Thema,
-  Beschreibung, Datum, Uhrzeit, Ort, Intro-Video (YouTube), Poster, Deckblatt, Bilder und Videos.
-- Nachträglich Fotos/Videos/Poster hinzufügen, umsortieren (Drag & Drop) oder entfernen.
-- **Mehrere Fotos auf einmal**: im Feld „Mehrere Fotos auf einmal hinzufügen“ auf „Create New“, alle
-  Dateien zusammen ablegen (10, 20 oder mehr) und ohne Einträge speichern. Nach dem Speichern der
-  Ausstellung stehen sie als neue Zeilen am Ende von „Bilder und Videos“. Bilder ohne Namen werden
-  ohne Beschriftung angezeigt.
+- New exhibition: ID (becomes part of the URL, e.g. `brasil-1` → `/exhibition/brasil-1`), title, theme,
+  description, date, time, location, intro video (YouTube), posters, cover, images and videos.
+- Add, reorder (drag & drop) or remove photos/videos/posters at any time.
+- **Several photos at once**: in the field “Add several photos at once” choose “Create New”, drop all
+  files together (10, 20 or more) and save without adding rows. After saving the exhibition they appear
+  as new rows at the end of “Images and videos”. Images without a name are shown without a caption.
 - **Release**:
-  - *Datum*: erscheint unter Events, nach dem Datum im Archive.
-  - *Coming soon*: ohne Datum, steht immer am Ende der Events und der Poster auf der Startseite.
-  - *Planning*: schon angelegt und hochgeladen, für Besucher aber nirgends sichtbar (auch Poster nicht).
-- **Sichtbarkeit**:
-  - *Gesperrt* (Standard): Poster und Details sind öffentlich (Events, Startseite), die Ausstellung
-    selbst nicht; ihre Dateien sind nicht abrufbar.
-  - *Gesperrt mit Link*: wie gesperrt, aber wer die Adresse `/exhibition/<ID>` kennt, sieht die
-    Ausstellung. Sie fehlt in Slideshow, Exhibitions-Liste und Sitemap und wird nicht indexiert.
-    Kein Passwortschutz: die ID ist erratbar, also nur für unkritische Vorab-Ansichten nutzen.
-  - *Freigeschaltet*: für alle sichtbar, auch in Slideshow, Exhibitions-Liste und Sitemap.
-- Bilder werden beim Upload in drei WebP-Größen (600/1280/2560 px) abgelegt, das Original bleibt.
-- Erlaubte Dateitypen: JPEG, PNG, WebP, AVIF, GIF, MP4, WebM, MOV. Kein SVG, kein HEIC
-  (iPhone-Fotos vorher als JPEG exportieren).
+  - *Date*: listed under Events, in the Archive after the date.
+  - *Coming soon*: no date, always at the end of the events and the posters on the home page.
+  - *Planning*: already created and uploaded, but not visible to visitors anywhere (posters neither).
+- **Visibility**:
+  - *Locked* (default): posters and details are public (Events, home page), the exhibition itself is
+    not; its files cannot be fetched.
+  - *Locked with link*: like locked, but whoever knows the address `/exhibition/<ID>` sees the
+    exhibition. It is missing from the slideshow, the Exhibitions list and the sitemap and is not indexed.
+    No password protection: the ID can be guessed, so only use it for uncritical previews.
+  - *Public*: visible to everyone, also in the slideshow, the Exhibitions list and the sitemap.
+- Images are stored in three WebP sizes on upload (600/1280/2560 px); the original is kept.
+- Allowed file types: JPEG, PNG, WebP, AVIF, GIF, MP4, WebM, MOV. No SVG, no HEIC
+  (export iPhone photos as JPEG first).
 
-## Site settings (About, Impressum, Datenschutz)
+## Site settings (About, legal notice, privacy)
 
-Im Admin unter **Site settings** (Globals), vor dem Livegang komplett ausfüllen:
+In the admin under **Site settings** (globals); fill in everything before going live:
 
-- **About**: Seitenbeschreibung für Suchmaschinen, About-Text (Leerzeile = Absatz), Kontakt-Mail.
-- **Legal notice**: Land (Deutschland/Österreich, steuert die Gesetzesangaben), Name, Anschrift,
-  E-Mail, Telefon, ggf. Rechtsform/Register/UID, Verantwortlicher nach § 18 MStV (nur DE).
-- **Privacy**: Hoster (Name, Adresse, Serverstandort, Sitz außerhalb der EU ja/nein, Link zu dessen
-  Datenschutzerklärung), optionaler Zusatztext.
+- **About**: site description for search engines, About text (blank line = paragraph), contact e-mail.
+- **Legal notice**: country (Germany/Austria, controls the legal references), name, address,
+  e-mail, phone, legal form/register/VAT ID if applicable, person responsible under § 18 MStV (Germany only).
+- **Privacy**: hosting provider (name, address, server location, based outside the EU yes/no, link to
+  its privacy policy), optional additional text.
 
-Die Seiten `/imprint` und `/privacy` entstehen daraus; sie sind im Footer jeder Seite verlinkt.
-Fehlende Angaben erscheinen auf der Seite gelb markiert, damit nichts leer live geht.
+The pages `/imprint` and `/privacy` are generated from it; they are linked in the footer of every page.
+Missing details are highlighted in yellow on the page so nothing goes live empty.
 
-**YouTube-Zustimmung:** Videos werden erst nach einem Klick auf „Play video“ geladen (Hinweiskarte mit
-Link zur Datenschutzerklärung, Zwei-Klick-Lösung). Die Entscheidung wird im Browser gemerkt; erst dann
-wird die YouTube-API im Hintergrund vorgeladen. Auf `/privacy` gibt es einen Knopf zum Zurücksetzen.
-Dadurch braucht die Seite kein Cookie-Banner: YouTube ist der einzige Drittanbieter, das Admin-Cookie
-ist technisch notwendig.
+**YouTube consent:** videos are only loaded after a click on “Play video” (notice card with a link to the
+privacy policy, two-click solution). The decision is remembered in the browser; only then is the YouTube
+API preloaded in the background. `/privacy` has a button to reset it. That is why the site needs no cookie
+banner: YouTube is the only third party, the admin cookie is technically necessary.
 
 ## Hosting (Railway)
 
-Einmalige Einrichtung, etwa eine Stunde. Alles Weitere passiert danach im Admin.
+One-time setup, about an hour. Everything else happens in the admin afterwards.
 
-1. Alles committen und zu GitHub pushen (`.env`, `*.db` und `media/` bleiben per .gitignore draußen).
-2. Auf railway.com anmelden, **New Project → Deploy from GitHub repo**, dieses Repo wählen.
-3. Im Service unter **Settings**:
-   - **Root Directory: `cms`** (sonst findet Railway kein package.json)
-   - **Region: Europe** (Amsterdam). Dann bleiben die Daten in der EU.
-   - Build und Start übernimmt `cms/railway.json` (`npm run build`, `npm start`, Healthcheck `/robots.txt`).
-4. **Volume** anlegen (rechte Maustaste auf den Service → Attach Volume), Mount Path **`/data`**.
-   Dort liegen Datenbank und Medien; ohne Volume ist nach jedem Deploy alles weg.
-5. Unter **Variables** eintragen:
-   - `PAYLOAD_SECRET` – langer Zufallsstring, z. B. aus `openssl rand -hex 32`; nie weitergeben
+1. Commit everything and push it to GitHub (`.env`, `*.db` and `media/` stay out via .gitignore).
+2. Sign in at railway.com, **New Project → Deploy from GitHub repo**, pick this repo.
+3. In the service under **Settings**:
+   - **Root Directory: `cms`** (otherwise Railway finds no package.json)
+   - **Region: Europe** (Amsterdam). The data then stays in the EU.
+   - Build and start come from `cms/railway.json` (`npm run build`, `npm start`, health check `/robots.txt`).
+4. Create a **volume** (right-click the service → Attach Volume), mount path **`/data`**.
+   Database and media live there; without a volume everything is gone after every deploy.
+5. Under **Variables** set:
+   - `PAYLOAD_SECRET` – long random string, e.g. from `openssl rand -hex 32`; never share it
    - `DATABASE_URI=file:/data/tripnjungle.db`
    - `MEDIA_DIR=/data/media`
-   - `PAYLOAD_PUBLIC_SERVER_URL=https://deine-domain.de` (ohne Schrägstrich am Ende; bis die Domain
-     steht, die von Railway erzeugte `https://….up.railway.app`-Adresse eintragen)
-6. **Settings → Networking → Custom Domain**: Domain eintragen, den angezeigten CNAME beim Registrar
-   setzen. HTTPS richtet Railway automatisch ein. Danach `PAYLOAD_PUBLIC_SERVER_URL` auf die Domain
-   ändern (löst einen Neustart aus).
-7. Nach dem ersten erfolgreichen Deploy **sofort** `https://deine-domain.de/admin` öffnen und den
-   Admin-Nutzer anlegen. Wer das zuerst tut, ist Admin. Starkes Passwort.
-8. **Site settings** ausfüllen. Für die Datenschutzerklärung unter Privacy:
-   - Hosting provider: `Railway Corporation`, Adresse laut Impressum/Terms auf railway.com
+   - `PAYLOAD_PUBLIC_SERVER_URL=https://your-domain.com` (no trailing slash; until the domain is set up,
+     use the `https://….up.railway.app` address generated by Railway)
+6. **Settings → Networking → Custom Domain**: enter the domain and set the CNAME shown at your registrar.
+   Railway sets up HTTPS automatically. Then change `PAYLOAD_PUBLIC_SERVER_URL` to the domain
+   (triggers a restart).
+7. Right after the first successful deploy, open `https://your-domain.com/admin` **immediately** and
+   create the admin user. Whoever does that first is admin. Use a strong password.
+8. Fill in the **Site settings**. For the privacy policy under Privacy:
+   - Hosting provider: `Railway Corporation`, address as in the imprint/terms on railway.com
    - Server location: `Amsterdam, Netherlands (EU)`
-   - Haken **„outside the EU/EEA“ setzen** (US-Unternehmen, auch wenn der Server in der EU steht)
-   - Link zur Datenschutzerklärung von Railway (railway.com/legal/privacy)
-   - Den Auftragsverarbeitungsvertrag (DPA) von Railway unter railway.com/legal akzeptieren bzw. ablegen.
-9. Prüfen: Startseite, `/robots.txt` und `/sitemap.xml` zeigen die Domain, `/imprint` und
-   `/privacy` ohne gelbe Markierungen, ein Testposter hochladen, Video-Hinweis und Player testen.
-10. Domain in der Google Search Console anmelden, Sitemap `https://deine-domain.de/sitemap.xml` eintragen.
+   - **Tick “outside the EU/EEA”** (US company, even though the server is in the EU)
+   - Link to Railway's privacy policy (railway.com/legal/privacy)
+   - Accept or file Railway's data processing agreement (DPA) under railway.com/legal.
+9. Check: home page, `/robots.txt` and `/sitemap.xml` show the domain, `/imprint` and `/privacy`
+   without yellow highlights, upload a test poster, test the video notice and the player.
+10. Register the domain in Google Search Console and submit the sitemap `https://your-domain.com/sitemap.xml`.
 
-Jeder weitere Push auf den verbundenen Branch löst automatisch Build und Deploy aus. `npm start` führt
-zuerst die Datenbank-Migrationen aus (`src/migrations`) und startet dann den Server.
+Every further push to the connected branch triggers a build and deploy automatically. `npm start` first
+runs the database migrations (`src/migrations`) and then starts the server.
 
-**Backup:** Railway sichert Volumes nicht automatisch dauerhaft. Unter Volume → Backups lassen sich
-tägliche Snapshots aktivieren (kostenpflichtig). Zusätzlich gelegentlich `tripnjungle.db` und `media/`
-aus dem Volume herunterladen (Railway CLI: `railway ssh` bzw. Volume-Download).
+**Backup:** Railway does not keep permanent volume backups automatically. Daily snapshots can be enabled
+under Volume → Backups (paid). In addition, download `tripnjungle.db` and `media/` from the volume now
+and then (Railway CLI: `railway ssh` or volume download).
 
-**Kosten:** Hobby-Plan etwa 5 USD/Monat inklusive Guthaben; die Seite verbraucht davon wenig.
+**Cost:** Hobby plan about 5 USD/month including credit; the site uses little of it.
 
-Für einen eigenen Server (VPS) gilt dasselbe: Node 24, `.env` wie oben, `npm ci && npm run build`,
-`npm start` unter PM2/systemd, Caddy oder nginx als HTTPS-Proxy davor.
+For your own server (VPS) the same applies: Node 24, `.env` as above, `npm ci && npm run build`,
+`npm start` under PM2/systemd, Caddy or nginx as HTTPS proxy in front.
 
-## Schema ändern
+## Changing the schema
 
-Nach Änderungen an den Collections: `npm run migrate:create` erzeugt eine neue Migration in
-`src/migrations`; sie läuft beim nächsten `npm start` automatisch. Lokal (`npm run dev`) wird das
-Schema direkt angepasst.
+After changes to the collections: `npm run migrate:create` creates a new migration in
+`src/migrations`; it runs automatically on the next `npm start`. Locally (`npm run dev`) the schema is
+adjusted directly.
 
-## Dateien
+**Renames** (a field or array gets a new name): `migrate:create` asks in the terminal whether a table or
+column was renamed or newly created and cannot run without an interactive terminal; if it treats it as
+new, the data is lost. In that case write the migration by hand with `ALTER TABLE … RENAME …` and create
+the schema snapshot with
+`PAYLOAD_MIGRATING=true npx tsx --env-file=.env scripts/write-schema-snapshot.ts <yyyymmdd_hhmmss_name>`
+(example: `src/migrations/20261123_000000_english_field_names.ts`). Back up the database first and test
+the migration on a copy.
 
-- `src/collections/Exhibitions.ts` – Felder, Zugriff, Hook, der `locked` auf die Medien überträgt
-- `src/collections/Media.ts` – Uploads (`MEDIA_DIR`), Bildgrößen, öffentlich nur mit `locked: false`
-- `src/globals/Site.ts` – Site settings (About, Impressum, Datenschutz); `src/lib/site.ts` bereitet sie für die Vorlagen auf
-- `src/templates/*.html` – die Seiten; `src/app/**/route.ts` liefert sie mit Titel, Beschreibung,
-  Open Graph und JSON-LD aus (`/`, `/exhibitions`, `/events`, `/archive`, `/about`, `/imprint`, `/privacy`, `/exhibition/<id>`)
+## Files
+
+- `src/collections/Exhibitions.ts` – fields, access, the hook that transfers `locked` to the media
+- `src/collections/Media.ts` – uploads (`MEDIA_DIR`), image sizes, public only with `locked: false`
+- `src/globals/Site.ts` – Site settings (About, legal notice, privacy); `src/lib/site.ts` prepares them for the templates
+- `src/templates/*.html` – the pages; `src/app/**/route.ts` serves them with title, description,
+  Open Graph and JSON-LD (`/`, `/exhibitions`, `/events`, `/archive`, `/about`, `/imprint`, `/privacy`, `/exhibition/<id>`)
 - `src/app/sitemap.xml`, `src/app/robots.txt` – SEO
-- `src/migrations/` – Datenbank-Migrationen für die Produktion
-- `public/` – CSS, JS, Favicon, OG-Bild; `public/js/data.js` spricht die API an und wählt die Bildgröße
-- `scripts/regenerate-sizes.ts` – Bildgrößen für vorhandene Medien neu erzeugen (`npm run media:regenerate`)
-- `scripts/set-locked.ts` – Ausstellung per Kommandozeile sperren/entsperren (zum Testen)
-- `tripnjungle.db`, `media/`, `.env` – lokal, nicht im Git
+- `src/migrations/` – database migrations for production
+- `public/` – CSS, JS, favicon, OG image; `public/js/data.js` talks to the API and picks the image size
+- `scripts/regenerate-sizes.ts` – regenerate image sizes for existing media (`npm run media:regenerate`)
+- `scripts/set-locked.ts` – lock/unlock an exhibition from the command line (for testing)
+- `scripts/write-schema-snapshot.ts` – schema snapshot for hand-written migrations (see above)
+- `tripnjungle.db`, `media/`, `.env` – local, not in git

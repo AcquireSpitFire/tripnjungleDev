@@ -14,11 +14,11 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  // Die Seiten liegen als Vorlagen in src/templates und werden von Route Handlern
-  // (src/app/**/route.ts) mit Meta-Daten ausgeliefert; public/ enthält nur CSS, JS, Bilder.
+  // The pages live as templates in src/templates and are served with meta data by
+  // route handlers (src/app/**/route.ts); public/ only contains CSS, JS and images.
   async redirects() {
     return [
-      // Alte Links weiterleiten (/exhibition.html?id=… erledigt src/app/exhibition.html/route.ts)
+      // Redirect old links (/exhibition.html?id=… is handled by src/app/exhibition.html/route.ts)
       { source: '/events.html', destination: '/events', permanent: true },
       { source: '/exhibitions.html', destination: '/exhibitions', permanent: true },
       { source: '/archive.html', destination: '/archive', permanent: true },
@@ -29,7 +29,7 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        // Sicherheits-Header für alle Antworten
+        // Security headers for all responses
         source: '/:path*',
         headers: [
           { key: 'X-Content-Type-Options', value: 'nosniff' },
@@ -40,8 +40,8 @@ const nextConfig: NextConfig = {
         ],
       },
       {
-        // Mediendateien ändern sich unter einer URL nicht (neue Datei = neuer Name).
-        // "sandbox": selbst wenn eine Datei Skripte enthielte, dürfte sie nichts ausführen.
+        // Media files never change under one URL (new file = new name).
+        // "sandbox": even if a file contained scripts, it could not run anything.
         source: '/api/media/file/:path*',
         headers: [
           { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },

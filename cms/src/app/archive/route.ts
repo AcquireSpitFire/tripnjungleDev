@@ -1,4 +1,4 @@
-// "/archive" – Poster vergangener Ausstellungen
+// "/archive" – posters of past exhibitions
 import { renderStaticPage } from '@/lib/static-page'
 import { SITE_NAME } from '@/lib/seo'
 

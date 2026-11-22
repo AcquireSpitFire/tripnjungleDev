@@ -1,27 +1,27 @@
-// Intro-Video vor einer Ausstellung.
+// Intro video before an exhibition.
 //
-// Nur Links mit data-intro (Poster, siehe createPosterElement in data.js)
-// werden abgefangen. Statt direkt zur Ausstellung zu springen, öffnet sich
-// ein Overlay mit dem YouTube-Video der Ausstellung (Feld "video").
-// Darunter steht der Knopf „Continue to exhibition“. Ist das Video zu Ende,
-// geht es automatisch weiter. Slides, Karten und Textlinks führen direkt
-// zur Ausstellung.
+// Only links with data-intro (posters, see createPosterElement in data.js)
+// are intercepted. Instead of jumping straight to the exhibition, an
+// overlay opens with the YouTube video of the exhibition (field "video").
+// Below it is the "Continue to exhibition" button. When the video ends,
+// it continues automatically. Slides, cards and text links lead straight
+// to the exhibition.
 //
-// Datenschutz: Vor dem ersten Kontakt zu YouTube/Google muss der Besucher
-// zustimmen (Hinweiskarte im Overlay, siehe createYouTubeNotice in data.js).
-// Die Zustimmung wird im Browser gemerkt. Erst mit gespeicherter Zustimmung
-// wird die YouTube-API im Leerlauf bzw. beim Berühren eines Posters vorgeladen.
+// Privacy: before the first contact with YouTube/Google the visitor has to
+// agree (notice card in the overlay, see createYouTubeNotice in data.js).
+// The consent is remembered in the browser. Only with stored consent is
+// the YouTube API preloaded while idle or when touching a poster.
 //
-// Schnell: Sobald das Overlay offen ist, werden die Daten und ersten Bilder
-// der Ausstellung (eigener Server) vorgeladen, sodass die Ausstellungsseite
-// danach sofort da ist.
+// Fast: as soon as the overlay is open, the data and first images of the
+// exhibition (own server) are preloaded, so the exhibition page is there
+// immediately afterwards.
 //
-// Warum ein Overlay und keine eigene Seite: Browser erlauben Autoplay mit
-// Ton nur nach einem Klick auf derselben Seite. Der Klick auf das Poster
-// ist dieser Klick; eine neue Seite hätte ihn nicht, das Intro liefe stumm.
+// Why an overlay and not a separate page: browsers only allow autoplay with
+// sound after a click on the same page. The click on the poster is that
+// click; a new page would not have it and the intro would play muted.
 //
-// Hinweis zur Qualität: 1080p wird angefordert (vq + setPlaybackQuality),
-// YouTube entscheidet aber selbst, was es tatsächlich abspielt.
+// Note on quality: 1080p is requested (vq + setPlaybackQuality), but
+// YouTube decides itself what it actually plays.
 
 (function () {
   let overlayElement = null;
@@ -29,7 +29,7 @@
   let apiPromise = null;
   const prefetched = new Set();
 
-  // YouTube IFrame Player API einmalig nachladen
+  // Load the YouTube IFrame Player API once
   function loadYouTubeApi() {
     if (window.YT?.Player) {
       return Promise.resolve();
@@ -55,9 +55,9 @@
     return apiPromise;
   }
 
-  // API im Leerlauf vorladen, sobald die Seite Poster mit Video enthält –
-  // nur mit gespeicherter Zustimmung. Poster entstehen erst nach dem
-  // API-Aufruf, deshalb per MutationObserver.
+  // Preload the API while idle as soon as the page contains posters with a
+  // video – only with stored consent. Posters only appear after the API
+  // call, hence the MutationObserver.
   function warmUpWhenPostersAppear() {
     if (!hasYouTubeConsent()) {
       return;
@@ -84,8 +84,8 @@
     observer.observe(document.body, { childList: true, subtree: true });
   }
 
-  // Ausstellung im Hintergrund holen: Daten in den sessionStorage,
-  // erste Bilder in den Browser-Cache, Seite per prefetch
+  // Fetch the exhibition in the background: data into sessionStorage,
+  // first images into the browser cache, the page via prefetch
   async function prefetchExhibition(exhibition) {
     if (prefetched.has(exhibition.id) || isLocked(exhibition)) {
       return;
@@ -119,7 +119,7 @@
     overlayElement = null;
     document.documentElement.classList.remove("intro_open");
 
-    // Startseite: Slideshow weiterlaufen lassen
+    // Home page: let the slideshow continue
     window.resumeSlideshow?.();
   }
 
@@ -134,7 +134,7 @@
     overlay.className = "intro";
     overlay.setAttribute("role", "dialog");
     overlay.setAttribute("aria-modal", "true");
-    overlay.setAttribute("aria-label", "Intro: " + exhibition.titel);
+    overlay.setAttribute("aria-label", "Intro: " + exhibition.title);
 
     const close = document.createElement("button");
 
@@ -158,7 +158,7 @@
       } else {
         box.appendChild(
           createYouTubeNotice({
-            cover: exhibition.posters?.[0] || resolveFrontPage(exhibition).front_page,
+            cover: exhibition.posters?.[0] || resolveFrontPage(exhibition).frontPage,
             onPlay: () => {
               box.innerHTML = "";
               box.appendChild(createPlayerTarget());
@@ -174,7 +174,7 @@
     const title = document.createElement("p");
 
     title.className = "intro_title";
-    title.textContent = exhibition.titel;
+    title.textContent = exhibition.title;
     inner.appendChild(title);
 
     const actions = document.createElement("div");
@@ -204,7 +204,7 @@
     overlay.appendChild(close);
     overlay.appendChild(inner);
 
-    // Klick auf den dunklen Hintergrund schließt
+    // A click on the dark background closes it
     overlay.addEventListener("click", (event) => {
       if (event.target === overlay) {
         closeIntro();
@@ -225,7 +225,7 @@
   async function startPlayer(exhibition, videoId) {
     await loadYouTubeApi();
 
-    // Overlay wurde inzwischen geschlossen
+    // The overlay was closed in the meantime
     if (!overlayElement || !document.getElementById("intro_player")) {
       return;
     }
@@ -265,9 +265,9 @@
     });
   }
 
-  // YouTube konnte das Video nicht abspielen: Grund statt schwarzem Feld anzeigen.
-  // Codes: 2 = ungültige ID, 5 = Player-Fehler, 100 = nicht gefunden/privat,
-  // 101/150 = Einbetten vom Besitzer nicht erlaubt
+  // YouTube could not play the video: show the reason instead of a black box.
+  // Codes: 2 = invalid ID, 5 = player error, 100 = not found/private,
+  // 101/150 = embedding not allowed by the owner
   function showPlayerError(code) {
     const box = overlayElement?.querySelector(".intro_player_box");
 
@@ -306,7 +306,7 @@
 
     const videoId = getYouTubeId(exhibition.video);
 
-    // Kein Video und freigeschaltet: direkt zur Ausstellung, kein leeres Overlay
+    // No video and public: straight to the exhibition, no empty overlay
     if (!videoId && !isLocked(exhibition)) {
       goToExhibition(exhibition);
       return;
@@ -319,7 +319,7 @@
     document.body.appendChild(overlayElement);
     document.documentElement.classList.add("intro_open");
 
-    // Ausstellung (eigener Server) schon laden, während Hinweis oder Video zu sehen ist
+    // Load the exhibition (own server) already while the notice or video is shown
     prefetchExhibition(exhibition);
 
     if (videoId && hasYouTubeConsent()) {
@@ -327,10 +327,10 @@
     }
   }
 
-  // Nur Poster-Links (data-intro) abfangen, auch solche, die erst später
-  // ins DOM kommen
+  // Only intercept poster links (data-intro), including ones that are
+  // added to the DOM later
   document.addEventListener("click", (event) => {
-    // Neue Tabs per Strg/Cmd/Mittelklick weiter erlauben
+    // Still allow new tabs via Ctrl/Cmd/middle click
     if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey) {
       return;
     }
@@ -351,8 +351,8 @@
     openIntro(id);
   });
 
-  // Zeigt die Maus auf ein Poster (oder Finger berührt es): API jetzt laden,
-  // sofern der Besucher YouTube schon zugestimmt hat
+  // When the mouse points at a poster (or a finger touches it): load the API
+  // now, provided the visitor has already agreed to YouTube
   ["pointerenter", "touchstart", "focusin"].forEach((type) => {
     document.addEventListener(
       type,

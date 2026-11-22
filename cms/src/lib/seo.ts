@@ -1,4 +1,4 @@
-// Gemeinsame SEO-Helfer für die Route Handler (Ausstellung, Events, Sitemap)
+// Shared SEO helpers for the route handlers (exhibition, events, sitemap)
 import type { Payload, Where } from 'payload'
 
 import type { Exhibition, Media } from '../payload-types'
@@ -17,7 +17,7 @@ export function asMedia(ref: MediaRef): Media | null {
   return ref && typeof ref === 'object' ? ref : null
 }
 
-// Beste öffentliche Bild-URL eines Mediums (large → medium → Original)
+// Best public image URL of a medium (large → medium → original)
 export function imageUrl(media: Media | null, size: 'large' | 'medium' | 'thumb' = 'large'): string | null {
   if (!media) {
     return null
@@ -36,7 +36,7 @@ export function absolute(base: string, url: string | null): string | null {
   return /^https?:\/\//.test(url) ? url : base + url
 }
 
-// Ausstellungen so laden, wie sie ein Besucher ohne Login sieht
+// Load exhibitions the way an anonymous visitor sees them
 export async function findPublicExhibitions(payload: Payload, where?: Where) {
   const result = await payload.find({
     collection: 'exhibitions',
@@ -50,7 +50,7 @@ export async function findPublicExhibitions(payload: Payload, where?: Where) {
   return result.docs
 }
 
-// Kommende Ausstellung mit festem Datum (Coming soon hat keins und bekommt kein Event-JSON-LD)
+// Upcoming exhibition with a fixed date (Coming soon has none and gets no event JSON-LD)
 export function isUpcoming(exhibition: Exhibition): boolean {
   if (!exhibition.date || (exhibition.release && exhibition.release !== 'scheduled')) {
     return false
@@ -63,7 +63,7 @@ export function isUpcoming(exhibition: Exhibition): boolean {
   return new Date(exhibition.date) >= today
 }
 
-// JSON-LD "Event" für eine kommende Ausstellung
+// JSON-LD "Event" for an upcoming exhibition
 export function eventJsonLd(exhibition: Exhibition, base: string) {
   const poster = asMedia(exhibition.posters?.[0])
   const image = absolute(base, imageUrl(poster))
@@ -73,7 +73,7 @@ export function eventJsonLd(exhibition: Exhibition, base: string) {
 
   return {
     '@type': 'ExhibitionEvent',
-    name: exhibition.titel,
+    name: exhibition.title,
     description: exhibition.description || undefined,
     startDate,
     eventStatus: 'https://schema.org/EventScheduled',

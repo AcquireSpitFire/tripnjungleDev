@@ -1,4 +1,4 @@
-// "/" – Startseite aus src/templates/index.html
+// "/" – home page from src/templates/index.html
 import { renderStaticPage } from '@/lib/static-page'
 import { SITE_NAME } from '@/lib/seo'
 
@@ -9,7 +9,7 @@ export async function GET() {
     template: 'index.html',
     path: '/',
     title: `${SITE_NAME} – Photo & video exhibitions`,
-    // Beschreibung: Site settings → Site description, sonst Standardtext
+    // Description: Site settings → Site description, otherwise the default text
     jsonLd: (base, description) => ({
       '@context': 'https://schema.org',
       '@graph': [

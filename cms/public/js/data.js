@@ -1,50 +1,49 @@
-// Gemeinsame Daten-Funktionen für alle Seiten.
-// Klassisches Skript (keine Module): die Funktionen sind global und werden
-// von script.js, exhibition.js, intro.js, events.js, exhibitions.js benutzt.
+// Shared data functions for all pages.
+// Classic script (no modules): the functions are global and are used by
+// script.js, exhibition.js, intro.js, events.js and exhibitions.js.
 //
-// Die Daten kommen aus der Payload-API (/api/exhibitions), die von derselben
-// App ausgeliefert wird. Hier werden sie in die Form gebracht, die die
-// Seiten-Skripte erwarten:
-//   id, titel, theme, description, date, time, location,
+// The data comes from the Payload API (/api/exhibitions), served by the same
+// app. Here it is brought into the shape the page scripts expect:
+//   id, title, theme, description, date, time, location,
 //   locked (true/false), visibility ("locked"|"link"|"public"),
-//   release ("scheduled"|"comingSoon"), video (YouTube-URL oder -ID),
-//   posters [ medium ], front_page medium, medien [ medium ]
-// Ein Medium: { id, type ("image"|"video"), src, alt, name, width, height,
-//               sizes: { thumb, medium, large } (je {url, width, height}) }
+//   release ("scheduled"|"comingSoon"), video (YouTube URL or ID),
+//   posters [ medium ], frontPage medium, gallery [ medium ]
+// A medium: { id, type ("image"|"video"), src, alt, name, width, height,
+//             sizes: { thumb, medium, large } (each {url, width, height}) }
 //
-// Bei gesperrten Ausstellungen (locked: true) liefert die API ohne Login
-// weder Deckblatt noch Medien, und die Dateien sind nicht abrufbar.
-// Ausnahme visibility "link": gilt überall als gesperrt (keine Links, nicht in
-// Slideshow und Listen), aber die Ausstellungsseite selbst zeigt den Inhalt.
-// Ausstellungen im Release "planning" liefert die API gar nicht.
+// For locked exhibitions (locked: true) the API returns neither the cover nor
+// the gallery to anonymous visitors, and the files cannot be fetched.
+// Exception visibility "link": it counts as locked everywhere (no links, not
+// in slideshow and lists), but the exhibition page itself shows the content.
+// Exhibitions in release "planning" are not returned by the API at all.
 
 const API_PATH = "/api/exhibitions";
-const CACHE_PREFIX = "tj:exhibition:";
-const CACHE_TTL = 10 * 60 * 1000;   // 10 Minuten
+const CACHE_PREFIX = "tj:exhibition:v2:";
+const CACHE_TTL = 10 * 60 * 1000;   // 10 minutes
 
-let exhibitionsCache = null;   // alle Ausstellungen, sobald einmal geladen
+let exhibitionsCache = null;   // all exhibitions, once loaded
 
 function getExhibitionLink(exhibition) {
   return "/exhibition/" + encodeURIComponent(exhibition.id);
 }
 
-// Nur ausdrücklich freigeschaltete Ausstellungen (locked: false) sind offen.
-// Fehlt das Feld, gilt die Ausstellung als gesperrt.
+// Only explicitly public exhibitions (locked: false) are open.
+// If the field is missing, the exhibition counts as locked.
 function isLocked(exhibition) {
   return exhibition?.locked !== false;
 }
 
-// Darf die Ausstellungsseite den Inhalt zeigen? Freigeschaltet oder „mit Link“
+// May the exhibition page show the content? Public or "with link"
 function canView(exhibition) {
   return !isLocked(exhibition) || exhibition?.visibility === "link";
 }
 
-// Ohne festes Datum angekündigt
+// Announced without a fixed date
 function isComingSoon(exhibition) {
   return exhibition?.release === "comingSoon";
 }
 
-// YouTube-ID aus URL (watch, youtu.be, embed, shorts, live) oder nackter ID
+// YouTube ID from a URL (watch, youtu.be, embed, shorts, live) or a bare ID
 function getYouTubeId(value) {
   if (!value) {
     return null;
@@ -61,9 +60,9 @@ function getYouTubeId(value) {
   return match ? match[1] : null;
 }
 
-// Datum → Date (lokale Zeit, 0 Uhr), bei ungültigem Datum null.
-// Die API liefert ISO-Strings ("2026-12-24T00:00:00.000Z" für lokale
-// Mitternacht), die alten JSON-Dateien "JJJJ-MM-TT".
+// Date → Date (local time, midnight), null for an invalid date.
+// The API returns ISO strings ("2026-12-24T00:00:00.000Z" for local
+// midnight), the old JSON files used "YYYY-MM-DD".
 function parseDate(exhibition) {
   const value = exhibition?.date;
 
@@ -95,7 +94,7 @@ function parseDate(exhibition) {
   return date;
 }
 
-// Nummer aus der id: "exhibition-12" → 12
+// Number from the id: "exhibition-12" → 12
 function getNumber(exhibition) {
   const match = /(\d+)$/.exec(exhibition.id);
 
@@ -110,7 +109,7 @@ function getToday() {
   return today;
 }
 
-// Findet noch statt (heute oder später) oder ist als „Coming soon“ angekündigt
+// Still to come (today or later) or announced as "Coming soon"
 function isUpcoming(exhibition, today = getToday()) {
   if (isComingSoon(exhibition)) {
     return true;
@@ -121,15 +120,15 @@ function isUpcoming(exhibition, today = getToday()) {
   return !!date && date >= today;
 }
 
-// Hat schon stattgefunden
+// Already took place
 function isPast(exhibition, today = getToday()) {
   const date = parseDate(exhibition);
 
   return !!date && date < today;
 }
 
-// Frühestes Datum zuerst, bei gleichem Datum die kleinere Nummer.
-// „Coming soon“ steht immer hinter allen Ausstellungen mit Datum.
+// Earliest date first, on the same date the lower number.
+// "Coming soon" always comes after all exhibitions with a date.
 function compareByDate(a, b) {
   const soonA = isComingSoon(a);
   const soonB = isComingSoon(b);
@@ -154,29 +153,29 @@ function formatDate(exhibition) {
     : "";
 }
 
-// Ergänzt das Deckblatt um das passende Medium, falls es nur als id vorliegt
-// (aus der API kommt es schon fertig mit src)
+// Completes the cover with the matching gallery medium if it only exists as an id
+// (from the API it already comes complete with src)
 function resolveFrontPage(exhibition) {
-  const frontPageReference = exhibition.front_page;
+  const frontPageReference = exhibition.frontPage;
 
   if (!frontPageReference?.id || frontPageReference.src) {
     return exhibition;
   }
 
-  const media = (exhibition.medien || []).find((item) => item.id === frontPageReference.id);
+  const media = (exhibition.gallery || []).find((item) => item.id === frontPageReference.id);
 
   if (!media) {
-    console.error("Front page medium not found: " + frontPageReference.id);
+    console.error("Cover medium not found: " + frontPageReference.id);
   }
 
-  return { ...exhibition, front_page: media || null };
+  return { ...exhibition, frontPage: media || null };
 }
 
-// ---------- Bilder in passender Größe ----------
+// ---------- Images in a suitable size ----------
 
 const SIZE_ORDER = ["thumb", "medium", "large"];
 
-// URL einer Größe, Fallback auf die nächstgrößere bzw. das Original
+// URL of a size, falling back to the next larger one or the original
 function getImageUrl(media, size) {
   if (!media) {
     return "";
@@ -195,11 +194,11 @@ function getImageUrl(media, size) {
   return media.src || "";
 }
 
-// Setzt src, srcset, sizes, width/height (kein Layout-Sprung) und decoding.
-//   size:  gewünschte Größe ("thumb" | "medium" | "large")
-//   sizes: HTML-Attribut "sizes" für responsive Auswahl, z. B. "(max-width: 600px) 100vw, 50vw"
+// Sets src, srcset, sizes, width/height (no layout shift) and decoding.
+//   size:  preferred size ("thumb" | "medium" | "large")
+//   sizes: HTML "sizes" attribute for responsive selection, e.g. "(max-width: 600px) 100vw, 50vw"
 //   lazy:  true → loading="lazy"
-//   priority: true → fetchpriority="high" (erstes sichtbares Bild)
+//   priority: true → fetchpriority="high" (first visible image)
 function setImageSources(image, media, options = {}) {
   const size = options.size || "medium";
   const chosen = media.sizes?.[size];
@@ -236,10 +235,10 @@ function setImageSources(image, media, options = {}) {
   return image;
 }
 
-// Bilder einer Ausstellung schon mal in den Browser-Cache holen
-// (Deckblatt + die ersten Medien), z. B. während das Intro-Video läuft
+// Pull the images of an exhibition into the browser cache ahead of time
+// (cover + the first gallery items), e.g. while the intro video is playing
 function preloadExhibitionImages(exhibition, count = 6) {
-  const items = [exhibition.front_page, ...(exhibition.medien || [])]
+  const items = [exhibition.frontPage, ...(exhibition.gallery || [])]
     .filter((item) => item && item.type === "image")
     .slice(0, count + 1);
 
@@ -251,16 +250,16 @@ function preloadExhibitionImages(exhibition, count = 6) {
   });
 }
 
-// Poster als Element:
-//   gesperrt            → <div class="poster_locked"><img></div>, kein Link
-//   mit Intro-Video     → <a data-intro data-id> (intro.js öffnet das Overlay)
-//   ohne Video          → <a> direkt zur Ausstellung
-// options: { altText, size, sizes, lazy, priority } wie setImageSources
+// Poster as an element:
+//   locked              → <div class="poster_locked"><img></div>, no link
+//   with intro video    → <a data-intro data-id> (intro.js opens the overlay)
+//   without video       → <a> straight to the exhibition
+// options: { altText, size, sizes, lazy, priority } as in setImageSources
 function createPosterElement(exhibition, poster, options = {}) {
   const image = document.createElement("img");
 
   setImageSources(image, poster, { size: "medium", ...options });
-  image.alt = poster.alt || options.altText || "Poster: " + exhibition.titel;
+  image.alt = poster.alt || options.altText || "Poster: " + exhibition.title;
 
   let wrapper;
 
@@ -282,9 +281,9 @@ function createPosterElement(exhibition, poster, options = {}) {
   return wrapper;
 }
 
-// ---------- Laden ----------
+// ---------- Loading ----------
 
-// Nur einfache ids erlauben
+// Only allow simple ids
 function isValidId(id) {
   return /^[a-z0-9-]+$/i.test(id || "");
 }
@@ -299,7 +298,7 @@ async function fetchJson(path) {
   return response.json();
 }
 
-// Ein Medium aus der API (Upload-Dokument) → Seitenformat
+// A medium from the API (upload document) → page format
 function mapMedia(media, name, alt) {
   if (!media || typeof media !== "object" || !media.url) {
     return null;
@@ -319,7 +318,7 @@ function mapMedia(media, name, alt) {
     id: String(media.id),
     type: (media.mimeType || "").startsWith("video/") ? "video" : "image",
     src: media.url,
-    // Alt-Text der Zeile in der Ausstellung, sonst der der Datei
+    // Alt text of the gallery row, otherwise the one of the file
     alt: alt || media.alt || "",
     name: name || media.name || "",
     width: media.width,
@@ -331,10 +330,10 @@ function mapMedia(media, name, alt) {
 function mapExhibition(doc) {
   return {
     id: doc.slug,
-    titel: doc.titel,
+    title: doc.title,
     theme: doc.theme || "",
     description: doc.description || "",
-    // „Coming soon“ hat kein Datum, auch wenn noch ein altes gespeichert ist
+    // "Coming soon" has no date, even if an old one is still stored
     date: doc.release === "comingSoon" ? null : doc.date || null,
     time: doc.time || "",
     location: doc.location || "",
@@ -343,15 +342,15 @@ function mapExhibition(doc) {
     release: doc.release || "scheduled",
     video: doc.video || "",
     posters: (doc.posters || []).map((poster) => mapMedia(poster)).filter(Boolean),
-    front_page: mapMedia(doc.frontPage),
-    medien: (doc.medien || [])
+    frontPage: mapMedia(doc.frontPage),
+    gallery: (doc.gallery || [])
       .map((row) => mapMedia(row.file, row.name, row.alt))
       .filter(Boolean),
   };
 }
 
-// Kurzzeit-Cache im sessionStorage: intro.js legt die Ausstellung während des
-// Videos ab, exhibition.js rendert sie dann ohne Wartezeit
+// Short-term cache in sessionStorage: intro.js stores the exhibition while the
+// video plays, exhibition.js then renders it without waiting
 function readCachedExhibition(id) {
   try {
     const raw = sessionStorage.getItem(CACHE_PREFIX + id);
@@ -361,7 +360,7 @@ function readCachedExhibition(id) {
       return entry.data;
     }
   } catch (error) {
-    // sessionStorage nicht verfügbar (privater Modus o. ä.) – einfach ohne Cache
+    // sessionStorage not available (private mode etc.) – just go without the cache
   }
 
   return null;
@@ -374,11 +373,11 @@ function cacheExhibition(exhibition) {
       JSON.stringify({ time: Date.now(), data: exhibition })
     );
   } catch (error) {
-    // voll oder nicht verfügbar – ignorieren
+    // full or not available – ignore
   }
 }
 
-// Eine einzelne Ausstellung über ihre id (= slug), zuerst aus dem Kurzzeit-Cache
+// A single exhibition by its id (= slug), from the short-term cache first
 async function loadExhibition(id) {
   if (!isValidId(id)) {
     throw new Error("Invalid id: " + id);
@@ -405,7 +404,7 @@ async function loadExhibition(id) {
   return exhibition;
 }
 
-// Alle Ausstellungen, nach Datum sortiert
+// All exhibitions, sorted by date
 async function loadExhibitions() {
   if (exhibitionsCache) {
     return exhibitionsCache;
@@ -418,18 +417,18 @@ async function loadExhibitions() {
   return exhibitionsCache;
 }
 
-// Eine Ausstellung: aus dem Cache, sonst einzeln nachladen
+// One exhibition: from the cache, otherwise load it on its own
 async function getExhibition(id) {
   const cached = exhibitionsCache?.find((exhibition) => exhibition.id === id);
 
   return cached || loadExhibition(id);
 }
 
-// ---------- YouTube-Zustimmung ----------
+// ---------- YouTube consent ----------
 //
-// Videos liegen bei YouTube. Vor dem ersten Kontakt zu Google (Player-Skript,
-// iframe) muss der Besucher zustimmen (§ 25 TDDDG / DSGVO). Die Entscheidung
-// wird im localStorage gemerkt; /privacy bietet einen Knopf zum Zurücksetzen.
+// Videos are hosted on YouTube. Before the first contact with Google (player
+// script, iframe) the visitor has to agree (§ 25 TDDDG / GDPR). The decision
+// is remembered in localStorage; /privacy offers a button to reset it.
 
 const YOUTUBE_CONSENT_KEY = "tj:consent:youtube";
 
@@ -449,13 +448,13 @@ function setYouTubeConsent(value) {
       localStorage.removeItem(YOUTUBE_CONSENT_KEY);
     }
   } catch (error) {
-    // localStorage nicht verfügbar – dann gilt die Zustimmung nur für diesen Klick
+    // localStorage not available – then the consent only applies to this click
   }
 }
 
-// Hinweiskarte an Stelle des Videos. options:
-//   cover   – Medium (Deckblatt/Poster) als Hintergrund, vom eigenen Server
-//   onPlay  – wird nach dem Klick auf „Play video“ aufgerufen
+// Notice card in place of the video. options:
+//   cover   – medium (cover/poster) as background, from our own server
+//   onPlay  – called after the click on "Play video"
 function createYouTubeNotice(options = {}) {
   const notice = document.createElement("div");
 
@@ -505,7 +504,7 @@ function createYouTubeNotice(options = {}) {
   return notice;
 }
 
-// /privacy: „Forget my YouTube consent“
+// /privacy: "Forget my YouTube consent"
 document.addEventListener("click", (event) => {
   const button = event.target.closest?.("[data-reset-youtube-consent]");
 

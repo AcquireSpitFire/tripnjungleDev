@@ -1,4 +1,4 @@
-// "/exhibitions" – Liste aller freigeschalteten Ausstellungen
+// "/exhibitions" – list of all public exhibitions
 import { renderStaticPage } from '@/lib/static-page'
 import { SITE_NAME } from '@/lib/seo'
 

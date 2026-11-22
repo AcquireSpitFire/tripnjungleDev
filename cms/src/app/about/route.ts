@@ -1,4 +1,4 @@
-// "/about": Text und Kontakt aus Admin → Site settings → About
+// "/about": text and contact from Admin → Site settings → About
 import { renderStaticPage } from '@/lib/static-page'
 import { SITE_NAME } from '@/lib/seo'
 import { mailLink, paragraphs } from '@/lib/site'

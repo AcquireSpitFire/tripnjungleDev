@@ -1,4 +1,4 @@
-// /sitemap.xml: Startseite, Listen und alle freigeschalteten Ausstellungen
+// /sitemap.xml: home page, lists and all public exhibitions
 import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 

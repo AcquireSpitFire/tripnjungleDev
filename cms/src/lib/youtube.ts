@@ -1,5 +1,5 @@
-// YouTube-ID aus URL (watch, youtu.be, embed, shorts, live) oder nackter ID.
-// Gleiche Logik wie getYouTubeId() im Frontend (public/js/data.js).
+// YouTube ID from a URL (watch, youtu.be, embed, shorts, live) or a bare ID.
+// Same logic as getYouTubeId() in the frontend (public/js/data.js).
 export function getYouTubeId(value: unknown): string | null {
   if (!value) {
     return null

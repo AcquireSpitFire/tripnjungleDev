@@ -24,9 +24,9 @@ export default buildConfig({
   },
   collections: [Exhibitions, Media, Users],
   globals: [Site],
-  // Kein Rich-Text-Editor nötig (nur Textfelder) – spart Abhängigkeiten und Angriffsfläche
+  // No rich text editor needed (only text fields) – saves dependencies and attack surface
   secret: process.env.PAYLOAD_SECRET || '',
-  // Öffentliche API: keine tiefen Verschachtelungen (teure Abfragen), kein GraphQL (ungenutzt)
+  // Public API: no deep nesting (expensive queries), no GraphQL (unused)
   maxDepth: 2,
   graphQL: {
     disable: true,
@@ -38,12 +38,12 @@ export default buildConfig({
     client: {
       url: process.env.DATABASE_URI || 'file:./tripnjungle.db',
     },
-    // Produktion: Tabellen kommen aus src/migrations ("payload migrate" vor dem Start),
-    // Entwicklung: Schema wird automatisch angepasst (push)
+    // Production: tables come from src/migrations ("payload migrate" before the start),
+    // development: the schema is adjusted automatically (push)
     migrationDir: path.resolve(dirname, 'migrations'),
   }),
-  // Nur die eigene Origin darf die API aus dem Browser aufrufen.
-  // Das Frontend wird aus public/ von derselben App ausgeliefert.
+  // Only our own origin may call the API from the browser.
+  // The frontend is served from public/ by the same app.
   cors: [serverURL],
   csrf: [serverURL],
   sharp,

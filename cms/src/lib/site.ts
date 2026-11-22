@@ -1,4 +1,4 @@
-// Seitenweite Einstellungen (Global "site") laden und für die Vorlagen aufbereiten
+// Load the site-wide settings (global "site") and prepare them for the templates
 import type { Payload } from 'payload'
 
 import type { Site } from '../payload-types'
@@ -10,7 +10,7 @@ export async function getSiteSettings(payload: Payload): Promise<SiteSettings> {
   return payload.findGlobal({ slug: 'site', depth: 0 })
 }
 
-// Textarea → <p>…</p> je Absatz (Leerzeile), Zeilenumbruch innerhalb → <br>
+// Textarea → <p>…</p> per paragraph (blank line), line break inside → <br>
 export function paragraphs(text: string | null | undefined): string {
   const clean = (text || '').replace(/\r\n/g, '\n').trim()
 
@@ -24,7 +24,7 @@ export function paragraphs(text: string | null | undefined): string {
     .join('\n')
 }
 
-// Textarea → <ul><li>…</li></ul>, eine Zeile = ein Punkt
+// Textarea → <ul><li>…</li></ul>, one line = one item
 export function lines(text: string | null | undefined): string {
   const items = (text || '')
     .split(/\r?\n/)
@@ -38,7 +38,7 @@ export function lines(text: string | null | undefined): string {
   return `<ul>${items.map((line) => `<li>${escapeHtml(line)}</li>`).join('')}</ul>`
 }
 
-// Fehlende Pflichtangabe sichtbar markieren, damit sie vor dem Livegang auffällt
+// Mark a missing required detail visibly so it is noticed before going live
 export function required(value: string | null | undefined, label: string): string {
   const clean = (value || '').trim()
 

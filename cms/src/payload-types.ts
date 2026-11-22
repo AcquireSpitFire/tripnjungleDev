@@ -130,49 +130,49 @@ export interface UserAuthOperations {
 export interface Exhibition {
   id: number;
   /**
-   * Nur Kleinbuchstaben, Zahlen und Bindestriche, z. B. exhibition-3. Wird in der URL verwendet.
+   * Lowercase letters, numbers and hyphens only, e.g. exhibition-3. Used in the URL.
    */
   slug: string;
-  titel: string;
+  title: string;
   theme?: string | null;
   description?: string | null;
   /**
-   * Datum: erscheint unter Events, nach dem Datum im Archive. Coming soon: steht ohne Datum am Ende der Events. Planning: schon angelegt, für Besucher aber nirgends sichtbar.
+   * Date: listed under Events, in the Archive after the date. Coming soon: listed without a date at the end of the events. Planning: already created, but not visible to visitors anywhere.
    */
   release?: ('scheduled' | 'comingSoon' | 'planning') | null;
   date?: string | null;
   time?: string | null;
   location?: string | null;
   /**
-   * Gesperrt: Poster und Details sind sichtbar, die Ausstellung selbst (Deckblatt, Bilder, Videos) nicht. Gesperrt mit Link: wie gesperrt, aber wer die Adresse /exhibition/<ID> kennt, sieht die Ausstellung. Freigeschaltet: für alle sichtbar, auch in Slideshow und Exhibitions.
+   * Locked: poster and details are visible, the exhibition itself (cover, images, videos) is not. Locked with link: like locked, but whoever knows the address /exhibition/<ID> sees the exhibition. Public: visible to everyone, also in the slideshow and Exhibitions.
    */
   visibility?: ('locked' | 'link' | 'public') | null;
   locked?: boolean | null;
   /**
-   * Wird vor der Ausstellung abgespielt und auf der Ausstellungsseite eingebettet.
+   * Played before the exhibition and embedded on the exhibition page.
    */
   video?: string | null;
   /**
-   * Poster für Startseite, Events und Archive. Öffentlich, außer im Release „Planning“.
+   * Posters for the home page, Events and Archive. Public, except in the release “Planning”.
    */
   posters?: (number | Media)[] | null;
   /**
-   * Bild oder Video für Slideshow und Exhibitions-Liste.
+   * Image or video for the slideshow and the Exhibitions list.
    */
   frontPage?: (number | null) | Media;
   /**
-   * „Create New“ wählen, alle Dateien auf einmal ablegen (10, 20 oder mehr) und speichern; der Alt-Text kann dabei pro Datei schon eingetragen werden. Nach dem Speichern der Ausstellung stehen sie unten bei „Bilder und Videos“, dort lassen sich Name und Alt-Text jederzeit ändern.
+   * Choose “Create New”, drop all files at once (10, 20 or more) and save; the alt text can already be entered per file. After saving the exhibition they appear below under “Images and videos”, where name and alt text can be changed at any time.
    */
   bulkMedia?: (number | Media)[] | null;
   /**
-   * Reihenfolge per Drag & Drop. Erscheint in Slideshow und Galerie.
+   * Reorder by drag & drop. Shown in the slideshow and the gallery.
    */
-  medien?:
+  gallery?:
     | {
         file: number | Media;
         name?: string | null;
         /**
-         * Kurze Bildbeschreibung (Barrierefreiheit, SEO).
+         * Short image description (accessibility, SEO).
          */
         alt?: string | null;
         id?: string | null;
@@ -188,12 +188,12 @@ export interface Exhibition {
 export interface Media {
   id: number;
   /**
-   * Kurze Bildbeschreibung (Barrierefreiheit, SEO).
+   * Short image description (accessibility, SEO).
    */
   alt?: string | null;
   name?: string | null;
   /**
-   * Wird automatisch von der Ausstellung gesetzt.
+   * Set automatically by the exhibition.
    */
   locked?: boolean | null;
   updatedAt: string;
@@ -344,7 +344,7 @@ export interface PayloadMigration {
  */
 export interface ExhibitionsSelect<T extends boolean = true> {
   slug?: T;
-  titel?: T;
+  title?: T;
   theme?: T;
   description?: T;
   release?: T;
@@ -357,7 +357,7 @@ export interface ExhibitionsSelect<T extends boolean = true> {
   posters?: T;
   frontPage?: T;
   bulkMedia?: T;
-  medien?:
+  gallery?:
     | T
     | {
         file?: T;

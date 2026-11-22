@@ -1,9 +1,9 @@
 import type { GlobalConfig } from 'payload'
 
-// Seitenweite Einstellungen: About-Text, Kontakt, Impressum, Datenschutz.
-// Werden von den Route Handlern (/about, /imprint, /privacy) gelesen und in
-// die Vorlagen eingesetzt. Nur eingeloggte Nutzer dürfen sie über die API
-// lesen; die Seiten selbst holen sie serverseitig.
+// Site-wide settings: About text, contact, legal notice, privacy policy.
+// Read by the route handlers (/about, /imprint, /privacy) and inserted into
+// the templates. Only logged-in users may read them via the API; the pages
+// themselves load them on the server.
 export const Site: GlobalConfig = {
   slug: 'site',
   label: 'Site settings',

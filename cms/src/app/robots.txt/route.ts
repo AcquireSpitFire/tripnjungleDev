@@ -1,4 +1,4 @@
-// /robots.txt: Admin und API nicht crawlen, Sitemap bekannt machen
+// /robots.txt: do not crawl admin and API, announce the sitemap
 import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 
