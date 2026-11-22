@@ -5,6 +5,7 @@ import * as migration_20261118_165313_medien_alt from './20261118_165313_medien_
 import * as migration_20261122_230000_english_field_names from './20261122_230000_english_field_names';
 import * as migration_20261122_233429_roles_accounts from './20261122_233429_roles_accounts';
 import * as migration_20261122_234526_artists from './20261122_234526_artists';
+import * as migration_20261122_235148_exhibition_editors from './20261122_235148_exhibition_editors';
 
 export const migrations = [
   {
@@ -40,6 +41,11 @@ export const migrations = [
   {
     up: migration_20261122_234526_artists.up,
     down: migration_20261122_234526_artists.down,
-    name: '20261122_234526_artists'
+    name: '20261122_234526_artists',
+  },
+  {
+    up: migration_20261122_235148_exhibition_editors.up,
+    down: migration_20261122_235148_exhibition_editors.down,
+    name: '20261122_235148_exhibition_editors'
   },
 ];

@@ -8,6 +8,7 @@ import {
   getArtistProfileId,
   idIn,
   isArtist,
+  loggedInField,
 } from '../access/roles'
 import { auditFields, auditHook } from '../lib/audit'
 import { mediaIdsOf, syncMediaLocks } from '../lib/media-lock'
@@ -41,7 +42,8 @@ import { getYouTubeId } from '../lib/youtube'
 // Accounts (see src/access/roles.ts): admins and exhibition managers may do
 // everything; ID, release, visibility and the credited artists can only be
 // changed by them. Artist accounts create exhibitions (always Planning + Locked,
-// credited to their own profile) and edit the ones that credit them.
+// credited to their own profile) and edit the ones that credit them. Editor
+// accounts edit the content of the exhibitions listed in "editors".
 
 // What anonymous visitors may read: everything except "planning"
 // (old entries without the field count as scheduled)
@@ -194,6 +196,25 @@ export const Exhibitions: CollectionConfig = {
         typeof value === 'string' && /^[a-z0-9-]+$/.test(value)
           ? true
           : 'Lowercase letters, numbers and hyphens only.',
+    },
+    {
+      // Accounts that may change the content of this exhibition (not publish it)
+      name: 'editors',
+      label: 'Editors',
+      type: 'relationship',
+      relationTo: 'users',
+      hasMany: true,
+      filterOptions: { role: { in: ['editor', 'artist'] } },
+      access: {
+        read: loggedInField,
+        create: exhibitionManagersOnlyField,
+        update: exhibitionManagersOnlyField,
+      },
+      admin: {
+        position: 'sidebar',
+        description:
+          'Editor or artist accounts that may change texts, captions, alt texts, photos and their order. They cannot change ID, release, visibility or these assignments, and cannot delete the exhibition.',
+      },
     },
     {
       // Public link with a copy button (sidebar, only after the first save)

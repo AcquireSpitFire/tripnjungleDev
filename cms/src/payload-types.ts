@@ -135,6 +135,10 @@ export interface Exhibition {
    * Lowercase letters, numbers and hyphens only, e.g. exhibition-3. Used in the URL.
    */
   slug: string;
+  /**
+   * Editor or artist accounts that may change texts, captions, alt texts, photos and their order. They cannot change ID, release, visibility or these assignments, and cannot delete the exhibition.
+   */
+  editors?: (number | User)[] | null;
   title: string;
   theme?: string | null;
   /**
@@ -192,6 +196,47 @@ export interface Exhibition {
   updatedBy?: (number | null) | User;
   updatedAt: string;
   createdAt: string;
+}
+/**
+ * Admin: everything. Manager: the selected sections (one account per sub page). Artist: own exhibitions, linked to an artist profile. Editor: the exhibitions they are assigned to.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "users".
+ */
+export interface User {
+  id: number;
+  name?: string | null;
+  /**
+   * Only admins can change roles. The very first account always becomes admin.
+   */
+  role: 'admin' | 'manager' | 'artist' | 'editor';
+  /**
+   * The sub pages this manager is responsible for.
+   */
+  sections?: 'exhibitions'[] | null;
+  /**
+   * The profile this account belongs to. The account may edit this profile and every exhibition that credits it.
+   */
+  artist?: (number | null) | Artist;
+  updatedAt: string;
+  createdAt: string;
+  email: string;
+  resetPasswordToken?: string | null;
+  resetPasswordExpiration?: string | null;
+  salt?: string | null;
+  hash?: string | null;
+  resetPasswordRequestedAt?: string | null;
+  loginAttempts?: number | null;
+  lockUntil?: string | null;
+  sessions?:
+    | {
+        id: string;
+        createdAt?: string | null;
+        expiresAt: string;
+      }[]
+    | null;
+  password?: string | null;
+  collection: 'users';
 }
 /**
  * People who make the photos and exhibitions. Each artist has a page at /artist/<slug>.
@@ -286,47 +331,6 @@ export interface Media {
   };
 }
 /**
- * Admin: everything. Manager: the selected sections (one account per sub page). Artist: own exhibitions, linked to an artist profile. Editor: the exhibitions they are assigned to.
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "users".
- */
-export interface User {
-  id: number;
-  name?: string | null;
-  /**
-   * Only admins can change roles. The very first account always becomes admin.
-   */
-  role: 'admin' | 'manager' | 'artist' | 'editor';
-  /**
-   * The sub pages this manager is responsible for.
-   */
-  sections?: 'exhibitions'[] | null;
-  /**
-   * The profile this account belongs to. The account may edit this profile and every exhibition that credits it.
-   */
-  artist?: (number | null) | Artist;
-  updatedAt: string;
-  createdAt: string;
-  email: string;
-  resetPasswordToken?: string | null;
-  resetPasswordExpiration?: string | null;
-  salt?: string | null;
-  hash?: string | null;
-  resetPasswordRequestedAt?: string | null;
-  loginAttempts?: number | null;
-  lockUntil?: string | null;
-  sessions?:
-    | {
-        id: string;
-        createdAt?: string | null;
-        expiresAt: string;
-      }[]
-    | null;
-  password?: string | null;
-  collection: 'users';
-}
-/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
@@ -414,6 +418,7 @@ export interface PayloadMigration {
  */
 export interface ExhibitionsSelect<T extends boolean = true> {
   slug?: T;
+  editors?: T;
   title?: T;
   theme?: T;
   artists?: T;

@@ -101,6 +101,13 @@ function ownExhibitionsWhere(user: MaybeUser): Where[] {
     conditions.push({ artists: { in: [artistId] } })
   }
 
+  // Editors (and artists): every exhibition they are assigned to
+  const userId = getUserId(user)
+
+  if ((isEditor(user) || isArtist(user)) && userId !== null) {
+    conditions.push({ editors: { in: [userId] } })
+  }
+
   return conditions
 }
 
