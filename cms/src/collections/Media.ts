@@ -7,6 +7,7 @@ import {
   getUserId,
 } from '../access/roles'
 import { auditFields, auditHook } from '../lib/audit'
+import { limitPublicQueries } from '../lib/query-limits'
 
 // Images, videos and posters.
 //
@@ -107,6 +108,8 @@ export const Media: CollectionConfig = {
     delete: ({ req }) => ownLockedUploadsOrManager(req.user),
   },
   hooks: {
+    // Page size for visitors/artists/editors at most 100 (src/lib/query-limits.ts)
+    beforeOperation: [limitPublicQueries],
     beforeChange: [auditHook({ updatedBy: false })],
   },
   upload: {

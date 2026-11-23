@@ -7,6 +7,7 @@ import {
   isArtist,
 } from '../access/roles'
 import { assertMediaMayBeAdded, syncMediaLocks } from '../lib/media-lock'
+import { limitPublicQueries } from '../lib/query-limits'
 import { toId } from '../lib/visibility'
 
 // Artist profiles: credited on exhibitions and photos, each with a small page
@@ -65,6 +66,8 @@ export const Artists: CollectionConfig = {
     delete: ({ req }) => canManageExhibitions(req.user),
   },
   hooks: {
+    // Page size for visitors/artists/editors at most 100 (src/lib/query-limits.ts)
+    beforeOperation: [limitPublicQueries],
     beforeChange: [
       async ({ data, originalDoc, req }) => {
         // A portrait becomes public: artist accounts may only choose public media or their own uploads

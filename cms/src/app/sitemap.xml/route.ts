@@ -39,12 +39,14 @@ export async function GET() {
   }
 
   // Artist mini pages (artists with an external website only forward, so they are left out)
+  // Server side and only slug/date: all profiles, without the visitor page-size limit
   const { docs: artists } = await payload.find({
     collection: 'artists',
     where: { pageType: { equals: 'profile' } },
     depth: 0,
     pagination: false,
-    overrideAccess: false,
+    overrideAccess: true,
+    select: { slug: true, updatedAt: true },
   })
 
   for (const artist of artists) {

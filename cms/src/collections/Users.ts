@@ -97,9 +97,15 @@ export const Users: CollectionConfig = {
     unlock: ({ req }) => isAdmin(req.user),
   },
   hooks: {
-    beforeValidate: [
-      ({ data }) => {
-        const password = data?.password
+    // Before every operation that sets a password: create, update and reset (a field hook
+    // would not see the new password on reset, Payload hashes it before the field hooks)
+    beforeOperation: [
+      ({ args, operation }) => {
+        if (operation !== 'create' && operation !== 'update' && operation !== 'resetPassword') {
+          return args
+        }
+
+        const password = (args as { data?: { password?: unknown } }).data?.password
 
         if (typeof password === 'string' && password.length > 0 && password.length < MIN_PASSWORD_LENGTH) {
           throw new ValidationError({
@@ -108,7 +114,7 @@ export const Users: CollectionConfig = {
           })
         }
 
-        return data
+        return args
       },
     ],
     beforeChange: [

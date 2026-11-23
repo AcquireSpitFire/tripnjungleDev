@@ -12,6 +12,7 @@ import {
 } from '../access/roles'
 import { exhibitionQrEndpoint } from '../endpoints/exhibition-qr'
 import { auditFields, auditHook } from '../lib/audit'
+import { limitPublicQueries } from '../lib/query-limits'
 import { assertMediaMayBeAdded, mediaIdsOf, syncMediaLocks } from '../lib/media-lock'
 import {
   contentIsOpen,
@@ -120,6 +121,8 @@ export const Exhibitions: CollectionConfig = {
   // GET /api/exhibitions/:id/qr – QR codes of the photos (PNG / printable PDF)
   endpoints: [exhibitionQrEndpoint],
   hooks: {
+    // Page size for visitors/artists/editors at most 100 (src/lib/query-limits.ts)
+    beforeOperation: [limitPublicQueries],
     beforeChange: [
       auditHook(),
       ({ data, operation, req }) => {

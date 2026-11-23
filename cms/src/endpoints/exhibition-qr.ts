@@ -14,6 +14,7 @@ import { getServerUrl } from '../lib/seo'
 import { toId } from '../lib/visibility'
 
 const FORMATS: QrLabelFormat[] = ['a6', 'a5', 'square100']
+const MAX_LABELS = 300
 
 function error(status: number, message: string): Response {
   return Response.json({ error: message }, { status, headers: { 'Cache-Control': 'no-store' } })
@@ -68,8 +69,20 @@ export const exhibitionQrEndpoint: Endpoint = {
       return error(404, 'Exhibition not found.')
     }
 
-    const rows = (exhibition.gallery || []).filter((row) => toId(row.file) !== null)
-    const selected = media ? rows.filter((row) => String(toId(row.file)) === media) : rows
+    // One label per photo; a photo used twice gets one label. At most MAX_LABELS pages
+    // (the gallery itself is limited to 300 rows), so one request cannot build a huge PDF.
+    const seen = new Set<string>()
+    const rows = (exhibition.gallery || []).filter((row) => {
+      const id = toId(row.file)
+
+      if (id === null || seen.has(String(id))) {
+        return false
+      }
+
+      seen.add(String(id))
+      return true
+    })
+    const selected = (media ? rows.filter((row) => String(toId(row.file)) === media) : rows).slice(0, MAX_LABELS)
 
     if (!selected.length) {
       return error(404, media ? 'This photo is not part of the saved exhibition.' : 'The exhibition has no photos yet.')

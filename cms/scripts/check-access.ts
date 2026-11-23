@@ -10,7 +10,7 @@ const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tj-access-'))
 
 process.env.DATABASE_URI = 'file:' + path.join(tempDir, 'test.db').replace(/\\/g, '/')
 process.env.MEDIA_DIR = path.join(tempDir, 'media')
-process.env.PAYLOAD_SECRET = process.env.PAYLOAD_SECRET || 'access-test-secret'
+process.env.PAYLOAD_SECRET = process.env.PAYLOAD_SECRET || 'access-test-secret-only-for-the-temporary-db'
 
 let failures = 0
 

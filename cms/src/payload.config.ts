@@ -15,6 +15,24 @@ const dirname = path.dirname(filename)
 
 const serverURL = process.env.PAYLOAD_PUBLIC_SERVER_URL || 'http://localhost:3000'
 
+// The secret signs logins and sessions: a short or example value would let anyone forge them.
+// (An empty one is rejected by Payload itself.)
+const secret = process.env.PAYLOAD_SECRET || ''
+
+if (secret && (secret.length < 32 || secret === 'YOUR_SECRET_HERE')) {
+  throw new Error(
+    'PAYLOAD_SECRET is too weak: use at least 32 random characters, e.g. the output of "openssl rand -hex 32".',
+  )
+}
+
+// Without the real address, CORS/CSRF only allow localhost, cookies are not "secure" and
+// QR codes / links point to localhost
+if (process.env.NODE_ENV === 'production' && !process.env.PAYLOAD_PUBLIC_SERVER_URL) {
+  console.warn(
+    '\n⚠ PAYLOAD_PUBLIC_SERVER_URL is not set. Set it to the public address (https://…) of the site.\n',
+  )
+}
+
 export default buildConfig({
   serverURL,
   admin: {
@@ -30,7 +48,7 @@ export default buildConfig({
   collections: [Exhibitions, Artists, Media, Users],
   globals: [Site],
   // No rich text editor needed (only text fields) – saves dependencies and attack surface
-  secret: process.env.PAYLOAD_SECRET || '',
+  secret,
   // Public API: no deep nesting (expensive queries), no GraphQL (unused)
   maxDepth: 2,
   graphQL: {
