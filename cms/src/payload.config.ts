@@ -19,6 +19,10 @@ export default buildConfig({
   serverURL,
   admin: {
     user: Users.slug,
+    components: {
+      // Visible "Log out" button with the logged-in account (top right on every admin page)
+      actions: ['/components/LogoutAction#LogoutAction'],
+    },
     importMap: {
       baseDir: path.resolve(dirname),
     },

@@ -52,6 +52,10 @@ the avatar (top right). There is no e-mail sending yet (comes with the shop rele
 password” does not work: an admin sets the first password and tells the person; they change it after
 logging in. Passwords need at least 12 characters; 5 wrong attempts lock the account for 15 minutes.
 
+**Log out**: in the admin with the “Log out” button (top right, next to the account name and role);
+on the website, logged-in accounts find “Admin” and “Log out” at the end of the menu. Logging out
+ends the session on the server, not only in the browser.
+
 | Role | May |
 |---|---|
 | **Admin** | Everything: accounts, site settings, all sections. The very first account always becomes admin. |

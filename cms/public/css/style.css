@@ -242,6 +242,38 @@ main {
   color: var(--text);
 }
 
+/* Only for logged-in accounts: "Admin" and "Log out", separated by a thin line */
+.menu_account {
+  align-self: stretch;
+  text-align: right;
+  margin-top: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #1a1a1a;
+}
+
+.menu_logout {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.9rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.menu_logout:hover,
+.menu_logout:focus-visible {
+  color: var(--text);
+}
+
+.menu_logout:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 
 /* ---------- 4. Media ---------- */
 

@@ -84,6 +84,68 @@ function setupMenu() {
       setOpen(false);
     }
   });
+
+  return list;
 }
 
-setupMenu();
+// Logged-in accounts get "Admin" and "Log out" at the end of the menu.
+// The login state is only checked in the browser: pages are cached publicly,
+// so it must never be part of the HTML. The session cookie stays httpOnly.
+async function addAccountItems(list) {
+  if (!list) {
+    return;
+  }
+
+  let user = null;
+
+  try {
+    const response = await fetch("/api/users/me", { credentials: "same-origin", cache: "no-store" });
+
+    if (response.ok) {
+      user = (await response.json()).user || null;
+    }
+  } catch {
+    return;
+  }
+
+  if (!user) {
+    return;
+  }
+
+  const adminEntry = document.createElement("li");
+  const adminLink = document.createElement("a");
+
+  adminEntry.className = "menu_account";
+  adminLink.href = "/admin";
+  adminLink.textContent = "Admin";
+  adminEntry.appendChild(adminLink);
+
+  const logoutEntry = document.createElement("li");
+  const logoutButton = document.createElement("button");
+
+  logoutButton.type = "button";
+  logoutButton.className = "menu_logout";
+  logoutButton.textContent = "Log out";
+
+  logoutButton.addEventListener("click", async () => {
+    logoutButton.disabled = true;
+
+    try {
+      const response = await fetch("/api/users/logout", { method: "POST", credentials: "same-origin" });
+
+      if (!response.ok) {
+        throw new Error(String(response.status));
+      }
+
+      location.reload();
+    } catch {
+      logoutButton.disabled = false;
+      alert("Logging out did not work. Please try again.");
+    }
+  });
+
+  logoutEntry.appendChild(logoutButton);
+  list.append(adminEntry, logoutEntry);
+}
+
+addAccountItems(setupMenu());
