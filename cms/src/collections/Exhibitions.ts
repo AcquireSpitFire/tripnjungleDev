@@ -10,6 +10,7 @@ import {
   isArtist,
   loggedInField,
 } from '../access/roles'
+import { exhibitionQrEndpoint } from '../endpoints/exhibition-qr'
 import { auditFields, auditHook } from '../lib/audit'
 import { mediaIdsOf, syncMediaLocks } from '../lib/media-lock'
 import { contentIsOpen, getRelease, getVisibility, toId, type Ref } from '../lib/visibility'
@@ -98,6 +99,8 @@ export const Exhibitions: CollectionConfig = {
     delete: ({ req }) => canManageExhibitions(req.user),
   },
   defaultSort: 'date',
+  // GET /api/exhibitions/:id/qr – QR codes of the photos (PNG / printable PDF)
+  endpoints: [exhibitionQrEndpoint],
   hooks: {
     beforeChange: [
       auditHook(),
@@ -223,6 +226,15 @@ export const Exhibitions: CollectionConfig = {
       admin: {
         position: 'sidebar',
         components: { Field: '/components/ExhibitionLink#ExhibitionLink' },
+      },
+    },
+    {
+      // "QR codes for all photos (PDF)" (sidebar, only after the first save)
+      name: 'qrCodes',
+      type: 'ui',
+      admin: {
+        position: 'sidebar',
+        components: { Field: '/components/ExhibitionQrCodes#ExhibitionQrCodes' },
       },
     },
     {
@@ -409,6 +421,12 @@ export const Exhibitions: CollectionConfig = {
           label: 'Alt text',
           type: 'text',
           admin: { description: 'Short image description (accessibility, SEO).' },
+        },
+        {
+          // QR code of this photo: preview, copy image/link, printable PDF
+          name: 'qrCode',
+          type: 'ui',
+          admin: { components: { Field: '/components/QrCodeField#QrCodeField' } },
         },
         {
           // Only needed when this photo is by someone else than the exhibition's artists

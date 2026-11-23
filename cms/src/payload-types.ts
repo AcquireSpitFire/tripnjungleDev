@@ -590,7 +590,7 @@ export interface PayloadMigrationsSelect<T extends boolean = true> {
   createdAt?: T;
 }
 /**
- * Texts for About, the legal notice (Impressum) and the privacy policy. Fill in everything before going live.
+ * Texts for About, the legal notice (Impressum), the privacy policy and the QR labels. Fill in everything before going live.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "site".
@@ -635,6 +635,11 @@ export interface Site {
   hostOutsideEu?: boolean | null;
   hostPrivacyUrl?: string | null;
   privacyExtra?: string | null;
+  qrFormat?: ('a6' | 'a5' | 'square100') | null;
+  qrShowTitle?: boolean | null;
+  qrShowArtist?: boolean | null;
+  qrShowExhibition?: boolean | null;
+  qrFooter?: string | null;
   updatedAt?: string | null;
   createdAt?: string | null;
 }
@@ -663,6 +668,11 @@ export interface SiteSelect<T extends boolean = true> {
   hostOutsideEu?: T;
   hostPrivacyUrl?: T;
   privacyExtra?: T;
+  qrFormat?: T;
+  qrShowTitle?: T;
+  qrShowArtist?: T;
+  qrShowExhibition?: T;
+  qrFooter?: T;
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;

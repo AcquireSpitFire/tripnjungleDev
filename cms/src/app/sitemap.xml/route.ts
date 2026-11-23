@@ -22,11 +22,19 @@ export async function GET() {
 
   for (const exhibition of exhibitions) {
     if (exhibition.locked === false) {
-      entries.push({
-        loc: base + '/exhibition/' + encodeURIComponent(exhibition.slug),
-        lastmod: exhibition.updatedAt?.slice(0, 10),
-        priority: '0.7',
-      })
+      const page = base + '/exhibition/' + encodeURIComponent(exhibition.slug)
+      const lastmod = exhibition.updatedAt?.slice(0, 10)
+
+      entries.push({ loc: page, lastmod, priority: '0.7' })
+
+      // Photo pages (targets of the QR codes)
+      for (const row of exhibition.gallery || []) {
+        const id = row.file && typeof row.file === 'object' ? row.file.id : row.file
+
+        if (id) {
+          entries.push({ loc: `${page}/photo/${encodeURIComponent(String(id))}`, lastmod, priority: '0.5' })
+        }
+      }
     }
   }
 

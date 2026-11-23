@@ -6,6 +6,7 @@ import * as migration_20261122_230000_english_field_names from './20261122_23000
 import * as migration_20261122_233429_roles_accounts from './20261122_233429_roles_accounts';
 import * as migration_20261122_234526_artists from './20261122_234526_artists';
 import * as migration_20261122_235148_exhibition_editors from './20261122_235148_exhibition_editors';
+import * as migration_20261122_235813_qr_settings from './20261122_235813_qr_settings';
 
 export const migrations = [
   {
@@ -46,6 +47,11 @@ export const migrations = [
   {
     up: migration_20261122_235148_exhibition_editors.up,
     down: migration_20261122_235148_exhibition_editors.down,
-    name: '20261122_235148_exhibition_editors'
+    name: '20261122_235148_exhibition_editors',
+  },
+  {
+    up: migration_20261122_235813_qr_settings.up,
+    down: migration_20261122_235813_qr_settings.down,
+    name: '20261122_235813_qr_settings'
   },
 ];

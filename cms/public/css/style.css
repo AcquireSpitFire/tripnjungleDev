@@ -1172,6 +1172,7 @@ main {
   display: block;
   width: min(100%, 320px);
   height: auto;
+  aspect-ratio: auto;          /* own format instead of the 3:2 media box */
   margin: 0 0 1.5rem;
 }
 
@@ -1208,4 +1209,54 @@ main {
 
 .artist_exhibition_theme {
   color: var(--muted);
+}
+
+/* Photo page (/exhibition/<id>/photo/<photo>): one photo as large as possible */
+.photo_page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.photo_figure {
+  margin: 0;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.photo_figure img,
+.photo_figure video {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  max-height: calc(100svh - 14rem);
+  aspect-ratio: auto;
+  object-fit: contain;
+  cursor: zoom-in;
+}
+
+.photo_figure video {
+  cursor: auto;
+}
+
+.photo_note {
+  margin: 2rem 0;
+  color: var(--muted);
+}
+
+.photo_nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem 2rem;
+  margin: 1.5rem 0 0;
+  font-size: 0.85rem;
+  letter-spacing: 0.1em;
+}
+
+.photo_nav_link {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
 }
