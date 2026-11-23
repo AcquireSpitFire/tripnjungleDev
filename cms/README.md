@@ -39,6 +39,54 @@ In the admin under **Exhibitions**:
 - Images are stored in three WebP sizes on upload (600/1280/2560 px); the original is kept.
 - Allowed file types: JPEG, PNG, WebP, AVIF, GIF, MP4, WebM, MOV. No SVG, no HEIC
   (export iPhone photos as JPEG first).
+- **Preview**: the sidebar of an exhibition has “Preview (with your login)”. It opens the exhibition with
+  your account and also shows locked and planned content (marked as preview). Everywhere else the site
+  looks exactly like it does for visitors, even when you are logged in.
+- **Photo pages**: every photo has its own page `/exhibition/<ID>/photo/<photo ID>` (large photo, name,
+  artist, previous/next). Same visibility as the exhibition: with *Locked* it says “not available yet”.
+
+## Accounts and roles
+
+Accounts are managed by admins under **Accounts**. Everybody changes their own name and password via
+the avatar (top right). There is no e-mail sending yet (comes with the shop release), so “Forgot
+password” does not work: an admin sets the first password and tells the person; they change it after
+logging in. Passwords need at least 12 characters; 5 wrong attempts lock the account for 15 minutes.
+
+| Role | May |
+|---|---|
+| **Admin** | Everything: accounts, site settings, all sections. The very first account always becomes admin. |
+| **Manager** | Everything in the sections ticked under “Sections” (one manager account per sub page; today: Exhibitions). No accounts, no site settings. |
+| **Artist** | Linked to an artist profile (“Artist profile”). Creates exhibitions (always *Planning* + *Locked*, credited to the own profile), edits the exhibitions that credit the profile and the profile itself. Cannot publish, delete or change IDs. |
+| **Editor** | Edits the content of the exhibitions they are assigned to (texts, captions, alt texts, photos and their order). Cannot publish, create, delete or change IDs. |
+
+- Only admins change roles, also not on their own account. The last admin cannot be deleted or demoted.
+- **Assign an editor**: in the exhibition, sidebar → **Editors** (managers and admins only).
+- Artists and editors only see their own exhibitions, the media of those and their own uploads.
+- “Created by” / “Last changed by” in the sidebar show who did what; visitors never see account details.
+
+## Artists
+
+Under **Artists**: name, ID (URL), portrait and the kind of artist page `/artist/<ID>`:
+
+- *Mini page on Tripnjungle*: portrait, short text, website/Instagram, contact and the public exhibitions.
+  Contact either **via Tripnjungle** (contact e-mail of the Site settings) or the **artist's own details**;
+  those are only published when “The artist agreed to publish these contact details” is ticked.
+- *Link to the artist's own website*: `/artist/<ID>` forwards there.
+
+Exhibitions credit artists under **Artists** (“by …” with a link, “About the artist” below the gallery).
+A single photo by someone else gets its own **Artist of this photo** in its row.
+
+## QR codes
+
+Every photo has a QR code in its row under “Images and videos” (after saving the exhibition):
+**Copy QR image**, **Copy link** and **Download PDF** (printable label). The sidebar has
+**All QR codes as PDF** (one label per page). Size (A6, A5, 10 × 10 cm) and texts: **Site settings → QR codes**.
+
+- The code contains the short link `https://your-domain.com/p/<photo ID>`, which forwards to the photo
+  page. Printed codes keep working when addresses change later.
+- **Before printing**: `PAYLOAD_PUBLIC_SERVER_URL` must be the real domain (the admin warns while it is
+  `localhost` or a Railway address), and the exhibition must be *Locked with link* or *Public* by the
+  time visitors scan – otherwise the page says “not available yet”.
 
 ## Site settings (About, legal notice, privacy)
 
@@ -80,7 +128,8 @@ One-time setup, about an hour. Everything else happens in the admin afterwards.
    Railway sets up HTTPS automatically. Then change `PAYLOAD_PUBLIC_SERVER_URL` to the domain
    (triggers a restart).
 7. Right after the first successful deploy, open `https://your-domain.com/admin` **immediately** and
-   create the admin user. Whoever does that first is admin. Use a strong password.
+   create the admin user. Whoever does that first is admin (the first account always gets the role
+   admin). Use a strong password (at least 12 characters).
 8. Fill in the **Site settings**. For the privacy policy under Privacy:
    - Hosting provider: `Railway Corporation`, address as in the imprint/terms on railway.com
    - Server location: `Amsterdam, Netherlands (EU)`
@@ -93,6 +142,11 @@ One-time setup, about an hour. Everything else happens in the admin afterwards.
 
 Every further push to the connected branch triggers a build and deploy automatically. `npm start` first
 runs the database migrations (`src/migrations`) and then starts the server.
+
+**Updating to release 2.0** (accounts, artists, QR codes): download a backup of `tripnjungle.db` first.
+The migrations run on the next start: field names become English (data is kept), all existing accounts
+become admins, artists/editors/QR settings are added. Then set `PAYLOAD_PUBLIC_SERVER_URL` to the real
+domain before printing any QR code, and create the manager/artist/editor accounts under Accounts.
 
 **Backup:** Railway does not keep permanent volume backups automatically. Daily snapshots can be enabled
 under Volume → Backups (paid). In addition, download `tripnjungle.db` and `media/` from the volume now
@@ -117,17 +171,32 @@ the schema snapshot with
 (example: `src/migrations/20261122_230000_english_field_names.ts`). Back up the database first and test
 the migration on a copy.
 
+**Check:** `npm run migrate:create` adds references to other collections (e.g. `created_by_id`) without
+their delete rule; add `ON DELETE SET NULL` (single reference) or `ON DELETE CASCADE` (`*_rels` tables) by
+hand as in the generated `.json` snapshot, see the migrations of release 2.0.
+
+**Permissions:** `npm run test:access` checks the roles (accounts, exhibitions, media, artists, editors,
+QR codes) against a temporary database. Run it after every change to access rules.
+
 ## Files
 
-- `src/collections/Exhibitions.ts` – fields, access, the hook that transfers `locked` to the media
+- `src/access/roles.ts` – roles and all permission helpers
+- `src/collections/Exhibitions.ts` – fields, access, artists/editors, hooks
 - `src/collections/Media.ts` – uploads (`MEDIA_DIR`), image sizes, public only with `locked: false`
+- `src/collections/Artists.ts` – artist profiles; `src/app/artist/[slug]/route.ts` – the artist page
+- `src/collections/Users.ts` – accounts, roles, login security
+- `src/lib/media-lock.ts` – keeps `locked` of the media in sync with exhibitions and portraits
+- `src/lib/qr.ts`, `src/endpoints/exhibition-qr.ts` – QR PNG/PDF; `src/components/QrCodeField.tsx`,
+  `ExhibitionQrCodes.tsx` – the QR buttons in the admin; `src/app/p/[id]/route.ts` – short link
 - `src/globals/Site.ts` – Site settings (About, legal notice, privacy); `src/lib/site.ts` prepares them for the templates
 - `src/templates/*.html` – the pages; `src/app/**/route.ts` serves them with title, description,
-  Open Graph and JSON-LD (`/`, `/exhibitions`, `/events`, `/archive`, `/about`, `/imprint`, `/privacy`, `/exhibition/<id>`)
+  Open Graph and JSON-LD (`/`, `/exhibitions`, `/events`, `/archive`, `/about`, `/imprint`, `/privacy`,
+  `/exhibition/<id>`, `/exhibition/<id>/photo/<photo id>`, `/artist/<id>`)
 - `src/app/sitemap.xml`, `src/app/robots.txt` – SEO
 - `src/migrations/` – database migrations for production
 - `public/` – CSS, JS, favicon, OG image; `public/js/data.js` talks to the API and picks the image size
 - `scripts/regenerate-sizes.ts` – regenerate image sizes for existing media (`npm run media:regenerate`)
 - `scripts/set-locked.ts` – lock/unlock an exhibition from the command line (for testing)
 - `scripts/write-schema-snapshot.ts` – schema snapshot for hand-written migrations (see above)
+- `scripts/check-access.ts` – permission checks (`npm run test:access`)
 - `tripnjungle.db`, `media/`, `.env` – local, not in git
