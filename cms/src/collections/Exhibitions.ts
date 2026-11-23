@@ -174,15 +174,25 @@ export const Exhibitions: CollectionConfig = {
 
         data.bulkMedia = []
 
-        // Artists/editors may only add media that are public already or their own uploads
+        // Artists/editors may only add media that are public already or their own uploads.
+        // Posters and content are compared separately: posters are public sooner (outside
+        // "planning"), so a locked gallery photo must not become a poster either.
+        const posters = (data.posters ?? originalDoc?.posters) as Ref[] | undefined
+        const content = {
+          frontPage: 'frontPage' in data ? data.frontPage : originalDoc?.frontPage,
+          gallery: data.gallery ?? originalDoc?.gallery,
+        }
+
         await assertMediaMayBeAdded(
           req,
-          mediaIdsOf({
-            posters: data.posters ?? originalDoc?.posters,
-            frontPage: 'frontPage' in data ? data.frontPage : originalDoc?.frontPage,
-            gallery: data.gallery ?? originalDoc?.gallery,
-          }),
-          mediaIdsOf(originalDoc),
+          mediaIdsOf({ posters }),
+          mediaIdsOf({ posters: originalDoc?.posters }),
+          'exhibitions',
+        )
+        await assertMediaMayBeAdded(
+          req,
+          mediaIdsOf(content),
+          mediaIdsOf({ frontPage: originalDoc?.frontPage, gallery: originalDoc?.gallery }),
           'exhibitions',
         )
 

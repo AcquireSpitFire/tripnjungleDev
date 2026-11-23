@@ -522,6 +522,225 @@ async function run() {
   check('Railway addresses count as temporary', isTemporaryAddress('https://tj-production.up.railway.app'))
   check('the real domain is not temporary', !isTemporaryAddress('https://tripnjungle.com'))
 
+  console.log('Security')
+
+  // Locked photos must not become public through artists/editors
+  const managerPhoto: AnyDoc = await payload.create({ collection: 'media', data: { alt: 'M' }, file: file(), ...as(manager) })
+
+  await payload.update({
+    collection: 'exhibitions',
+    id: own.id,
+    data: { gallery: [{ file: artistImage.id }, { file: managerPhoto.id }] },
+    ...as(manager),
+  })
+  await fails('an artist cannot make a locked photo of their exhibition public as portrait', () =>
+    payload.update({ collection: 'artists', id: profile.id, data: { portrait: managerPhoto.id }, ...as(artistUser) }),
+  )
+  check('the photo stays locked', (await reload(managerPhoto.id)).locked === true)
+
+  const ownPortrait: AnyDoc = await payload.update({
+    collection: 'artists',
+    id: profile.id,
+    data: { portrait: artistImage.id },
+    ...as(artistUser),
+  })
+
+  check('an artist can use their own upload as portrait', String(ownPortrait.portrait?.id ?? ownPortrait.portrait) === String(artistImage.id))
+
+  const publicElsewhere: AnyDoc = await payload.create({ collection: 'media', data: { alt: 'Pub' }, file: file(), ...as(manager) })
+  const editorOpen: AnyDoc = await payload.create({
+    collection: 'exhibitions',
+    data: { slug: 'editor-open', title: 'Editor open', visibility: 'public', editors: [editor.id] },
+    ...as(manager),
+  })
+
+  await payload.create({
+    collection: 'exhibitions',
+    data: { slug: 'other-open', title: 'Other open', visibility: 'public', gallery: [{ file: publicElsewhere.id }] },
+    ...as(manager),
+  })
+
+  await fails('an editor cannot move a locked photo into a public exhibition', () =>
+    payload.update({ collection: 'exhibitions', id: editorOpen.id, data: { gallery: [{ file: imageA.id }] }, ...as(editor) }),
+  )
+  await fails('an editor cannot make a locked photo public as poster', () =>
+    payload.update({ collection: 'exhibitions', id: locked.id, data: { posters: [imageA.id] }, ...as(editor) }),
+  )
+  check('the locked photo stays locked', (await reload(imageA.id)).locked === true)
+
+  const withPublic: AnyDoc = await payload.update({
+    collection: 'exhibitions',
+    id: editorOpen.id,
+    data: { gallery: [{ file: publicElsewhere.id }, { file: editorUpload.id }] },
+    ...as(editor),
+  })
+
+  check('an editor can add public photos and their own uploads', withPublic.gallery?.length === 2, withPublic.gallery?.length)
+
+  const resaved: AnyDoc = await payload.update({
+    collection: 'exhibitions',
+    id: locked.id,
+    data: { title: 'Saved again' },
+    ...as(editor),
+  })
+
+  check('saving an exhibition that already holds locked photos still works', resaved.title === 'Saved again')
+
+  const lockedFlag: AnyDoc = await payload.update({
+    collection: 'exhibitions',
+    id: editorOpen.id,
+    data: { locked: true },
+    ...as(editor),
+  })
+
+  check('an editor cannot change the "locked" flag', lockedFlag.locked === false && lockedFlag.visibility === 'public', [
+    lockedFlag.locked,
+    lockedFlag.visibility,
+  ])
+
+  // editorUpload is public now (gallery of a public exhibition)
+  check('the editor upload is public now', (await reload(editorUpload.id)).locked === false)
+  await fails('an editor cannot replace or change their upload once it is public', () =>
+    payload.update({ collection: 'media', id: editorUpload.id, data: { alt: 'changed' }, ...as(editor) }),
+  )
+  await fails('an editor cannot delete their upload once it is public', () =>
+    payload.delete({ collection: 'media', id: editorUpload.id, ...as(editor) }),
+  )
+
+  const draftUpload: AnyDoc = await payload.create({ collection: 'media', data: { alt: 'Draft' }, file: file(), ...as(editor) })
+  const draftChanged: AnyDoc = await payload.update({
+    collection: 'media',
+    id: draftUpload.id,
+    data: { alt: 'Draft 2' },
+    ...as(editor),
+  })
+
+  check('an editor can still change their own locked upload', draftChanged.alt === 'Draft 2', draftChanged.alt)
+
+  // "Locked with link": content only for a direct lookup
+  const linkPhoto: AnyDoc = await payload.create({ collection: 'media', data: { alt: 'L' }, file: file(), ...as(manager) })
+
+  await payload.create({
+    collection: 'exhibitions',
+    data: { slug: 'link-one', title: 'Link', visibility: 'link', gallery: [{ file: linkPhoto.id }] },
+    ...as(manager),
+  })
+
+  const anonymousList = await payload.find({ collection: 'exhibitions', overrideAccess: false, depth: 0 })
+  const linkInList: AnyDoc = anonymousList.docs.find((doc: AnyDoc) => doc.slug === 'link-one')
+
+  check('a link-only exhibition is still listed (poster and details)', Boolean(linkInList))
+  check('lists do not contain the gallery of a link-only exhibition', !linkInList?.gallery?.length, linkInList?.gallery)
+
+  const direct = await payload.find({
+    collection: 'exhibitions',
+    where: { slug: { equals: 'link-one' } },
+    context: { tjSlug: 'link-one' },
+    overrideAccess: false,
+    depth: 0,
+  })
+
+  check('a direct lookup by ID gets the gallery', direct.docs[0]?.gallery?.length === 1, direct.docs[0]?.gallery)
+
+  const { requestedSlug } = await import('../src/lib/visibility')
+
+  check(
+    'the REST lookup ?where[slug][equals]= counts as direct',
+    requestedSlug({ searchParams: new URLSearchParams('where[slug][equals]=link-one') }) === 'link-one',
+  )
+  check('invalid IDs do not count as direct', requestedSlug({ context: { tjSlug: '../x' } }) === null)
+
+  // Page size and the media API
+  const unlimited = await payload.find({ collection: 'exhibitions', limit: 0, overrideAccess: false })
+  const unpaginated = await payload.find({ collection: 'media', pagination: false, overrideAccess: false })
+
+  check('visitors get at most 100 results (limit=0)', unlimited.limit === 100, unlimited.limit)
+  check('visitors cannot turn pagination off', unpaginated.limit === 100, unpaginated.limit)
+
+  const { Media } = await import('../src/collections/Media')
+  const mediaRead = Media.access?.read as (args: AnyDoc) => Promise<unknown>
+
+  check(
+    'visitors cannot browse /api/media',
+    (await mediaRead({ req: { user: null, pathname: '/api/media', payload } })) === false,
+  )
+  check(
+    'the file route /api/media/file/… still works for visitors',
+    (await mediaRead({ req: { user: null, pathname: '/api/media/file/x.webp', payload } })) !== false,
+  )
+
+  const protectOriginal = Media.upload && typeof Media.upload === 'object' ? Media.upload.handlers?.[0] : undefined
+  const photoDoc = { filename: 'a.jpg', mimeType: 'image/jpeg', sizes: { thumb: { filename: 'a-600x400.webp' } } }
+  const fileReq = (user: AnyDoc) => ({ user }) as AnyDoc
+  const handle = async (user: AnyDoc, doc: AnyDoc, filename: string) =>
+    protectOriginal?.(fileReq(user), { doc, params: { collection: 'media', filename } })
+
+  check('visitors cannot load original photos (EXIF/GPS)', ((await handle(null, photoDoc, 'a.jpg')) as AnyDoc)?.status === 404)
+  check('visitors can load the generated sizes', (await handle(null, photoDoc, 'a-600x400.webp')) === undefined)
+  check('logged-in accounts can load originals', (await handle(editor, photoDoc, 'a.jpg')) === undefined)
+  check(
+    'videos stay available',
+    (await handle(null, { filename: 'v.mp4', mimeType: 'video/mp4', sizes: {} }, 'v.mp4')) === undefined,
+  )
+
+  // Passwords
+  const resetToken = await payload.forgotPassword({
+    collection: 'users',
+    data: { email: 'editor@test.local' },
+    disableEmail: true,
+  })
+
+  await fails('a password reset also needs 12 characters', () =>
+    payload.resetPassword({ collection: 'users', data: { token: String(resetToken), password: 'short' }, overrideAccess: true }),
+  )
+
+  const reset = await payload
+    .resetPassword({
+      collection: 'users',
+      data: { token: String(resetToken), password: 'editor-password-new-1' },
+      overrideAccess: true,
+    })
+    .then(() => true)
+    .catch(() => false)
+
+  check('a long enough password works with the same reset token', reset)
+
+  // Template engine, mail links
+  const { renderTemplate } = await import('../src/lib/render-template')
+  const count = (html: string) => html.split('SECRET-VALUE').length - 1
+  const withPlaceholder = renderTemplate('about.html', { title: '{{description}}', description: 'SECRET-VALUE' })
+  const withoutPlaceholder = renderTemplate('about.html', { title: 'plain', description: 'SECRET-VALUE' })
+
+  check(
+    'placeholders typed into texts are not expanded',
+    withPlaceholder.includes('{{description}}') && count(withPlaceholder) === count(withoutPlaceholder),
+    [count(withPlaceholder), count(withoutPlaceholder)],
+  )
+
+  const { mailtoHref } = await import('../src/lib/site')
+
+  check('mail links cannot add hidden recipients', !mailtoHref('a?bcc=x@evil.example').includes('?'), mailtoHref('a?bcc=x@evil.example'))
+
+  // Login rate limit (src/proxy.ts)
+  const { proxy } = await import('../src/proxy')
+  const { NextRequest } = await import('next/server')
+  const attempt = (address: string) =>
+    proxy(
+      new NextRequest('http://localhost:3000/api/users/login', {
+        method: 'POST',
+        headers: { 'x-forwarded-for': `1.2.3.4, ${address}` },
+      }),
+    )
+  const statuses: number[] = []
+
+  for (let index = 0; index < 11; index += 1) {
+    statuses.push(attempt('203.0.113.7').status)
+  }
+
+  check('10 login attempts per address are allowed', statuses.slice(0, 10).every((status) => status !== 429), statuses)
+  check('the 11th attempt is blocked (429)', statuses[10] === 429, statuses[10])
+  check('other addresses are not affected', attempt('203.0.113.8').status !== 429)
+
   console.log(failures ? `\n${failures} check(s) failed.` : '\nAll checks passed.')
 }
 

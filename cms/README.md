@@ -66,6 +66,11 @@ ends the session on the server, not only in the browser.
 - Only admins change roles, also not on their own account. The last admin cannot be deleted or demoted.
 - **Assign an editor**: in the exhibition, sidebar → **Editors** (managers and admins only).
 - Artists and editors only see their own exhibitions, the media of those and their own uploads.
+- Artists and editors can only **add** photos that are public already or that they uploaded themselves
+  (as poster, cover, gallery item or portrait). Other locked photos need a manager – otherwise they
+  could publish a photo a manager keeps locked.
+- Their own uploads can be changed or deleted only while they are still locked; once a photo is public,
+  only managers change it.
 - “Created by” / “Last changed by” in the sidebar show who did what; visitors never see account details.
 
 ## Artists
@@ -91,6 +96,41 @@ Every photo has a QR code in its row under “Images and videos” (after saving
 - **Before printing**: `PAYLOAD_PUBLIC_SERVER_URL` must be the real domain (the admin warns while it is
   `localhost` or a Railway address), and the exhibition must be *Locked with link* or *Public* by the
   time visitors scan – otherwise the page says “not available yet”.
+
+## Security notes
+
+- **Login**: at most 10 login/password requests per IP address in 15 minutes (`src/proxy.ts`, then
+  “429 Too Many Requests”), plus Payload's lock of 15 minutes after 5 wrong passwords per account.
+  Sessions are stored on the server (logging out ends them), cookies are `httpOnly`, `SameSite=Strict`
+  and `secure` on https.
+- **Startup**: the server refuses to start with a `PAYLOAD_SECRET` shorter than 32 characters
+  (`openssl rand -hex 32` gives 64) and warns in production without `PAYLOAD_PUBLIC_SERVER_URL`.
+- **Photos**: visitors only get the generated WebP sizes. Original photos (with camera data such as
+  GPS position and time) are only delivered to logged-in accounts. Locked media are never delivered
+  to visitors; `/api/media` itself is not public (the site gets media through exhibitions/artists).
+- **Caching**: media files are only cached by the browser (`private`, one week), never by shared
+  caches, because what may be delivered depends on the login. Pages are cached publicly and never
+  contain anything account-specific.
+- **“Locked with link”**: lists (`/api/exhibitions`) show such exhibitions like locked ones (poster and
+  details); the content only comes with a lookup of exactly that ID.
+- **API limits**: visitors, artists and editors get at most 100 results per request; `depth` is at most 2.
+- **Uploads**: only JPEG, PNG, WebP, AVIF, GIF, MP4, WebM and QuickTime (checked from the file content,
+  no SVG); files are served with a sandbox CSP.
+- `npm run test:access` checks all of this against a temporary database.
+
+Accepted on purpose (known, low risk):
+
+- **Artist redirect**: an artist account with *Link to the artist's own website* chooses the target
+  itself, so `/artist/<ID>` can forward to any https address. All artist accounts are known personally
+  and their pages are checked.
+- `npm audit` reports 5 moderate findings in esbuild inside `drizzle-kit` (development tool of the
+  SQLite adapter; no fix available, do **not** run `npm audit fix --force`). They disappear with a
+  Payload update that ships a newer drizzle-kit.
+- `/p/<photo ID>` reveals which exhibition (ID) a photo belongs to; exhibition IDs are public anyway.
+- Videos keep their metadata (removing it needs ffmpeg).
+- On a completely empty database, the first account created becomes admin – create it right after
+  the first deploy.
+- The login rate limit counts per server process; with several instances it multiplies.
 
 ## Site settings (About, legal notice, privacy)
 
@@ -180,11 +220,13 @@ their delete rule; add `ON DELETE SET NULL` (single reference) or `ON DELETE CAS
 hand as in the generated `.json` snapshot, see the migrations of release 2.0.
 
 **Permissions:** `npm run test:access` checks the roles (accounts, exhibitions, media, artists, editors,
-QR codes) against a temporary database. Run it after every change to access rules.
+QR codes, the security rules above) against a temporary database. Run it after every change to access rules.
 
 ## Files
 
 - `src/access/roles.ts` – roles and all permission helpers
+- `src/proxy.ts` – rate limit for login and password requests
+- `src/lib/query-limits.ts` – page-size cap for visitors, artists and editors
 - `src/collections/Exhibitions.ts` – fields, access, artists/editors, hooks
 - `src/collections/Media.ts` – uploads (`MEDIA_DIR`), image sizes, public only with `locked: false`
 - `src/collections/Artists.ts` – artist profiles; `src/app/artist/[slug]/route.ts` – the artist page
