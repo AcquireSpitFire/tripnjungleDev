@@ -95,7 +95,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
     })
   }
 
-  if (isUpcoming(exhibition)) {
+  // Link-only pages are noindex and carry no structured data of their own
+  if (isUpcoming(exhibition) && !linkOnly) {
     graph.push(eventJsonLd(exhibition, base))
   }
 

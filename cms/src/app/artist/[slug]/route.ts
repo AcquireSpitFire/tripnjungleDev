@@ -8,7 +8,7 @@ import { getPayload } from 'payload'
 
 import { escapeHtml, htmlResponse, jsonForScript, renderTemplate, summarize } from '@/lib/render-template'
 import { SITE_NAME, absolute, asMedia, findPublicExhibitions, getServerUrl, imageUrl } from '@/lib/seo'
-import { getSiteSettings, mailLink, paragraphs } from '@/lib/site'
+import { getSiteSettings, mailLink, mailtoHref, paragraphs } from '@/lib/site'
 import type { Artist, Media } from '@/payload-types'
 
 export const dynamic = 'force-dynamic'
@@ -77,7 +77,7 @@ function contactHtml(artist: Artist, siteContact: string | null | undefined): st
     const phone = (artist.contactPhone || '').trim()
 
     if (email) {
-      parts.push(`<a href="mailto:${escapeHtml(email)}">${escapeHtml(email)}</a>`)
+      parts.push(`<a href="${escapeHtml(mailtoHref(email))}">${escapeHtml(email)}</a>`)
     }
 
     if (phone) {
@@ -138,11 +138,14 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
   if (artist.pageType === 'external') {
     const target = httpsUrl(artist.externalUrl)
 
-    // Not an open redirect: the target is only ever set in the admin
+    // The target comes from the admin: managers, and the artist account of this profile.
+    // So an artist account can point its own page anywhere (https only, CR/LF impossible).
+    // Accepted on purpose: every artist account is known personally and the pages are
+    // checked (README, "Security notes").
     return target
       ? new Response(null, {
           status: 302,
-          headers: { Location: target, 'Cache-Control': 'public, s-maxage=300' },
+          headers: { Location: target, 'Cache-Control': 'public, s-maxage=60' },
         })
       : notFound()
   }
@@ -200,6 +203,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
           .filter(Boolean)
           .join('\n') || '<p>More about this artist soon.</p>',
     }),
-    { cache: 'public, s-maxage=300, stale-while-revalidate=86400' },
+    // Short: withdrawn contact details must disappear quickly from caches
+    { cache: 'public, s-maxage=60, stale-while-revalidate=300' },
   )
 }

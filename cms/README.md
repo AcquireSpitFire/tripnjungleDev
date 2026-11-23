@@ -199,8 +199,8 @@ QR codes) against a temporary database. Run it after every change to access rule
 - `src/app/sitemap.xml`, `src/app/robots.txt` – SEO
 - `src/migrations/` – database migrations for production
 - `public/` – CSS, JS, favicon, OG image; `public/js/data.js` talks to the API and picks the image size
-- `scripts/regenerate-sizes.ts` – regenerate image sizes for existing media (`npm run media:regenerate`)
-- `scripts/set-locked.ts` – lock/unlock an exhibition from the command line (for testing)
+- `scripts/regenerate-sizes.ts` – regenerate image sizes for existing media (`npm run media:regenerate -- --yes`; without `--yes` it only shows which database and folder it would change)
+- `scripts/set-locked.ts` – lock/unlock an exhibition from the command line (for testing; needs `--yes`)
 - `scripts/write-schema-snapshot.ts` – schema snapshot for hand-written migrations (see above)
 - `scripts/check-access.ts` – permission checks (`npm run test:access`)
 - `tripnjungle.db`, `media/`, `.env` – local, not in git

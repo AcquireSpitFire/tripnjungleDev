@@ -51,11 +51,23 @@ export function optional(value: string | null | undefined): string {
   return escapeHtml((value || '').trim())
 }
 
+// "mailto:" link target with the address parts URL-encoded: characters like "?" or "&" in
+// an address could otherwise add hidden recipients or a prefilled text (?bcc=…, &body=…)
+export function mailtoHref(email: string): string {
+  const at = email.lastIndexOf('@')
+
+  if (at <= 0) {
+    return 'mailto:' + encodeURIComponent(email)
+  }
+
+  return 'mailto:' + encodeURIComponent(email.slice(0, at)) + '@' + encodeURIComponent(email.slice(at + 1))
+}
+
 export function mailLink(value: string | null | undefined, label: string): string {
   const clean = (value || '').trim()
 
   return clean
-    ? `<a href="mailto:${escapeHtml(clean)}">${escapeHtml(clean)}</a>`
+    ? `<a href="${escapeHtml(mailtoHref(clean))}">${escapeHtml(clean)}</a>`
     : required('', label)
 }
 
