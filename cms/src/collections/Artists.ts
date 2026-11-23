@@ -6,7 +6,7 @@ import {
   getArtistProfileId,
   isArtist,
 } from '../access/roles'
-import { syncMediaLocks } from '../lib/media-lock'
+import { assertMediaMayBeAdded, syncMediaLocks } from '../lib/media-lock'
 import { toId } from '../lib/visibility'
 
 // Artist profiles: credited on exhibitions and photos, each with a small page
@@ -65,6 +65,22 @@ export const Artists: CollectionConfig = {
     delete: ({ req }) => canManageExhibitions(req.user),
   },
   hooks: {
+    beforeChange: [
+      async ({ data, originalDoc, req }) => {
+        // A portrait becomes public: artist accounts may only choose public media or their own uploads
+        const next = toId('portrait' in data ? data.portrait : originalDoc?.portrait)
+        const previous = toId(originalDoc?.portrait)
+
+        await assertMediaMayBeAdded(
+          req,
+          next === null ? [] : [next],
+          previous === null ? [] : [previous],
+          'artists',
+        )
+
+        return data
+      },
+    ],
     afterChange: [
       async ({ doc, previousDoc, req }) => {
         // The portrait is public as long as a profile uses it
@@ -148,6 +164,7 @@ export const Artists: CollectionConfig = {
       name: 'shortText',
       label: 'Short text',
       type: 'textarea',
+      maxLength: 5000,
       admin: {
         condition: (data) => isProfile(data),
         description: 'A few sentences about the artist. Blank line = new paragraph.',

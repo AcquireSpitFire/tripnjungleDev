@@ -17,7 +17,9 @@ export function asMedia(ref: MediaRef): Media | null {
   return ref && typeof ref === 'object' ? ref : null
 }
 
-// Best public image URL of a medium (large → medium → original)
+// Best public image URL of a medium: the requested size, then the other generated sizes.
+// The original only as a last resort (videos, GIFs, images without generated sizes):
+// visitors cannot load original photos (EXIF/GPS, see src/collections/Media.ts).
 export function imageUrl(media: Media | null, size: 'large' | 'medium' | 'thumb' = 'large'): string | null {
   if (!media) {
     return null
@@ -25,7 +27,7 @@ export function imageUrl(media: Media | null, size: 'large' | 'medium' | 'thumb'
 
   const sizes = (media.sizes || {}) as Record<string, { url?: string | null } | undefined>
 
-  return sizes[size]?.url || sizes.medium?.url || media.url || null
+  return sizes[size]?.url || sizes.large?.url || sizes.medium?.url || sizes.thumb?.url || media.url || null
 }
 
 // JSON-LD "Person" entries for the credited artists (only populated profiles)
@@ -51,11 +53,16 @@ export function absolute(base: string, url: string | null): string | null {
   return /^https?:\/\//.test(url) ? url : base + url
 }
 
-// Load exhibitions the way an anonymous visitor sees them
+// Load exhibitions the way an anonymous visitor sees them.
+// A lookup by slug passes it on as context: "locked with link" exhibitions only show their
+// content when asked for directly (see requestedSlug in src/lib/visibility.ts).
 export async function findPublicExhibitions(payload: Payload, where?: Where) {
+  const slug = (where?.slug as { equals?: unknown } | undefined)?.equals
+
   const result = await payload.find({
     collection: 'exhibitions',
     where,
+    context: typeof slug === 'string' ? { tjSlug: slug } : undefined,
     depth: 1,
     limit: 100,
     sort: 'date',

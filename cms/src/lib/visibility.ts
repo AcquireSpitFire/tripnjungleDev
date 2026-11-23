@@ -22,6 +22,29 @@ export function contentIsOpen(doc: VisibilitySettings | null | undefined): boole
   return getRelease(doc) !== 'planning' && getVisibility(doc) !== 'locked'
 }
 
+// The exhibition a request asks for by its ID (slug), if any:
+//   - REST: /api/exhibitions?where[slug][equals]=<slug> (public/js/data.js, loadExhibition)
+//   - Local API of the server pages: context { tjSlug: <slug> }
+// "Locked with link" exhibitions only show their content to such requests, never in lists
+// (otherwise /api/exhibitions would hand out every "secret" gallery).
+type SlugRequest = {
+  context?: Record<string, unknown>
+  query?: Record<string, unknown>
+  searchParams?: URLSearchParams
+}
+
+export function requestedSlug(req: SlugRequest | null | undefined): string | null {
+  const fromContext = req?.context?.tjSlug
+  const where = req?.query?.where as { slug?: { equals?: unknown } } | undefined
+  const candidate =
+    (typeof fromContext === 'string' && fromContext) ||
+    (typeof where?.slug?.equals === 'string' && where.slug.equals) ||
+    req?.searchParams?.get('where[slug][equals]') ||
+    null
+
+  return candidate && /^[a-z0-9-]+$/i.test(candidate) ? candidate.toLowerCase() : null
+}
+
 export type Ref = number | string | { id: number | string } | null | undefined
 
 export function toId(ref: Ref): number | string | null {

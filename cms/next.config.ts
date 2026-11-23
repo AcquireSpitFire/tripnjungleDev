@@ -7,6 +7,8 @@ const __filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(__filename)
 
 const nextConfig: NextConfig = {
+  // No "X-Powered-By: Next.js" (tells attackers what to try)
+  poweredByHeader: false,
   images: {
     localPatterns: [
       {
@@ -37,16 +39,16 @@ const nextConfig: NextConfig = {
           { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
           { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' },
+          // Other windows (e.g. a page that opened ours) get no handle on our pages
+          { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
         ],
       },
       {
-        // Media files never change under one URL (new file = new name).
         // "sandbox": even if a file contained scripts, it could not run anything.
+        // Caching is set per response in src/collections/Media.ts (private: delivery depends
+        // on the login, so no shared cache may keep a copy).
         source: '/api/media/file/:path*',
-        headers: [
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
-          { key: 'Content-Security-Policy', value: "sandbox; default-src 'none'" },
-        ],
+        headers: [{ key: 'Content-Security-Policy', value: "sandbox; default-src 'none'" }],
       },
       {
         source: '/:path(css|js)/:file*',

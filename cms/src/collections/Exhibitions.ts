@@ -12,8 +12,15 @@ import {
 } from '../access/roles'
 import { exhibitionQrEndpoint } from '../endpoints/exhibition-qr'
 import { auditFields, auditHook } from '../lib/audit'
-import { mediaIdsOf, syncMediaLocks } from '../lib/media-lock'
-import { contentIsOpen, getRelease, getVisibility, toId, type Ref } from '../lib/visibility'
+import { assertMediaMayBeAdded, mediaIdsOf, syncMediaLocks } from '../lib/media-lock'
+import {
+  contentIsOpen,
+  getRelease,
+  getVisibility,
+  requestedSlug,
+  toId,
+  type Ref,
+} from '../lib/visibility'
 import { getYouTubeId } from '../lib/youtube'
 
 // An exhibition.
@@ -53,8 +60,19 @@ const publicWhere: Where = {
 }
 
 // Cover and gallery: visible when logged in (the collection read access already
-// limits artists/editors to their own exhibitions), public or "with link"
-const onlyWhenUnlocked: FieldAccess = ({ req, doc }) => Boolean(req.user) || contentIsOpen(doc)
+// limits artists/editors to their own exhibitions), public, or "with link" – the latter
+// only when the request asks for exactly this exhibition (not in lists, see requestedSlug)
+const onlyWhenUnlocked: FieldAccess = ({ req, doc }) => {
+  if (req.user) {
+    return true
+  }
+
+  if (!contentIsOpen(doc)) {
+    return false
+  }
+
+  return getVisibility(doc) !== 'link' || requestedSlug(req) === doc?.slug
+}
 
 // Media fields only accept media the account may read. "true" adds no filter of its own,
 // but makes Payload validate every chosen id against the read access of the account
@@ -152,6 +170,18 @@ export const Exhibitions: CollectionConfig = {
         }
 
         data.bulkMedia = []
+
+        // Artists/editors may only add media that are public already or their own uploads
+        await assertMediaMayBeAdded(
+          req,
+          mediaIdsOf({
+            posters: data.posters ?? originalDoc?.posters,
+            frontPage: 'frontPage' in data ? data.frontPage : originalDoc?.frontPage,
+            gallery: data.gallery ?? originalDoc?.gallery,
+          }),
+          mediaIdsOf(originalDoc),
+          'exhibitions',
+        )
 
         return data
       },
@@ -264,6 +294,7 @@ export const Exhibitions: CollectionConfig = {
       name: 'description',
       label: 'Description',
       type: 'textarea',
+      maxLength: 20000,
     },
     {
       name: 'release',
@@ -340,6 +371,7 @@ export const Exhibitions: CollectionConfig = {
       name: 'locked',
       type: 'checkbox',
       defaultValue: true,
+      access: { create: exhibitionManagersOnlyField, update: exhibitionManagersOnlyField },
       admin: { hidden: true },
     },
     {
@@ -360,6 +392,7 @@ export const Exhibitions: CollectionConfig = {
       relationTo: 'media',
       filterOptions: readableMediaOnly,
       hasMany: true,
+      maxRows: 10,
       admin: {
         description: 'Posters for the home page, Events and Archive. Public, except in the release “Planning”.',
       },
@@ -396,6 +429,7 @@ export const Exhibitions: CollectionConfig = {
       label: 'Images and videos',
       type: 'array',
       labels: { singular: 'Item', plural: 'Items' },
+      maxRows: 300,
       access: { read: onlyWhenUnlocked },
       admin: {
         description: 'Reorder by drag & drop. Shown in the slideshow and the gallery.',

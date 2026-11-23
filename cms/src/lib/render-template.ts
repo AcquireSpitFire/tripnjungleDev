@@ -43,10 +43,15 @@ function readTemplate(name: string): string {
 const assetVersion = (process.env.RAILWAY_GIT_COMMIT_SHA || Date.now().toString(36)).slice(0, 12)
 
 export function renderTemplate(name: string, values: Record<string, string>): string {
+  // One single pass: inserted values are never scanned again, so "{{key}}" typed into a
+  // CMS text stays literal text (a second pass would expand it – content corruption and,
+  // repeated, a huge response that exhausts the server memory).
+  // The asset version is added to the template itself, before any value is inserted.
   return readTemplate(name)
-    .replace(/\{\{\{(\w+)\}\}\}/g, (_, key) => values[key] ?? '')
-    .replace(/\{\{(\w+)\}\}/g, (_, key) => escapeHtml(values[key] ?? ''))
     .replace(/((?:href|src)="\/(?:css|js)\/[^"?#]+)"/g, `$1?v=${assetVersion}"`)
+    .replace(/\{\{\{(\w+)\}\}\}|\{\{(\w+)\}\}/g, (_, rawKey: string | undefined, key: string | undefined) =>
+      rawKey !== undefined ? (values[rawKey] ?? '') : escapeHtml(values[key ?? ''] ?? ''),
+    )
 }
 
 // Shortens a description to meta length
