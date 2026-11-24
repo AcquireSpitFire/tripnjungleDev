@@ -1,12 +1,12 @@
-// Events und Archive (gleiche Darstellung, andere Auswahl):
-//   <body data-page="events">  → Ausstellungen, die noch stattfinden (Datum ab heute),
-//                                 aufsteigend sortiert, mit allen Details
-//   <body data-page="archive"> → vergangene Ausstellungen, neueste zuerst
+// Events and Archive (same layout, different selection):
+//   <body data-page="events">  → exhibitions still to come (date from today on),
+//                                 sorted ascending, with all details
+//   <body data-page="archive"> → past exhibitions, newest first
 //
-// Pro Ausstellung: alle Poster nebeneinander, Titel, Datum, Uhrzeit, Ort,
-// Beschreibung und der Link zur Ausstellung (bei locked: nur ein Hinweis,
-// Poster nicht klickbar). Klick auf Poster → Intro-Video (wenn vorhanden),
-// Klick auf den Link → direkt zur Ausstellung.
+// Per exhibition: all posters side by side, title, date, time, location,
+// description and the link to the exhibition (when locked: only a notice,
+// posters not clickable). Click on a poster → intro video (if any),
+// click on the link → straight to the exhibition.
 
 const listElement = document.getElementById("list");
 const isArchive = document.body.dataset.page === "archive";
@@ -22,7 +22,7 @@ function createPosters(exhibition, eventIndex) {
     }
 
     const element = createPosterElement(exhibition, poster, {
-      altText: "Poster " + (index + 1) + ": " + exhibition.titel,
+      altText: "Poster " + (index + 1) + ": " + exhibition.title,
       size: "medium",
       sizes: "(max-width: 600px) 100vw, 24rem",
       lazy: eventIndex > 0 || index > 0,
@@ -52,7 +52,7 @@ function createEvent(exhibition, eventIndex) {
   const title = document.createElement("h2");
 
   title.className = "event_title";
-  title.textContent = exhibition.titel;
+  title.textContent = exhibition.title;
   info.appendChild(title);
 
   if (exhibition.theme) {
@@ -63,7 +63,7 @@ function createEvent(exhibition, eventIndex) {
     info.appendChild(theme);
   }
 
-  // Datum · Uhrzeit · Ort (nur was vorhanden ist)
+  // Date · time · location (only what is there)
   const details = [formatDate(exhibition)];
 
   if (!isArchive) {

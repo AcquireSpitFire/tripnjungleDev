@@ -1,5 +1,5 @@
-// Statische Seiten (Startseite, Exhibitions, Archive, About, Imprint, Privacy)
-// aus src/templates mit absoluten Canonical-/OG-Angaben ausliefern
+// Serve static pages (home, Exhibitions, Archive, About, Imprint, Privacy)
+// from src/templates with absolute canonical/OG values
 import configPromise from '@payload-config'
 import { getPayload, type Payload } from 'payload'
 
@@ -11,11 +11,11 @@ type StaticPage = {
   template: string
   path: string
   title: string
-  // Fehlt sie, gilt die Seitenbeschreibung aus den Site settings
+  // If missing, the site description from the Site settings applies
   description?: string
   robots?: string
   jsonLd?: (base: string, description: string) => unknown
-  // Zusätzliche Platzhalter, berechnet aus den Site settings
+  // Additional placeholders, computed from the Site settings
   values?: (settings: SiteSettings, payload: Payload) => Record<string, string>
 }
 

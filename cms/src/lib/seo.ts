@@ -1,4 +1,4 @@
-// Gemeinsame SEO-Helfer für die Route Handler (Ausstellung, Events, Sitemap)
+// Shared SEO helpers for the route handlers (exhibition, events, sitemap)
 import type { Payload, Where } from 'payload'
 
 import type { Exhibition, Media } from '../payload-types'
@@ -17,7 +17,9 @@ export function asMedia(ref: MediaRef): Media | null {
   return ref && typeof ref === 'object' ? ref : null
 }
 
-// Beste öffentliche Bild-URL eines Mediums (large → medium → Original)
+// Best public image URL of a medium: the requested size, then the other generated sizes.
+// The original only as a last resort (videos, GIFs, images without generated sizes):
+// visitors cannot load original photos (EXIF/GPS, see src/collections/Media.ts).
 export function imageUrl(media: Media | null, size: 'large' | 'medium' | 'thumb' = 'large'): string | null {
   if (!media) {
     return null
@@ -25,7 +27,22 @@ export function imageUrl(media: Media | null, size: 'large' | 'medium' | 'thumb'
 
   const sizes = (media.sizes || {}) as Record<string, { url?: string | null } | undefined>
 
-  return sizes[size]?.url || sizes.medium?.url || media.url || null
+  return sizes[size]?.url || sizes.large?.url || sizes.medium?.url || sizes.thumb?.url || media.url || null
+}
+
+// JSON-LD "Person" entries for the credited artists (only populated profiles)
+export function artistsJsonLd(artists: unknown[] | null | undefined, base: string) {
+  const people = (artists || [])
+    .filter((artist): artist is { name: string; slug: string } =>
+      Boolean(artist && typeof artist === 'object' && 'slug' in artist && 'name' in artist),
+    )
+    .map((artist) => ({
+      '@type': 'Person',
+      name: artist.name,
+      url: `${base}/artist/${encodeURIComponent(artist.slug)}`,
+    }))
+
+  return people.length ? people : undefined
 }
 
 export function absolute(base: string, url: string | null): string | null {
@@ -36,11 +53,16 @@ export function absolute(base: string, url: string | null): string | null {
   return /^https?:\/\//.test(url) ? url : base + url
 }
 
-// Ausstellungen so laden, wie sie ein Besucher ohne Login sieht
+// Load exhibitions the way an anonymous visitor sees them.
+// A lookup by slug passes it on as context: "locked with link" exhibitions only show their
+// content when asked for directly (see requestedSlug in src/lib/visibility.ts).
 export async function findPublicExhibitions(payload: Payload, where?: Where) {
+  const slug = (where?.slug as { equals?: unknown } | undefined)?.equals
+
   const result = await payload.find({
     collection: 'exhibitions',
     where,
+    context: typeof slug === 'string' ? { tjSlug: slug } : undefined,
     depth: 1,
     limit: 100,
     sort: 'date',
@@ -50,7 +72,7 @@ export async function findPublicExhibitions(payload: Payload, where?: Where) {
   return result.docs
 }
 
-// Kommende Ausstellung mit festem Datum (Coming soon hat keins und bekommt kein Event-JSON-LD)
+// Upcoming exhibition with a fixed date (Coming soon has none and gets no event JSON-LD)
 export function isUpcoming(exhibition: Exhibition): boolean {
   if (!exhibition.date || (exhibition.release && exhibition.release !== 'scheduled')) {
     return false
@@ -63,7 +85,7 @@ export function isUpcoming(exhibition: Exhibition): boolean {
   return new Date(exhibition.date) >= today
 }
 
-// JSON-LD "Event" für eine kommende Ausstellung
+// JSON-LD "Event" for an upcoming exhibition
 export function eventJsonLd(exhibition: Exhibition, base: string) {
   const poster = asMedia(exhibition.posters?.[0])
   const image = absolute(base, imageUrl(poster))
@@ -73,7 +95,7 @@ export function eventJsonLd(exhibition: Exhibition, base: string) {
 
   return {
     '@type': 'ExhibitionEvent',
-    name: exhibition.titel,
+    name: exhibition.title,
     description: exhibition.description || undefined,
     startDate,
     eventStatus: 'https://schema.org/EventScheduled',

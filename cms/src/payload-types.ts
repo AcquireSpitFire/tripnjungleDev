@@ -68,6 +68,7 @@ export interface Config {
   blocks: {};
   collections: {
     exhibitions: Exhibition;
+    artists: Artist;
     media: Media;
     users: User;
     'payload-kv': PayloadKv;
@@ -78,6 +79,7 @@ export interface Config {
   collectionsJoins: {};
   collectionsSelect: {
     exhibitions: ExhibitionsSelect<false> | ExhibitionsSelect<true>;
+    artists: ArtistsSelect<false> | ArtistsSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
     users: UsersSelect<false> | UsersSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
@@ -130,54 +132,147 @@ export interface UserAuthOperations {
 export interface Exhibition {
   id: number;
   /**
-   * Nur Kleinbuchstaben, Zahlen und Bindestriche, z. B. exhibition-3. Wird in der URL verwendet.
+   * Lowercase letters, numbers and hyphens only, e.g. exhibition-3. Used in the URL.
    */
   slug: string;
-  titel: string;
+  /**
+   * Editor or artist accounts that may change texts, captions, alt texts, photos and their order. They cannot change ID, release, visibility or these assignments, and cannot delete the exhibition.
+   */
+  editors?: (number | User)[] | null;
+  title: string;
   theme?: string | null;
+  /**
+   * Who made the exhibition. Shown as “by …” with a link to the artist page. Artist accounts of these profiles may edit the exhibition.
+   */
+  artists?: (number | Artist)[] | null;
   description?: string | null;
   /**
-   * Datum: erscheint unter Events, nach dem Datum im Archive. Coming soon: steht ohne Datum am Ende der Events. Planning: schon angelegt, für Besucher aber nirgends sichtbar.
+   * Date: listed under Events, in the Archive after the date. Coming soon: listed without a date at the end of the events. Planning: already created, but not visible to visitors anywhere.
    */
   release?: ('scheduled' | 'comingSoon' | 'planning') | null;
   date?: string | null;
   time?: string | null;
   location?: string | null;
   /**
-   * Gesperrt: Poster und Details sind sichtbar, die Ausstellung selbst (Deckblatt, Bilder, Videos) nicht. Gesperrt mit Link: wie gesperrt, aber wer die Adresse /exhibition/<ID> kennt, sieht die Ausstellung. Freigeschaltet: für alle sichtbar, auch in Slideshow und Exhibitions.
+   * Locked: poster and details are visible, the exhibition itself (cover, images, videos) is not. Locked with link: like locked, but whoever knows the address /exhibition/<ID> sees the exhibition. Public: visible to everyone, also in the slideshow and Exhibitions.
    */
   visibility?: ('locked' | 'link' | 'public') | null;
   locked?: boolean | null;
   /**
-   * Wird vor der Ausstellung abgespielt und auf der Ausstellungsseite eingebettet.
+   * Played before the exhibition and embedded on the exhibition page.
    */
   video?: string | null;
   /**
-   * Poster für Startseite, Events und Archive. Öffentlich, außer im Release „Planning“.
+   * Posters for the home page, Events and Archive. Public, except in the release “Planning”.
    */
   posters?: (number | Media)[] | null;
   /**
-   * Bild oder Video für Slideshow und Exhibitions-Liste.
+   * Image or video for the slideshow and the Exhibitions list.
    */
   frontPage?: (number | null) | Media;
   /**
-   * „Create New“ wählen, alle Dateien auf einmal ablegen (10, 20 oder mehr) und speichern; der Alt-Text kann dabei pro Datei schon eingetragen werden. Nach dem Speichern der Ausstellung stehen sie unten bei „Bilder und Videos“, dort lassen sich Name und Alt-Text jederzeit ändern.
+   * Choose “Create New”, drop all files at once (10, 20 or more) and save; the alt text can already be entered per file. After saving the exhibition they appear below under “Images and videos”, where name and alt text can be changed at any time.
    */
   bulkMedia?: (number | Media)[] | null;
   /**
-   * Reihenfolge per Drag & Drop. Erscheint in Slideshow und Galerie.
+   * Reorder by drag & drop. Shown in the slideshow and the gallery.
    */
-  medien?:
+  gallery?:
     | {
         file: number | Media;
         name?: string | null;
         /**
-         * Kurze Bildbeschreibung (Barrierefreiheit, SEO).
+         * Short image description (accessibility, SEO).
          */
         alt?: string | null;
+        /**
+         * Leave empty if it is by the artists of the exhibition.
+         */
+        artist?: (number | null) | Artist;
         id?: string | null;
       }[]
     | null;
+  createdBy?: (number | null) | User;
+  updatedBy?: (number | null) | User;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Admin: everything. Manager: the selected sections (one account per sub page). Artist: own exhibitions, linked to an artist profile. Editor: the exhibitions they are assigned to.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "users".
+ */
+export interface User {
+  id: number;
+  name?: string | null;
+  /**
+   * Only admins can change roles. The very first account always becomes admin.
+   */
+  role: 'admin' | 'manager' | 'artist' | 'editor';
+  /**
+   * The sub pages this manager is responsible for.
+   */
+  sections?: 'exhibitions'[] | null;
+  /**
+   * The profile this account belongs to. The account may edit this profile and every exhibition that credits it.
+   */
+  artist?: (number | null) | Artist;
+  updatedAt: string;
+  createdAt: string;
+  email: string;
+  resetPasswordToken?: string | null;
+  resetPasswordExpiration?: string | null;
+  salt?: string | null;
+  hash?: string | null;
+  resetPasswordRequestedAt?: string | null;
+  loginAttempts?: number | null;
+  lockUntil?: string | null;
+  sessions?:
+    | {
+        id: string;
+        createdAt?: string | null;
+        expiresAt: string;
+      }[]
+    | null;
+  password?: string | null;
+  collection: 'users';
+}
+/**
+ * People who make the photos and exhibitions. Each artist has a page at /artist/<slug>.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "artists".
+ */
+export interface Artist {
+  id: number;
+  name: string;
+  /**
+   * Lowercase letters, numbers and hyphens, e.g. tom. The page is /artist/<ID>.
+   */
+  slug: string;
+  /**
+   * Optional. Public as soon as it is saved here.
+   */
+  portrait?: (number | null) | Media;
+  pageType: 'profile' | 'external';
+  /**
+   * /artist/<ID> forwards to this address.
+   */
+  externalUrl?: string | null;
+  /**
+   * A few sentences about the artist. Blank line = new paragraph.
+   */
+  shortText?: string | null;
+  website?: string | null;
+  instagram?: string | null;
+  contactVia?: ('tripnjungle' | 'artist') | null;
+  contactEmail?: string | null;
+  contactPhone?: string | null;
+  /**
+   * Without this tick, e-mail and phone are not shown on the page (privacy).
+   */
+  contactConsent?: boolean | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -188,14 +283,15 @@ export interface Exhibition {
 export interface Media {
   id: number;
   /**
-   * Kurze Bildbeschreibung (Barrierefreiheit, SEO).
+   * Short image description (accessibility, SEO).
    */
   alt?: string | null;
   name?: string | null;
   /**
-   * Wird automatisch von der Ausstellung gesetzt.
+   * Set automatically by the exhibition.
    */
   locked?: boolean | null;
+  createdBy?: (number | null) | User;
   updatedAt: string;
   createdAt: string;
   url?: string | null;
@@ -236,32 +332,6 @@ export interface Media {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "users".
- */
-export interface User {
-  id: number;
-  updatedAt: string;
-  createdAt: string;
-  email: string;
-  resetPasswordToken?: string | null;
-  resetPasswordExpiration?: string | null;
-  salt?: string | null;
-  hash?: string | null;
-  resetPasswordRequestedAt?: string | null;
-  loginAttempts?: number | null;
-  lockUntil?: string | null;
-  sessions?:
-    | {
-        id: string;
-        createdAt?: string | null;
-        expiresAt: string;
-      }[]
-    | null;
-  password?: string | null;
-  collection: 'users';
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
@@ -287,6 +357,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'exhibitions';
         value: number | Exhibition;
+      } | null)
+    | ({
+        relationTo: 'artists';
+        value: number | Artist;
       } | null)
     | ({
         relationTo: 'media';
@@ -344,8 +418,10 @@ export interface PayloadMigration {
  */
 export interface ExhibitionsSelect<T extends boolean = true> {
   slug?: T;
-  titel?: T;
+  editors?: T;
+  title?: T;
   theme?: T;
+  artists?: T;
   description?: T;
   release?: T;
   date?: T;
@@ -357,14 +433,37 @@ export interface ExhibitionsSelect<T extends boolean = true> {
   posters?: T;
   frontPage?: T;
   bulkMedia?: T;
-  medien?:
+  gallery?:
     | T
     | {
         file?: T;
         name?: T;
         alt?: T;
+        artist?: T;
         id?: T;
       };
+  createdBy?: T;
+  updatedBy?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "artists_select".
+ */
+export interface ArtistsSelect<T extends boolean = true> {
+  name?: T;
+  slug?: T;
+  portrait?: T;
+  pageType?: T;
+  externalUrl?: T;
+  shortText?: T;
+  website?: T;
+  instagram?: T;
+  contactVia?: T;
+  contactEmail?: T;
+  contactPhone?: T;
+  contactConsent?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -376,6 +475,7 @@ export interface MediaSelect<T extends boolean = true> {
   alt?: T;
   name?: T;
   locked?: T;
+  createdBy?: T;
   updatedAt?: T;
   createdAt?: T;
   url?: T;
@@ -427,6 +527,10 @@ export interface MediaSelect<T extends boolean = true> {
  * via the `definition` "users_select".
  */
 export interface UsersSelect<T extends boolean = true> {
+  name?: T;
+  role?: T;
+  sections?: T;
+  artist?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -486,7 +590,7 @@ export interface PayloadMigrationsSelect<T extends boolean = true> {
   createdAt?: T;
 }
 /**
- * Texts for About, the legal notice (Impressum) and the privacy policy. Fill in everything before going live.
+ * Texts for About, the legal notice (Impressum), the privacy policy and the QR labels. Fill in everything before going live.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "site".
@@ -531,6 +635,11 @@ export interface Site {
   hostOutsideEu?: boolean | null;
   hostPrivacyUrl?: string | null;
   privacyExtra?: string | null;
+  qrFormat?: ('a6' | 'a5' | 'square100') | null;
+  qrShowTitle?: boolean | null;
+  qrShowArtist?: boolean | null;
+  qrShowExhibition?: boolean | null;
+  qrFooter?: string | null;
   updatedAt?: string | null;
   createdAt?: string | null;
 }
@@ -559,6 +668,11 @@ export interface SiteSelect<T extends boolean = true> {
   hostOutsideEu?: T;
   hostPrivacyUrl?: T;
   privacyExtra?: T;
+  qrFormat?: T;
+  qrShowTitle?: T;
+  qrShowArtist?: T;
+  qrShowExhibition?: T;
+  qrFooter?: T;
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;

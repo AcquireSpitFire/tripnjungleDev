@@ -1,4 +1,4 @@
-// /sitemap.xml: Startseite, Listen und alle freigeschalteten Ausstellungen
+// /sitemap.xml: home page, lists, all public exhibitions and the artist pages
 import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 
@@ -22,12 +22,39 @@ export async function GET() {
 
   for (const exhibition of exhibitions) {
     if (exhibition.locked === false) {
-      entries.push({
-        loc: base + '/exhibition/' + encodeURIComponent(exhibition.slug),
-        lastmod: exhibition.updatedAt?.slice(0, 10),
-        priority: '0.7',
-      })
+      const page = base + '/exhibition/' + encodeURIComponent(exhibition.slug)
+      const lastmod = exhibition.updatedAt?.slice(0, 10)
+
+      entries.push({ loc: page, lastmod, priority: '0.7' })
+
+      // Photo pages (targets of the QR codes)
+      for (const row of exhibition.gallery || []) {
+        const id = row.file && typeof row.file === 'object' ? row.file.id : row.file
+
+        if (id) {
+          entries.push({ loc: `${page}/photo/${encodeURIComponent(String(id))}`, lastmod, priority: '0.5' })
+        }
+      }
     }
+  }
+
+  // Artist mini pages (artists with an external website only forward, so they are left out)
+  // Server side and only slug/date: all profiles, without the visitor page-size limit
+  const { docs: artists } = await payload.find({
+    collection: 'artists',
+    where: { pageType: { equals: 'profile' } },
+    depth: 0,
+    pagination: false,
+    overrideAccess: true,
+    select: { slug: true, updatedAt: true },
+  })
+
+  for (const artist of artists) {
+    entries.push({
+      loc: base + '/artist/' + encodeURIComponent(artist.slug),
+      lastmod: artist.updatedAt?.slice(0, 10),
+      priority: '0.4',
+    })
   }
 
   const xml =

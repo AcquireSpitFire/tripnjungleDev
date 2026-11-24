@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>{{title}}</title>
+	<meta name="description" content="{{description}}">
+	<meta name="robots" content="{{robots}}">
+	<link rel="canonical" href="{{canonical}}">
+	<meta property="og:site_name" content="{{siteName}}">
+	<meta property="og:type" content="article">
+	<meta property="og:title" content="{{title}}">
+	<meta property="og:description" content="{{description}}">
+	<meta property="og:url" content="{{canonical}}">
+	<meta property="og:image" content="{{ogImage}}">
+	<meta name="twitter:card" content="summary_large_image">
+	<meta name="twitter:title" content="{{title}}">
+	<meta name="twitter:description" content="{{description}}">
+	<meta name="twitter:image" content="{{ogImage}}">
+	<meta name="theme-color" content="#000000">
+	<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+	<link rel="manifest" href="/manifest.webmanifest">
+	<link rel="stylesheet" href="/css/style.css">
+	{{{jsonLd}}}
+</head>
+<body data-photo-state="{{photoState}}">
+	<header>
+		<div class="header_inner">
+			<a id="back" href="{{backUrl}}">‹ {{backLabel}}</a>
+			<h1 id="title">{{heading}}</h1>
+			<p id="artists" class="artist_credit" hidden></p>
+		</div>
+	</header>
+
+	<!-- Single photo (target of the QR codes); rendered by public/js/photo.js -->
+	<main class="photo_page">
+		<figure id="photo" class="photo_figure" hidden></figure>
+		<p id="photo_note" class="photo_note" hidden></p>
+
+		<nav class="photo_nav" aria-label="Photos of this exhibition">
+			<a id="prev_photo" class="photo_nav_link" href="#" hidden>‹ Previous</a>
+			<a id="exhibition_link" class="photo_nav_link" href="{{exhibitionUrl}}">{{exhibitionLabel}}</a>
+			<a id="next_photo" class="photo_nav_link" href="#" hidden>Next ›</a>
+		</nav>
+	</main>
+
+	<footer class="site_footer">
+		<nav aria-label="Footer">
+			<a href="/">Home</a>
+			<a href="/about">About</a>
+			<a href="/imprint">Legal notice</a>
+			<a href="/privacy">Privacy</a>
+		</nav>
+	</footer>
+
+	<!-- Fullscreen view: opens when the photo is clicked -->
+	<div id="viewer" class="viewer" hidden>
+		<button id="viewer_close" class="viewer_close" aria-label="Close">×</button>
+		<img id="viewer_image" alt="">
+	</div>
+
+	<script defer src="/js/data.js"></script>
+	<script defer src="/js/nav.js"></script>
+	<script defer src="/js/photo.js"></script>
+</body>
+</html>

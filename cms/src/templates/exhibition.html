@@ -27,13 +27,14 @@
 	<header>
 		<div class="header_inner">
 			<a href="/">‹ Back to overview</a>
-			<h1 id="titel">Tripnjungle</h1>
+			<h1 id="title">Tripnjungle</h1>
 			<p id="theme"></p>
+			<p id="artists" class="artist_credit" hidden></p>
 		</div>
 	</header>
 
 	<main>
-		<!-- Slideshow: Deckblatt + alle Bilder/Videos der Ausstellung -->
+		<!-- Slideshow: cover + all images/videos of the exhibition -->
 		<div id="slideshow" class="slideshow exhibition_slideshow">
 
 			<button id="prev" class="nav prev" aria-label="Previous image">‹</button>
@@ -48,9 +49,15 @@
 
 		<p id="description"></p>
 
-		<div id="galerie" class="galerie"></div>
+		<div id="gallery" class="gallery"></div>
 
-		<!-- Intro-Video der Ausstellung, zum erneuten Anschauen (unter den Fotos) -->
+		<!-- The artists of the exhibition with their short text and a link to their page -->
+		<section id="about_artists" class="about_artists" hidden>
+			<h2 class="section_title" id="about_artists_title">About the artist</h2>
+			<div id="about_artists_list"></div>
+		</section>
+
+		<!-- Intro video of the exhibition, to watch again (below the photos) -->
 		<section id="video" class="video_section" hidden>
 			<h2 class="section_title">Video</h2>
 			<div id="video_box" class="video_box"></div>
@@ -65,7 +72,7 @@
 		</nav>
 	</footer>
 
-	<!-- Vollbild-Ansicht: öffnet sich beim Klick auf ein Bild -->
+	<!-- Fullscreen view: opens when an image is clicked -->
 	<div id="viewer" class="viewer" hidden>
 		<button id="viewer_close" class="viewer_close" aria-label="Close">×</button>
 		<img id="viewer_image" alt="">

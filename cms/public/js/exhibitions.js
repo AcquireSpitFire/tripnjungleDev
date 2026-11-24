@@ -1,12 +1,12 @@
-// Exhibitions: Raster aller freigeschalteten Ausstellungen (locked: false).
-// Jede Karte zeigt das Deckblatt, den Titel und das Thema.
-// Klick → direkt zur Ausstellung.
+// Exhibitions: grid of all public exhibitions (locked: false).
+// Every card shows the cover, the title and the theme.
+// Click → straight to the exhibition.
 
 const listElement = document.getElementById("list");
 
 function createCard(exhibition, index) {
   const card = document.createElement("a");
-  const frontPage = exhibition.front_page;
+  const frontPage = exhibition.frontPage;
 
   card.className = "card";
   card.href = getExhibitionLink(exhibition);
@@ -28,7 +28,7 @@ function createCard(exhibition, index) {
       lazy: index > 2,
       priority: index === 0,
     });
-    image.alt = frontPage.alt || exhibition.titel;
+    image.alt = frontPage.alt || exhibition.title;
     card.appendChild(image);
   } else {
     const placeholder = document.createElement("div");
@@ -40,7 +40,7 @@ function createCard(exhibition, index) {
   const title = document.createElement("h2");
 
   title.className = "card_title";
-  title.textContent = exhibition.titel;
+  title.textContent = exhibition.title;
   card.appendChild(title);
 
   if (exhibition.theme) {

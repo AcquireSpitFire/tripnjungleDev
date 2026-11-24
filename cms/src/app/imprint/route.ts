@@ -1,4 +1,4 @@
-// "/imprint": Impressum aus Admin → Site settings → Legal notice
+// "/imprint": legal notice from Admin → Site settings → Legal notice
 import { renderStaticPage } from '@/lib/static-page'
 import { SITE_NAME } from '@/lib/seo'
 import { escapeHtml } from '@/lib/render-template'

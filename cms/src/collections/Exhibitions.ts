@@ -1,137 +1,142 @@
-import type { CollectionConfig, FieldAccess, Payload, PayloadRequest } from 'payload'
+import type { CollectionConfig, FieldAccess, Where } from 'payload'
 
+import {
+  canManageExhibitions,
+  clearAccessCache,
+  exhibitionManagersOnlyField,
+  getAccessibleExhibitionIds,
+  getArtistProfileId,
+  idIn,
+  isArtist,
+  loggedInField,
+} from '../access/roles'
+import { exhibitionQrEndpoint } from '../endpoints/exhibition-qr'
+import { auditFields, auditHook } from '../lib/audit'
+import { limitPublicQueries } from '../lib/query-limits'
+import { assertMediaMayBeAdded, mediaIdsOf, syncMediaLocks } from '../lib/media-lock'
+import {
+  contentIsOpen,
+  getRelease,
+  getVisibility,
+  requestedSlug,
+  toId,
+  type Ref,
+} from '../lib/visibility'
 import { getYouTubeId } from '../lib/youtube'
 
-// Eine Ausstellung. Entspricht den bisherigen data/exhibitions/exhibition-N.json.
+// An exhibition.
 //
-// Zwei Einstellungen steuern, was Besucher sehen:
+// Two settings control what visitors see:
 //
-//   release     scheduled   – mit Datum (Events bis zum Datum, danach Archive)
-//               comingSoon  – ohne Datum, steht am Ende der kommenden Events
-//               planning    – nur im Admin sichtbar; für Besucher existiert
-//                             die Ausstellung nicht (auch Poster gesperrt)
+//   release     scheduled   – with a date (Events until the date, Archive afterwards)
+//               comingSoon  – without a date, listed at the end of the upcoming events
+//               planning    – only visible in the admin; for visitors the
+//                             exhibition does not exist (posters locked too)
 //
-//   visibility  locked      – Poster und Details sichtbar, Inhalt nicht
-//               link        – wie locked, aber /exhibition/<id> zeigt den Inhalt
-//                             (fehlt in Slideshow, Exhibitions-Liste, Sitemap)
-//               public      – freigeschaltet
+//   visibility  locked      – poster and details visible, content not
+//               link        – like locked, but /exhibition/<id> shows the content
+//                             (missing from slideshow, exhibitions list, sitemap)
+//               public      – unlocked
 //
-// "locked" (true/false) bleibt als abgeleitetes Feld für API und Frontend:
-// locked = visibility !== 'public'. Alte Einträge ohne visibility/release
-// werden aus "locked" bzw. als "scheduled" gelesen.
+// "locked" (true/false) stays as a derived field for API and frontend:
+// locked = visibility !== 'public'. Old entries without visibility/release
+// are read from "locked" or as "scheduled".
 //
-// Zugriff ohne Login:
-//   - Ausstellungen in "planning" liefert die API nicht.
-//   - Deckblatt und Medien fehlen in der Antwort, außer bei public und link.
-//   - Die Mediendateien selbst schützt die Media-Collection (Feld "locked",
-//     siehe syncMediaLock).
+// Access without login:
+//   - The API does not return exhibitions in "planning".
+//   - Cover and gallery are missing from the response, except for public and link.
+//   - The media files themselves are protected by the media collection
+//     (field "locked", kept in sync by src/lib/media-lock.ts).
+//
+// Accounts (see src/access/roles.ts): admins and exhibition managers may do
+// everything; ID, release, visibility and the credited artists can only be
+// changed by them. Artist accounts create exhibitions (always Planning + Locked,
+// credited to their own profile) and edit the ones that credit them. Editor
+// accounts edit the content of the exhibitions listed in "editors".
 
-type Visibility = 'locked' | 'link' | 'public'
-type Release = 'scheduled' | 'comingSoon' | 'planning'
-
-type Settings = {
-  locked?: boolean | null
-  visibility?: Visibility | null
-  release?: Release | null
+// What anonymous visitors may read: everything except "planning"
+// (old entries without the field count as scheduled)
+const publicWhere: Where = {
+  or: [{ release: { not_equals: 'planning' } }, { release: { exists: false } }],
 }
 
-function getVisibility(doc: Settings | null | undefined): Visibility {
-  return doc?.visibility || (doc?.locked === false ? 'public' : 'locked')
-}
-
-function getRelease(doc: Settings | null | undefined): Release {
-  return doc?.release || 'scheduled'
-}
-
-// Inhalt (Deckblatt, Medien) für Besucher abrufbar?
-function contentIsOpen(doc: Settings | null | undefined): boolean {
-  return getRelease(doc) !== 'planning' && getVisibility(doc) !== 'locked'
-}
-
-// Deckblatt und Medien nur sehen, wenn eingeloggt, freigeschaltet oder "mit Link"
-const onlyWhenUnlocked: FieldAccess = ({ req, doc }) => Boolean(req.user) || contentIsOpen(doc)
-
-type MediaRef = number | string | { id: number | string } | null | undefined
-
-function toId(ref: MediaRef): number | string | null {
-  if (ref === null || ref === undefined) {
-    return null
+// Cover and gallery: visible when logged in (the collection read access already
+// limits artists/editors to their own exhibitions), public, or "with link" – the latter
+// only when the request asks for exactly this exhibition (not in lists, see requestedSlug)
+const onlyWhenUnlocked: FieldAccess = ({ req, doc }) => {
+  if (req.user) {
+    return true
   }
 
-  return typeof ref === 'object' ? ref.id : ref
+  if (!contentIsOpen(doc)) {
+    return false
+  }
+
+  return getVisibility(doc) !== 'link' || requestedSlug(req) === doc?.slug
 }
 
-// Setzt "locked" auf allen Medien der Ausstellung:
-// Poster → öffentlich (außer in "planning"), Deckblatt + Medien → öffentlich
-// bei public und link
-async function syncMediaLock(
-  payload: Payload,
-  req: PayloadRequest,
-  doc: Settings & {
-    posters?: MediaRef[] | null
-    frontPage?: MediaRef
-    medien?: { file?: MediaRef }[] | null
-  },
-) {
-  const updates = new Map<number | string, boolean>()
-  const planning = getRelease(doc) === 'planning'
-
-  for (const poster of doc.posters || []) {
-    const id = toId(poster)
-
-    if (id !== null) {
-      updates.set(id, planning)
-    }
-  }
-
-  const locked = !contentIsOpen(doc)
-  const frontPageId = toId(doc.frontPage)
-
-  if (frontPageId !== null && !updates.has(frontPageId)) {
-    updates.set(frontPageId, locked)
-  }
-
-  for (const row of doc.medien || []) {
-    const id = toId(row.file)
-
-    if (id !== null && !updates.has(id)) {
-      updates.set(id, locked)
-    }
-  }
-
-  for (const [id, value] of updates) {
-    await payload.update({
-      collection: 'media',
-      id,
-      data: { locked: value },
-      req,
-      overrideAccess: true,
-    })
-  }
-}
+// Media fields only accept media the account may read. "true" adds no filter of its own,
+// but makes Payload validate every chosen id against the read access of the account
+// (otherwise an editor could enter the id of a locked image of another exhibition and
+// make it public through their own exhibition).
+const readableMediaOnly = () => true as const
 
 export const Exhibitions: CollectionConfig = {
   slug: 'exhibitions',
   labels: {
-    singular: 'Ausstellung',
-    plural: 'Ausstellungen',
+    singular: 'Exhibition',
+    plural: 'Exhibitions',
   },
   admin: {
-    useAsTitle: 'titel',
-    defaultColumns: ['titel', 'release', 'date', 'visibility', 'updatedAt'],
+    useAsTitle: 'title',
+    defaultColumns: ['title', 'release', 'date', 'visibility', 'updatedAt'],
   },
   access: {
-    // Besucher sehen keine Ausstellungen in "planning" (alte Einträge ohne Feld gelten als scheduled)
-    read: ({ req }) =>
-      req.user
-        ? true
-        : { or: [{ release: { not_equals: 'planning' } }, { release: { exists: false } }] },
+    // Managers see everything, artists/editors only their own exhibitions (also in the
+    // admin list), visitors everything except "planning". The public pages call the API
+    // without cookies (public/js/data.js), so a login never changes what the site shows.
+    read: async ({ req }) => {
+      if (canManageExhibitions(req.user)) {
+        return true
+      }
+
+      if (req.user) {
+        return idIn(await getAccessibleExhibitionIds(req))
+      }
+
+      return publicWhere
+    },
+    create: ({ req }) =>
+      canManageExhibitions(req.user) || (isArtist(req.user) && getArtistProfileId(req.user) !== null),
+    update: async ({ req }) => {
+      if (canManageExhibitions(req.user)) {
+        return true
+      }
+
+      return req.user ? idIn(await getAccessibleExhibitionIds(req)) : false
+    },
+    delete: ({ req }) => canManageExhibitions(req.user),
   },
   defaultSort: 'date',
+  // GET /api/exhibitions/:id/qr – QR codes of the photos (PNG / printable PDF)
+  endpoints: [exhibitionQrEndpoint],
   hooks: {
+    // Page size for visitors/artists/editors at most 100 (src/lib/query-limits.ts)
+    beforeOperation: [limitPublicQueries],
     beforeChange: [
+      auditHook(),
+      ({ data, operation, req }) => {
+        // An artist creates: credited to their own profile, nothing goes public without a manager
+        if (operation === 'create' && !canManageExhibitions(req.user) && isArtist(req.user)) {
+          data.artists = [getArtistProfileId(req.user)]
+          data.release = 'planning'
+          data.visibility = 'locked'
+        }
+
+        return data
+      },
       async ({ data, originalDoc, req }) => {
-        // Bei Teil-Updates fehlen Felder in data; dann gilt der gespeicherte Stand
+        // Partial updates lack fields in data; then the stored state applies
         const visibility = getVisibility({
           visibility: data.visibility ?? originalDoc?.visibility,
           locked: data.locked ?? originalDoc?.locked,
@@ -141,20 +146,20 @@ export const Exhibitions: CollectionConfig = {
         data.release = data.release ?? originalDoc?.release ?? 'scheduled'
         data.locked = visibility !== 'public'
 
-        // Massen-Upload: die Dateien als neue Zeilen an "medien" anhängen, Feld leeren
-        const bulk = ((data.bulkMedia as MediaRef[] | undefined) || [])
+        // Bulk upload: append the files as new rows to "gallery", then empty the field
+        const bulk = ((data.bulkMedia as Ref[] | undefined) || [])
           .map(toId)
           .filter((id): id is number | string => id !== null)
 
         if (bulk.length) {
-          const rows: { file?: MediaRef; name?: string | null; alt?: string | null }[] = [
-            ...(data.medien ?? originalDoc?.medien ?? []),
+          const rows: { file?: Ref; name?: string | null; alt?: string | null }[] = [
+            ...(data.gallery ?? originalDoc?.gallery ?? []),
           ]
           const present = new Set(rows.map((row) => String(toId(row.file))))
 
           for (const id of bulk) {
             if (!present.has(String(id))) {
-              // Alt-Text, der im Upload-Dialog eingegeben wurde, in die Zeile übernehmen
+              // Copy the alt text entered in the upload dialog into the row
               const media = await req.payload
                 .findByID({ collection: 'media', id, depth: 0, req, overrideAccess: true })
                 .catch(() => null)
@@ -164,17 +169,39 @@ export const Exhibitions: CollectionConfig = {
             }
           }
 
-          data.medien = rows
+          data.gallery = rows
         }
 
         data.bulkMedia = []
+
+        // Artists/editors may only add media that are public already or their own uploads.
+        // Posters and content are compared separately: posters are public sooner (outside
+        // "planning"), so a locked gallery photo must not become a poster either.
+        const posters = (data.posters ?? originalDoc?.posters) as Ref[] | undefined
+        const content = {
+          frontPage: 'frontPage' in data ? data.frontPage : originalDoc?.frontPage,
+          gallery: data.gallery ?? originalDoc?.gallery,
+        }
+
+        await assertMediaMayBeAdded(
+          req,
+          mediaIdsOf({ posters }),
+          mediaIdsOf({ posters: originalDoc?.posters }),
+          'exhibitions',
+        )
+        await assertMediaMayBeAdded(
+          req,
+          mediaIdsOf(content),
+          mediaIdsOf({ frontPage: originalDoc?.frontPage, gallery: originalDoc?.gallery }),
+          'exhibitions',
+        )
 
         return data
       },
     ],
     afterRead: [
       ({ doc }) => {
-        // Alte Einträge (Spalten noch leer) mit abgeleiteten Werten ausliefern
+        // Deliver old entries (columns still empty) with derived values
         doc.visibility = getVisibility(doc)
         doc.release = getRelease(doc)
 
@@ -182,15 +209,18 @@ export const Exhibitions: CollectionConfig = {
       },
     ],
     afterChange: [
-      async ({ doc, req }) => {
-        await syncMediaLock(req.payload, req, doc)
+      async ({ doc, previousDoc, req }) => {
+        // Media used now and media removed by this change: both may change their lock state
+        clearAccessCache(req)
+        await syncMediaLocks(req, [...mediaIdsOf(doc), ...mediaIdsOf(previousDoc)])
         return doc
       },
     ],
     afterDelete: [
       async ({ doc, req }) => {
-        // Medien einer gelöschten Ausstellung wieder sperren
-        await syncMediaLock(req.payload, req, { ...doc, release: 'planning' })
+        // The deleted exhibition no longer counts, its media are locked unless used elsewhere
+        clearAccessCache(req)
+        await syncMediaLocks(req, mediaIdsOf(doc))
         return doc
       },
     ],
@@ -203,16 +233,37 @@ export const Exhibitions: CollectionConfig = {
       required: true,
       unique: true,
       index: true,
+      // Set when creating; changing it later breaks links and printed QR codes
+      access: { update: exhibitionManagersOnlyField },
       admin: {
-        description: 'Nur Kleinbuchstaben, Zahlen und Bindestriche, z. B. exhibition-3. Wird in der URL verwendet.',
+        description: 'Lowercase letters, numbers and hyphens only, e.g. exhibition-3. Used in the URL.',
       },
       validate: (value: unknown) =>
         typeof value === 'string' && /^[a-z0-9-]+$/.test(value)
           ? true
-          : 'Nur Kleinbuchstaben, Zahlen und Bindestriche.',
+          : 'Lowercase letters, numbers and hyphens only.',
     },
     {
-      // Öffentlicher Link mit Kopier-Button (Seitenleiste, erst nach dem ersten Speichern)
+      // Accounts that may change the content of this exhibition (not publish it)
+      name: 'editors',
+      label: 'Editors',
+      type: 'relationship',
+      relationTo: 'users',
+      hasMany: true,
+      filterOptions: { role: { in: ['editor', 'artist'] } },
+      access: {
+        read: loggedInField,
+        create: exhibitionManagersOnlyField,
+        update: exhibitionManagersOnlyField,
+      },
+      admin: {
+        position: 'sidebar',
+        description:
+          'Editor or artist accounts that may change texts, captions, alt texts, photos and their order. They cannot change ID, release, visibility or these assignments, and cannot delete the exhibition.',
+      },
+    },
+    {
+      // Public link with a copy button (sidebar, only after the first save)
       name: 'publicLink',
       type: 'ui',
       admin: {
@@ -221,36 +272,59 @@ export const Exhibitions: CollectionConfig = {
       },
     },
     {
-      name: 'titel',
-      label: 'Titel',
+      // "QR codes for all photos (PDF)" (sidebar, only after the first save)
+      name: 'qrCodes',
+      type: 'ui',
+      admin: {
+        position: 'sidebar',
+        components: { Field: '/components/ExhibitionQrCodes#ExhibitionQrCodes' },
+      },
+    },
+    {
+      name: 'title',
+      label: 'Title',
       type: 'text',
       required: true,
     },
     {
       name: 'theme',
-      label: 'Thema',
+      label: 'Theme',
       type: 'text',
     },
     {
+      name: 'artists',
+      label: 'Artists',
+      type: 'relationship',
+      relationTo: 'artists',
+      hasMany: true,
+      access: { create: exhibitionManagersOnlyField, update: exhibitionManagersOnlyField },
+      admin: {
+        description:
+          'Who made the exhibition. Shown as “by …” with a link to the artist page. Artist accounts of these profiles may edit the exhibition.',
+      },
+    },
+    {
       name: 'description',
-      label: 'Beschreibung',
+      label: 'Description',
       type: 'textarea',
+      maxLength: 20000,
     },
     {
       name: 'release',
       label: 'Release',
       type: 'select',
-      // Default als Funktion: gilt im Formular, aber nicht als Spalten-Default in der Datenbank
+      access: { create: exhibitionManagersOnlyField, update: exhibitionManagersOnlyField },
+      // Default as a function: applies in the form, but not as a column default in the database
       defaultValue: () => 'scheduled',
       options: [
-        { label: 'Datum', value: 'scheduled' },
-        { label: 'Coming soon (ohne Datum, am Ende der Events)', value: 'comingSoon' },
-        { label: 'Planning (nur im Admin sichtbar)', value: 'planning' },
+        { label: 'Date', value: 'scheduled' },
+        { label: 'Coming soon (no date, at the end of the events)', value: 'comingSoon' },
+        { label: 'Planning (only visible in the admin)', value: 'planning' },
       ],
       admin: {
         isClearable: false,
         description:
-          'Datum: erscheint unter Events, nach dem Datum im Archive. Coming soon: steht ohne Datum am Ende der Events. Planning: schon angelegt, für Besucher aber nirgends sichtbar.',
+          'Date: listed under Events, in the Archive after the date. Coming soon: listed without a date at the end of the events. Planning: already created, but not visible to visitors anywhere.',
       },
     },
     {
@@ -258,7 +332,7 @@ export const Exhibitions: CollectionConfig = {
       fields: [
         {
           name: 'date',
-          label: 'Datum',
+          label: 'Date',
           type: 'date',
           admin: {
             date: { pickerAppearance: 'dayOnly', displayFormat: 'dd.MM.yyyy' },
@@ -268,7 +342,7 @@ export const Exhibitions: CollectionConfig = {
         },
         {
           name: 'time',
-          label: 'Uhrzeit',
+          label: 'Time',
           type: 'text',
           admin: {
             placeholder: '19:00',
@@ -278,11 +352,11 @@ export const Exhibitions: CollectionConfig = {
           validate: (value: unknown) =>
             !value || (typeof value === 'string' && /^\d{1,2}:\d{2}$/.test(value))
               ? true
-              : 'Format HH:MM, z. B. 19:00.',
+              : 'Format HH:MM, e.g. 19:00.',
         },
         {
           name: 'location',
-          label: 'Ort',
+          label: 'Location',
           type: 'text',
           admin: { width: '33%' },
         },
@@ -290,104 +364,127 @@ export const Exhibitions: CollectionConfig = {
     },
     {
       name: 'visibility',
-      label: 'Sichtbarkeit',
+      label: 'Visibility',
       type: 'select',
+      access: { create: exhibitionManagersOnlyField, update: exhibitionManagersOnlyField },
       defaultValue: () => 'locked',
       options: [
-        { label: 'Gesperrt', value: 'locked' },
-        { label: 'Gesperrt mit Link', value: 'link' },
-        { label: 'Freigeschaltet', value: 'public' },
+        { label: 'Locked', value: 'locked' },
+        { label: 'Locked with link', value: 'link' },
+        { label: 'Public', value: 'public' },
       ],
       admin: {
         isClearable: false,
         description:
-          'Gesperrt: Poster und Details sind sichtbar, die Ausstellung selbst (Deckblatt, Bilder, Videos) nicht. Gesperrt mit Link: wie gesperrt, aber wer die Adresse /exhibition/<ID> kennt, sieht die Ausstellung. Freigeschaltet: für alle sichtbar, auch in Slideshow und Exhibitions.',
+          'Locked: poster and details are visible, the exhibition itself (cover, images, videos) is not. Locked with link: like locked, but whoever knows the address /exhibition/<ID> sees the exhibition. Public: visible to everyone, also in the slideshow and Exhibitions.',
       },
     },
     {
-      // Abgeleitet aus "visibility" (siehe beforeChange); bleibt für API und Frontend
+      // Derived from "visibility" (see beforeChange); kept for API and frontend
       name: 'locked',
       type: 'checkbox',
       defaultValue: true,
+      access: { create: exhibitionManagersOnlyField, update: exhibitionManagersOnlyField },
       admin: { hidden: true },
     },
     {
       name: 'video',
-      label: 'Intro-Video (YouTube)',
+      label: 'Intro video (YouTube)',
       type: 'text',
       admin: {
         placeholder: 'https://www.youtube.com/watch?v=…',
-        description: 'Wird vor der Ausstellung abgespielt und auf der Ausstellungsseite eingebettet.',
+        description: 'Played before the exhibition and embedded on the exhibition page.',
       },
       validate: (value: unknown) =>
-        !value || getYouTubeId(value) ? true : 'Keine gültige YouTube-URL oder -ID.',
+        !value || getYouTubeId(value) ? true : 'Not a valid YouTube URL or ID.',
     },
     {
       name: 'posters',
-      label: 'Poster',
+      label: 'Posters',
       type: 'upload',
       relationTo: 'media',
+      filterOptions: readableMediaOnly,
       hasMany: true,
+      maxRows: 10,
       admin: {
-        description: 'Poster für Startseite, Events und Archive. Öffentlich, außer im Release „Planning“.',
+        description: 'Posters for the home page, Events and Archive. Public, except in the release “Planning”.',
       },
     },
     {
       name: 'frontPage',
-      label: 'Deckblatt',
+      label: 'Cover',
       type: 'upload',
       relationTo: 'media',
+      filterOptions: readableMediaOnly,
       access: { read: onlyWhenUnlocked },
       admin: {
-        description: 'Bild oder Video für Slideshow und Exhibitions-Liste.',
+        description: 'Image or video for the slideshow and the Exhibitions list.',
       },
     },
     {
-      // Massen-Upload: "Create New" öffnet Payloads Dialog für mehrere Dateien.
-      // Beim Speichern wandern die Dateien als neue Zeilen ans Ende von "medien"
-      // (beforeChange), dieses Feld ist danach wieder leer.
+      // Bulk upload: "Create New" opens Payload's dialog for multiple files.
+      // On save the files move as new rows to the end of "gallery"
+      // (beforeChange); this field is empty again afterwards.
       name: 'bulkMedia',
-      label: 'Mehrere Fotos auf einmal hinzufügen',
+      label: 'Add several photos at once',
       type: 'upload',
       relationTo: 'media',
+      filterOptions: readableMediaOnly,
       hasMany: true,
       access: { read: ({ req }) => Boolean(req.user) },
       admin: {
         description:
-          '„Create New“ wählen, alle Dateien auf einmal ablegen (10, 20 oder mehr) und speichern; der Alt-Text kann dabei pro Datei schon eingetragen werden. Nach dem Speichern der Ausstellung stehen sie unten bei „Bilder und Videos“, dort lassen sich Name und Alt-Text jederzeit ändern.',
+          'Choose “Create New”, drop all files at once (10, 20 or more) and save; the alt text can already be entered per file. After saving the exhibition they appear below under “Images and videos”, where name and alt text can be changed at any time.',
       },
     },
     {
-      name: 'medien',
-      label: 'Bilder und Videos',
+      name: 'gallery',
+      label: 'Images and videos',
       type: 'array',
-      labels: { singular: 'Medium', plural: 'Medien' },
+      labels: { singular: 'Item', plural: 'Items' },
+      maxRows: 300,
       access: { read: onlyWhenUnlocked },
       admin: {
-        description: 'Reihenfolge per Drag & Drop. Erscheint in Slideshow und Galerie.',
+        description: 'Reorder by drag & drop. Shown in the slideshow and the gallery.',
       },
       fields: [
         {
           name: 'file',
-          label: 'Datei',
+          label: 'File',
           type: 'upload',
           relationTo: 'media',
+          filterOptions: readableMediaOnly,
           required: true,
         },
         {
           name: 'name',
-          label: 'Name / Bildunterschrift',
+          label: 'Name / caption',
           type: 'text',
         },
         {
-          // Beim Massen-Upload aus dem Alt-Text der Datei übernommen, danach hier änderbar.
-          // Leer = Alt-Text der Datei (Media-Collection).
+          // Taken from the file's alt text on bulk upload, editable here afterwards.
+          // Empty = alt text of the file (media collection).
           name: 'alt',
-          label: 'Alt-Text',
+          label: 'Alt text',
           type: 'text',
-          admin: { description: 'Kurze Bildbeschreibung (Barrierefreiheit, SEO).' },
+          admin: { description: 'Short image description (accessibility, SEO).' },
+        },
+        {
+          // QR code of this photo: preview, copy image/link, printable PDF
+          name: 'qrCode',
+          type: 'ui',
+          admin: { components: { Field: '/components/QrCodeField#QrCodeField' } },
+        },
+        {
+          // Only needed when this photo is by someone else than the exhibition's artists
+          name: 'artist',
+          label: 'Artist of this photo',
+          type: 'relationship',
+          relationTo: 'artists',
+          admin: { description: 'Leave empty if it is by the artists of the exhibition.' },
         },
       ],
     },
+    ...auditFields(),
   ],
 }

@@ -1,36 +1,39 @@
 /* =====================================================================
-   Tripnjungle – minimales Design, schwarzer Hintergrund
+   Tripnjungle – minimal design, black background
 
-   Aufbau dieser Datei:
-     1. Variablen
-     2. Grundlagen        (gilt überall)
-     3. Seitenaufbau      (Header, Inhalt)
-     4. Medien            (Bilder, Videos)
-     5. Startseite        (index.html – Slideshow)
-     6. Ausstellung       (exhibition.html – Slideshow + Galerie-Band)
-     7. Handy             (schmale Bildschirme)
-     8. Handy hochkant
-     9. Handy quer        (niedrige Bildschirme)
+   Structure of this file:
+     1. Variables
+     2. Basics            (applies everywhere)
+     3. Page layout       (header, content)
+     4. Media             (images, videos)
+     5. Home page         (index.html – slideshow)
+     6. Exhibition        (exhibition.html – slideshow + gallery strip)
+     7. Phone             (narrow screens)
+     8. Phone portrait
+     9. Phone landscape   (low screens)
+    10. YouTube notice
+    11. Legal pages
+    12. Photo and artist pages
 
-   Die Abschnitte 1–6 gelten für alle Geräte (Desktop-Ansicht).
-   Die Abschnitte 7–9 überschreiben nur, was am Handy anders ist.
+   Sections 1–6 apply to all devices (desktop view).
+   Sections 7–9 only override what differs on phones.
    ===================================================================== */
 
 
-/* ---------- 1. Variablen ---------- */
+/* ---------- 1. Variables ---------- */
 
 :root {
   --bg: #000;
   --text: #e6e6e6;
   --muted: #777;
-  --frame: #0d0d0d;          /* Rahmen hinter den Medien, kaum sichtbar */
-  --media-ratio: 3 / 2;      /* Einheitliches Format für alle Bilder/Videos */
+  --frame: #0d0d0d;          /* frame behind the media, barely visible */
+  --media-ratio: 3 / 2;      /* one aspect ratio for all images/videos */
   --gap: 1rem;
-  --page-pad: clamp(1rem, 4vw, 3rem);   /* seitlicher Seitenrand */
+  --page-pad: clamp(1rem, 4vw, 3rem);   /* horizontal page margin */
 }
 
 
-/* ---------- 2. Grundlagen ---------- */
+/* ---------- 2. Basics ---------- */
 
 * {
   box-sizing: border-box;
@@ -38,17 +41,17 @@
 
 html {
   color-scheme: dark;
-  overflow-x: hidden;        /* kein seitliches Scrollen (Rückfall für ältere Browser) */
+  overflow-x: hidden;        /* no horizontal scrolling (fallback for older browsers) */
   overflow-x: clip;
-  -webkit-text-size-adjust: 100%;   /* keine automatische Schriftvergrößerung am Handy */
+  -webkit-text-size-adjust: 100%;   /* no automatic font enlargement on phones */
   text-size-adjust: 100%;
 }
 
 body {
-  overflow-x: hidden;        /* zusätzlich am body, mobile Browser ignorieren es am html teilweise */
+  overflow-x: hidden;        /* also on body, some mobile browsers ignore it on html */
   overflow-x: clip;
   margin: 0;
-  padding: 0 var(--page-pad) 2rem;   /* der obere Rand sitzt im Header (sticky) */
+  padding: 0 var(--page-pad) 2rem;   /* the top margin lives in the header (sticky) */
   background: var(--bg);
   color: var(--text);
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -62,7 +65,7 @@ h1 {
   font-weight: 400;
   letter-spacing: 0.3em;
   text-transform: uppercase;
-  overflow-wrap: anywhere;   /* lange Titel brechen um, statt die Seite zu verbreitern */
+  overflow-wrap: anywhere;   /* long titles wrap instead of widening the page */
 }
 
 p {
@@ -83,12 +86,12 @@ a:focus-visible {
 }
 
 
-/* ---------- 3. Seitenaufbau ---------- */
+/* ---------- 3. Page layout ---------- */
 
-/* Der Header bleibt beim Scrollen oben stehen. Er reicht über die volle
-   Breite (negative Ränder gleichen den Seitenrand aus) und hat einen festen
-   Hintergrund, damit nichts durchscheint. Deshalb liegt der obere Seitenrand
-   (2rem) im Header statt am body; der Abstand nach unten (2rem) ebenso. */
+/* The header stays at the top while scrolling. It spans the full width
+   (negative margins offset the page margin) and has a solid background so
+   nothing shows through. That is why the top page margin (2rem) lives in
+   the header instead of on body; the same goes for the space below (2rem). */
 header {
   position: sticky;
   top: 0;
@@ -102,7 +105,7 @@ header {
   position: relative;
   max-width: 1200px;
   margin: 0 auto;
-  padding-right: 3rem;       /* Platz für den Menü-Knopf rechts */
+  padding-right: 3rem;       /* room for the menu button on the right */
 }
 
 main {
@@ -110,7 +113,7 @@ main {
   margin: 0 auto;
 }
 
-/* Markenname auf Unterseiten (sieht aus wie die h1 der Startseite) */
+/* Brand name on sub pages (looks like the h1 of the home page) */
 .site_name {
   margin: 0;
   font-size: 1.1rem;
@@ -125,7 +128,7 @@ main {
   color: inherit;
 }
 
-/* Untertitel im Header: Thema der Ausstellung oder Name der Seite (h1 auf Unterseiten) */
+/* Subtitle in the header: exhibition theme or page name (h1 on sub pages) */
 #theme,
 .page_title {
   margin: 0.25rem 0 0;
@@ -136,7 +139,7 @@ main {
   color: var(--muted);
 }
 
-/* Fußzeile: Links für Besucher ohne Menü und für Suchmaschinen */
+/* Footer: links for visitors without the menu and for search engines */
 .site_footer {
   max-width: 1200px;
   margin: 4rem auto 0;
@@ -144,8 +147,8 @@ main {
   border-top: 1px solid #1a1a1a;
 }
 
-/* Mittig und immer in einer Zeile: Schrift und Abstände werden auf schmalen
-   Bildschirmen mit der Breite kleiner, aber nie größer als 0.8rem / 1.5rem */
+/* Centered and always on one line: font size and gaps shrink with the width
+   on narrow screens, but never grow beyond 0.8rem / 1.5rem */
 .site_footer nav {
   display: flex;
   flex-wrap: nowrap;
@@ -157,12 +160,12 @@ main {
   white-space: nowrap;
 }
 
-/* Startseite ohne Poster: feste Höhe, die Fußzeile würde den Platz stehlen */
+/* Home page without poster: fixed height, the footer would steal the space */
 .fit .site_footer {
   display: none;
 }
 
-/* Menü-Knopf: drei Striche rechts oben, offen ein × */
+/* Menu button: three bars top right, an × when open */
 
 .menu_toggle {
   position: absolute;
@@ -174,7 +177,7 @@ main {
   align-items: flex-end;
   gap: 5px;
   width: 2.5rem;
-  height: 1.76rem;           /* Höhe der Titelzeile */
+  height: 1.76rem;           /* height of the title line */
   padding: 0;
   border: 0;
   background: none;
@@ -206,7 +209,7 @@ main {
   transform: translateY(-7px) rotate(-45deg);
 }
 
-/* Menü: klappt unter dem Header auf, Einträge rechtsbündig */
+/* Menu: opens below the header, entries right-aligned */
 
 .menu {
   position: absolute;
@@ -239,37 +242,69 @@ main {
   color: var(--text);
 }
 
+/* Only for logged-in accounts: "Admin" and "Log out", separated by a thin line */
+.menu_account {
+  align-self: stretch;
+  text-align: right;
+  margin-top: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #1a1a1a;
+}
 
-/* ---------- 4. Medien ---------- */
+.menu_logout {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.9rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.2s;
+}
 
-/* Alle Medien: gleiche Größe, nichts wird abgeschnitten */
+.menu_logout:hover,
+.menu_logout:focus-visible {
+  color: var(--text);
+}
+
+.menu_logout:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+
+/* ---------- 4. Media ---------- */
+
+/* All media: same size, nothing is cropped */
 img,
 video {
   display: block;
   width: 100%;
-  height: auto;              /* width/height-Attribute nur fürs Seitenverhältnis, nicht als feste Höhe */
+  height: auto;              /* width/height attributes only for the aspect ratio, not as a fixed height */
   aspect-ratio: var(--media-ratio);
   object-fit: contain;
-  background: transparent;   /* kein Rahmen hinter dem Medium, nur der Seitenhintergrund */
+  background: transparent;   /* no frame behind the medium, only the page background */
 }
 
 
-/* ---------- 5. Startseite (index.html) ---------- */
+/* ---------- 5. Home page (index.html) ---------- */
 
-/* Seitenrahmen: <html class="fit">
-   Die Seite ist genau so groß wie der Bildschirm und fest fixiert:
-   nichts lässt sich scrollen oder verschieben. Das Bild füllt den
-   Platz, der neben Header, Text, Link und Punkten übrig bleibt. */
+/* Page frame: <html class="fit">
+   The page is exactly as large as the screen and fixed in place:
+   nothing can be scrolled or moved. The image fills the space left
+   over next to header, text, link and dots. */
 
 .fit,
 .fit body {
   height: 100%;
   overflow: hidden;
-  overscroll-behavior: none;   /* kein Nachfedern am Rand */
+  overscroll-behavior: none;   /* no rubber-band effect at the edges */
 }
 
 .fit body {
-  position: fixed;             /* verhindert jedes Verschieben, auch auf dem iPhone */
+  position: fixed;             /* prevents any shifting, also on iPhone */
   inset: 0;
   display: flex;
   flex-direction: column;
@@ -291,17 +326,17 @@ video {
   flex: none;
 }
 
-/* Poster der nächsten Ausstellung (Hochformat). Es füllt den ersten
-   Bildschirm, die Slideshow rutscht darunter: <html class="has_poster">
-   ersetzt dann "fit", die Seite scrollt normal. */
+/* Poster of the next exhibition (portrait). It fills the first screen and
+   the slideshow moves below it: <html class="has_poster"> then replaces
+   "fit" and the page scrolls normally. */
 
 .poster {
-  --poster-max-height: max(20rem, 100svh - 12rem);   /* Platz unter Titel und Begrüßungstext */
+  --poster-max-height: max(20rem, 100svh - 12rem);   /* space below title and welcome text */
 
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  /* Platz schon reservieren, bevor das Bild geladen ist (Format ca. 1 : 1.41) */
+  /* reserve the space before the image has loaded (ratio about 1 : 1.41) */
   min-height: min(var(--poster-max-height), (100vw - 2 * var(--page-pad)) * 1.41);
   margin-bottom: 3rem;
 }
@@ -319,7 +354,7 @@ video {
   aspect-ratio: auto;
 }
 
-/* Alle kommenden Poster unter der Slideshow, nach Datum sortiert */
+/* All upcoming posters below the slideshow, sorted by date */
 
 .upcoming {
   display: grid;
@@ -345,7 +380,7 @@ video {
   letter-spacing: 0.1em;
 }
 
-/* Slideshow unter dem Poster: gleich groß wie ohne Poster */
+/* Slideshow below the poster: same size as without poster */
 .has_poster .slide_content > * {
   width: min(100%, max(14rem, 100vh - 14.36rem - 6px) * 3 / 2);
   margin-inline: auto;
@@ -355,7 +390,7 @@ video {
   display: block;
 }
 
-/* Slideshow: Pfeil | Bild | Pfeil, darunter die Punkte */
+/* Slideshow: arrow | image | arrow, dots below */
 
 .slideshow {
   display: grid;
@@ -372,21 +407,21 @@ video {
 
 .slide_content {
   min-width: 0;
-  touch-action: pan-y;   /* senkrecht scrollt die Seite, waagrecht wischt die Slideshow */
+  touch-action: pan-y;   /* vertical scrolls the page, horizontal swipes the slideshow */
 }
 
-/* Der freie Platz für Bild + Link wird gemessen (Container Query) */
+/* The free space for image + link is measured (container query) */
 .fit .slide_content {
   height: 100%;
   container-type: size;
   display: flex;
   flex-direction: column;
-  justify-content: center;   /* Bild mittig im freien Platz */
+  justify-content: center;   /* image centered in the free space */
   align-items: center;
 }
 
-/* Bild so groß wie möglich: so breit wie der Platz erlaubt, aber nur so
-   hoch, dass der Link (ca. 2.5rem) noch darunter passt */
+/* Image as large as possible: as wide as the space allows, but only so
+   tall that the link (about 2.5rem) still fits below it */
 .fit .slide_content > * {
   width: min(100cqw, (100cqh - 2.5rem) * 3 / 2);
 }
@@ -395,7 +430,7 @@ video {
   display: block;
 }
 
-/* Link unter dem Bild (Startseite) bzw. Name des Bildes (Ausstellung) */
+/* Link below the image (home page) or name of the image (exhibition) */
 .slide_link,
 .slide_caption {
   display: block;
@@ -405,14 +440,14 @@ video {
 }
 
 .slide_caption {
-  min-height: 1.6em;         /* eine Zeile hoch, auch ohne Namen */
+  min-height: 1.6em;         /* one line tall, even without a name */
 }
 
-/* Pfeile */
+/* Arrows */
 
 .nav {
   position: relative;
-  align-self: stretch;       /* Klickfläche über die ganze Bildhöhe */
+  align-self: stretch;       /* click area over the full image height */
   padding: 0.5rem;
   border: 0;
   background: none;
@@ -428,8 +463,8 @@ video {
   color: var(--text);
 }
 
-/* Unsichtbare Erweiterung der Klickfläche: vom Rand des Mediums bis zum
-   Seitenrand, ohne das Layout zu verschieben */
+/* Invisible extension of the click area: from the edge of the medium to
+   the page edge, without shifting the layout */
 .nav::before {
   content: "";
   position: absolute;
@@ -438,16 +473,16 @@ video {
 }
 
 .prev::before {
-  left: -100vw;                     /* bis weit über den linken Seitenrand */
-  right: calc(-1 * var(--gap));     /* bis an den Rand des Mediums */
+  left: -100vw;                     /* far past the left page edge */
+  right: calc(-1 * var(--gap));     /* up to the edge of the medium */
 }
 
 .next::before {
-  left: calc(-1 * var(--gap));      /* ab dem Rand des Mediums */
-  right: -100vw;                    /* bis weit über den rechten Seitenrand */
+  left: calc(-1 * var(--gap));      /* from the edge of the medium */
+  right: -100vw;                    /* far past the right page edge */
 }
 
-/* Punkte */
+/* Dots */
 
 #dots {
   grid-column: 1 / -1;
@@ -471,7 +506,7 @@ video {
 }
 
 
-/* ---------- 6. Ausstellung (exhibition.html) ---------- */
+/* ---------- 6. Exhibition (exhibition.html) ---------- */
 
 .header_inner > a {
   display: inline-block;
@@ -479,28 +514,27 @@ video {
   font-size: 0.85rem;
 }
 
-/* Breite eines Galeriebildes – die Slideshow ist genauso groß */
+/* Width of a gallery image – the slideshow has the same size */
 main {
   --gallery-item-width: min(480px, 80%);
 }
 
-/* Slideshow oben (Deckblatt + alle Bilder): Pfeil | Bild | Pfeil wie auf
-   der Startseite, damit das Bild am Desktop genauso groß ist wie dort */
+/* Slideshow at the top (cover + all images): arrow | image | arrow like on
+   the home page, so the image on desktop is just as large as there */
 .exhibition_slideshow {
   margin-bottom: 2rem;
 }
 
-/* Gleiche Größe wie auf der Startseite: so breit wie der Platz erlaubt,
-   aber nur so hoch, wie dort der Platz für das Bild ist. Dort bleibt vom
-   Bildschirm übrig, was nicht belegt ist von: Seitenrand oben+unten (4rem),
-   Titel (1.76rem) + Abstand (2rem), Begrüßungstext (1.6rem) + Abstand (1.5rem),
-   Abstand + Punkte (1rem + 6px) und Link unter dem Bild (2.5rem) */
+/* Same size as on the home page: as wide as the space allows, but only as
+   tall as the image space there. That is what remains of the screen after:
+   page margin top+bottom (4rem), title (1.76rem) + gap (2rem), welcome text
+   (1.6rem) + gap (1.5rem), gap + dots (1rem + 6px) and link below the image (2.5rem) */
 .exhibition_slideshow .slide_content > * {
   width: min(100%, (100vh - 14.36rem - 6px) * 3 / 2);
   margin-inline: auto;
 }
 
-/* Name eines Bildes in der Galerie */
+/* Name of an image in the gallery */
 .caption {
   margin: 0.5rem 0 0;
   font-size: 0.85rem;
@@ -508,7 +542,7 @@ main {
   color: var(--muted);
 }
 
-/* Nur ein Bild: keine Pfeile und Punkte (Platz bleibt gleich) */
+/* Only one image: no arrows and dots (the space stays the same) */
 .exhibition_slideshow.single .nav,
 .exhibition_slideshow.single #dots {
   visibility: hidden;
@@ -523,8 +557,8 @@ main {
   margin-bottom: 3rem;
 }
 
-/* Intro-Video der Ausstellung, zum erneuten Anschauen. Mittig; der Titel
-   „Video“ steht bündig über dem linken Rand des Videos. */
+/* Intro video of the exhibition, to watch again. Centered; the title
+   "Video" is aligned with the left edge of the video. */
 .video_section {
   width: min(100%, 720px);
   margin: 0 auto 3rem;
@@ -552,20 +586,20 @@ main {
   border: 0;
 }
 
-/* Galerie als Band: alle Bilder nebeneinander, das Band scrollt seitlich
-   (die Seite selbst nicht). Beim Scrollen rastet jedes Bild ein. */
-.galerie {
+/* Gallery as a strip: all images side by side, the strip scrolls
+   horizontally (the page itself does not). Each image snaps into place. */
+.gallery {
   display: flex;
   gap: var(--gap);
   overflow-x: auto;
-  overscroll-behavior-x: contain;   /* am Ende des Bandes nicht „zurück“ blättern */
+  overscroll-behavior-x: contain;   /* no "back" navigation at the end of the strip */
   scroll-snap-type: x mandatory;
-  padding-bottom: 0.75rem;          /* Platz für die Scrollleiste */
-  margin-bottom: 3rem;              /* Abstand zum Video darunter */
+  padding-bottom: 0.75rem;          /* room for the scrollbar */
+  margin-bottom: 3rem;              /* gap to the video below */
   scrollbar-color: #333 transparent;
 }
 
-/* Poster einer gesperrten Ausstellung: sichtbar, aber kein Link */
+/* Poster of a locked exhibition: visible, but not a link */
 .poster_locked {
   display: block;
 }
@@ -574,17 +608,17 @@ main {
   cursor: default;
 }
 
-.galerie > * {
+.gallery > * {
   flex: none;
   width: var(--gallery-item-width);
-  margin: 0;                 /* <figure> hat sonst einen Rand */
+  margin: 0;                 /* <figure> has a margin otherwise */
   scroll-snap-align: start;
 }
 
-/* Vollbild-Ansicht: Klick auf ein Bild zeigt es bildschirmfüllend */
+/* Fullscreen view: clicking an image shows it filling the screen */
 
 .exhibition_slideshow img,
-.galerie img {
+.gallery img {
   cursor: zoom-in;
 }
 
@@ -603,7 +637,7 @@ main {
   width: 100%;
   height: 100%;
   aspect-ratio: auto;
-  object-fit: contain;      /* ganzes Bild, nichts abgeschnitten */
+  object-fit: contain;      /* whole image, nothing cropped */
   background: none;
 }
 
@@ -619,7 +653,7 @@ main {
   color: var(--muted);
   font-size: 2rem;
   line-height: 1;
-  text-shadow: 0 0 6px #000;   /* auch auf hellen Bildern sichtbar */
+  text-shadow: 0 0 6px #000;   /* visible on bright images too */
   cursor: pointer;
 }
 
@@ -630,7 +664,7 @@ main {
   color: var(--text);
 }
 
-/* Seite dahinter nicht scrollen, solange Bild oder Intro offen ist */
+/* Do not scroll the page behind while an image or the intro is open */
 .viewer_open,
 .viewer_open body,
 .intro_open,
@@ -639,10 +673,10 @@ main {
 }
 
 
-/* ---------- 6b. Intro-Video (Overlay vor der Ausstellung) ---------- */
+/* ---------- 6b. Intro video (overlay before the exhibition) ---------- */
 
-/* Overlay über der ganzen Seite: Video 16:9 mittig, darunter Titel und
-   der Knopf „Weiter zur Ausstellung“ (nur wenn freigeschaltet) */
+/* Overlay over the whole page: 16:9 video centered, below it the title and
+   the "Continue to exhibition" button (only when public) */
 
 .intro {
   position: fixed;
@@ -655,7 +689,7 @@ main {
   background: rgba(0, 0, 0, 0.96);
 }
 
-/* So breit, dass Video + Titel + Knopf in die Bildschirmhöhe passen */
+/* As wide as allows video + title + button to fit the screen height */
 .intro_inner {
   display: flex;
   flex-direction: column;
@@ -714,7 +748,7 @@ main {
   letter-spacing: 0.1em;
 }
 
-/* Fehlermeldung an Stelle des Videos */
+/* Error message in place of the video */
 .intro_player_box {
   display: flex;
   align-items: center;
@@ -730,9 +764,9 @@ main {
 }
 
 
-/* ---------- 6c. Listen (exhibitions.html, events.html, archive.html) ---------- */
+/* ---------- 6c. Lists (exhibitions.html, events.html, archive.html) ---------- */
 
-/* Exhibitions: Raster aus Karten mit Deckblatt, Titel, Thema */
+/* Exhibitions: grid of cards with cover, title, theme */
 
 .card_grid {
   display: grid;
@@ -767,7 +801,7 @@ main {
   letter-spacing: 0.1em;
 }
 
-/* Events / Archive: pro Ausstellung links die Poster, rechts die Details */
+/* Events / Archive: per exhibition the posters on the left, details on the right */
 
 .event_list {
   display: flex;
@@ -795,7 +829,7 @@ main {
   max-width: 24rem;
 }
 
-/* Poster hochkant, nichts abgeschnitten */
+/* Posters in portrait, nothing cropped */
 .event_posters img {
   width: 100%;
   height: auto;
@@ -842,23 +876,23 @@ main {
   color: #555;
 }
 
-/* About: einfacher Text */
+/* About: plain text */
 .text_page p {
   max-width: 60ch;
 }
 
 
-/* ---------- 7. Handy (schmale Bildschirme) ---------- */
+/* ---------- 7. Phone (narrow screens) ---------- */
 
 @media (max-width: 600px) {
-  /* Pfeile kleiner */
+  /* Smaller arrows */
   .nav {
     font-size: 1.5rem;
     padding: 0.25rem;
   }
 
-  /* Klickflächen enden genau am Bildschirmrand (= Seitenrand des body),
-     damit die Seite nicht breiter als der Bildschirm wird */
+  /* Click areas end exactly at the screen edge (= page margin of body),
+     so the page never gets wider than the screen */
   .prev::before {
     left: calc(-1 * var(--page-pad));
   }
@@ -867,12 +901,12 @@ main {
     right: calc(-1 * var(--page-pad));
   }
 
-  /* Galeriebilder volle Breite */
+  /* Gallery images full width */
   main {
     --gallery-item-width: 100%;
   }
 
-  /* Slideshow der Ausstellung: ohne Pfeile (wischen), volle Breite */
+  /* Exhibition slideshow: no arrows (swipe), full width */
   .exhibition_slideshow {
     grid-template-columns: 1fr;
   }
@@ -885,8 +919,8 @@ main {
     width: 100%;
   }
 
-  /* Galerie: alle Bilder untereinander zum Runterscrollen (statt Band) */
-  .galerie {
+  /* Gallery: all images stacked for scrolling down (instead of a strip) */
+  .gallery {
     display: grid;
     grid-template-columns: 1fr;
     overflow-x: visible;
@@ -894,20 +928,20 @@ main {
     padding-bottom: 0;
   }
 
-  /* Bilder im eigenen Format statt in der 3:2-Box. Die figure ist so breit
-     wie das Bild: volle Breite, aber höchstens so breit, dass das Bild nicht
-     höher als 85 % des Bildschirms wird (betrifft nur Hochkant-Bilder).
-     Die Bildunterschrift steht dadurch bündig unter dem Bild. */
-  .galerie > figure[style*="--ratio"] {
+  /* Images in their own aspect ratio instead of the 3:2 box. The figure is as
+     wide as the image: full width, but at most so wide that the image is not
+     taller than 85 % of the screen (only affects portrait images).
+     That keeps the caption aligned right below the image. */
+  .gallery > figure[style*="--ratio"] {
     width: min(100%, 85svh * var(--ratio));
     justify-self: center;
   }
 
-  .galerie > figure[style*="--ratio"] img {
+  .gallery > figure[style*="--ratio"] img {
     aspect-ratio: var(--ratio);
   }
 
-  /* Listen: eine Spalte */
+  /* Lists: one column */
   .card_grid {
     grid-template-columns: 1fr;
   }
@@ -922,7 +956,7 @@ main {
     max-width: none;
   }
 
-  /* Intro: Video volle Breite */
+  /* Intro: video full width */
   .intro {
     padding: 3rem 0;
   }
@@ -930,11 +964,11 @@ main {
 }
 
 
-/* ---------- 8. Handy hochkant ---------- */
+/* ---------- 8. Phone portrait ---------- */
 
-/* Das Querformat-Bild ist hier immer viel niedriger als der Bildschirm.
-   Statt es mittig zu zeigen, stehen Bild, Link und Punkte als Block
-   direkt unter dem Begrüßungstext. */
+/* The landscape image is always much lower than the screen here.
+   Instead of centering it, image, link and dots form a block right
+   below the welcome text. */
 @media (max-width: 600px) and (orientation: portrait) {
   .fit .slideshow {
     flex: none;
@@ -944,7 +978,7 @@ main {
 
   .fit .slide_content {
     height: auto;
-    container-type: inline-size;   /* nur die Breite messen, Höhe ergibt sich aus dem Bild */
+    container-type: inline-size;   /* only measure the width, the height follows from the image */
   }
 
   .fit .slide_content > * {
@@ -953,9 +987,9 @@ main {
 }
 
 
-/* ---------- 9. Handy quer (niedrige Bildschirme) ---------- */
+/* ---------- 9. Phone landscape (low screens) ---------- */
 
-/* Weniger Abstände, damit das Bild größer ist */
+/* Smaller gaps so the image is larger */
 @media (max-height: 500px) {
   .fit body {
     padding-bottom: 0.75rem;
@@ -980,7 +1014,7 @@ main {
 }
 
 
-/* ---------- 8. YouTube-Hinweis (vor dem ersten Laden eines Videos) ---------- */
+/* ---------- 10. YouTube notice (before a video is loaded for the first time) ---------- */
 
 .yt_notice {
   position: relative;
@@ -1040,7 +1074,7 @@ main {
 }
 
 
-/* ---------- 9. Rechtliches (Legal notice, Privacy) ---------- */
+/* ---------- 11. Legal pages (legal notice, privacy) ---------- */
 
 .legal_page {
   line-height: 1.6;
@@ -1078,7 +1112,7 @@ main {
   color: var(--muted);
 }
 
-/* Fehlende Angabe: deutlich sichtbar, bis sie im Admin eingetragen ist */
+/* Missing detail: clearly visible until it is filled in in the admin */
 .legal_page mark,
 .text_page mark {
   padding: 0 0.3em;
@@ -1104,4 +1138,157 @@ main {
 .legal_button:disabled {
   cursor: default;
   color: var(--muted);
+}
+
+/* ---------- 12. Preview, photo and artist pages ---------- */
+
+/* Preview from the admin (?preview): clearly not the public view */
+.preview_note {
+  margin: 0 0 1.5rem;
+  padding: 0.6rem 0.9rem;
+  border: 1px solid #ffd54a;
+  color: #ffd54a;
+  font-size: 0.85rem;
+}
+
+/* "by <artist>" below the theme in the header */
+.artist_credit {
+  margin: 0.25rem 0 0;
+  font-size: 0.85rem;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+
+.artist_credit a,
+.caption_artist a {
+  color: var(--text);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+/* Exhibition page: the artists with their short text, below the gallery */
+.about_artists {
+  width: min(100%, 720px);
+  margin: 0 auto 3rem;
+}
+
+.about_artist + .about_artist {
+  margin-top: 2rem;
+}
+
+.about_artist_name {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+}
+
+.about_artist p {
+  max-width: 60ch;
+  line-height: 1.6;
+}
+
+.about_artist_link {
+  font-size: 0.85rem;
+  letter-spacing: 0.1em;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+/* Artist mini page (/artist/<slug>) */
+.artist_page {
+  line-height: 1.6;
+}
+
+.artist_portrait {
+  display: block;
+  width: min(100%, 320px);
+  height: auto;
+  aspect-ratio: auto;          /* own format instead of the 3:2 media box */
+  margin: 0 0 1.5rem;
+}
+
+.artist_page h2 {
+  margin: 2rem 0 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 400;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.artist_links,
+.artist_exhibitions {
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.artist_links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+}
+
+.artist_page a {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.artist_exhibitions li + li {
+  margin-top: 0.4rem;
+}
+
+.artist_exhibition_theme {
+  color: var(--muted);
+}
+
+/* Photo page (/exhibition/<id>/photo/<photo>): one photo as large as possible */
+.photo_page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.photo_figure {
+  margin: 0;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.photo_figure img,
+.photo_figure video {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  max-height: calc(100svh - 14rem);
+  aspect-ratio: auto;
+  object-fit: contain;
+  cursor: zoom-in;
+}
+
+.photo_figure video {
+  cursor: auto;
+}
+
+.photo_note {
+  margin: 2rem 0;
+  color: var(--muted);
+}
+
+.photo_nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem 2rem;
+  margin: 1.5rem 0 0;
+  font-size: 0.85rem;
+  letter-spacing: 0.1em;
+}
+
+.photo_nav_link {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
 }

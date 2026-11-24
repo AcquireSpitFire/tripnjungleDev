@@ -1,6 +1,6 @@
-// Navigation: Hamburger-Knopf (drei Striche) rechts oben im Header,
-// darunter klappt das Menü auf. Das Markup wird hier erzeugt, damit es
-// nur an einer Stelle gepflegt wird und auf jeder Seite gleich ist.
+// Navigation: hamburger button (three bars) top right in the header,
+// the menu opens below it. The markup is created here so it is only
+// maintained in one place and is the same on every page.
 
 const MENU_ITEMS = [
   { label: "Home", href: "/" },
@@ -35,7 +35,7 @@ function setupMenu() {
   menu.setAttribute("aria-label", "Main navigation");
   menu.hidden = true;
 
-  // Aktuelle Seite: "/" oder "/exhibitions" … (ohne .html, ohne Query)
+  // Current page: "/" or "/exhibitions" … (without .html, without query)
   const currentPath = location.pathname.replace(/\.html$/, "").replace(/\/$/, "") || "/";
 
   MENU_ITEMS.forEach((item) => {
@@ -66,7 +66,7 @@ function setupMenu() {
     setOpen(menu.hidden);
   });
 
-  // Schließen: Esc, Klick außerhalb des Headers, Klick auf einen Link
+  // Close: Esc, click outside the header, click on a link
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
       setOpen(false);
@@ -84,6 +84,68 @@ function setupMenu() {
       setOpen(false);
     }
   });
+
+  return list;
 }
 
-setupMenu();
+// Logged-in accounts get "Admin" and "Log out" at the end of the menu.
+// The login state is only checked in the browser: pages are cached publicly,
+// so it must never be part of the HTML. The session cookie stays httpOnly.
+async function addAccountItems(list) {
+  if (!list) {
+    return;
+  }
+
+  let user = null;
+
+  try {
+    const response = await fetch("/api/users/me", { credentials: "same-origin", cache: "no-store" });
+
+    if (response.ok) {
+      user = (await response.json()).user || null;
+    }
+  } catch {
+    return;
+  }
+
+  if (!user) {
+    return;
+  }
+
+  const adminEntry = document.createElement("li");
+  const adminLink = document.createElement("a");
+
+  adminEntry.className = "menu_account";
+  adminLink.href = "/admin";
+  adminLink.textContent = "Admin";
+  adminEntry.appendChild(adminLink);
+
+  const logoutEntry = document.createElement("li");
+  const logoutButton = document.createElement("button");
+
+  logoutButton.type = "button";
+  logoutButton.className = "menu_logout";
+  logoutButton.textContent = "Log out";
+
+  logoutButton.addEventListener("click", async () => {
+    logoutButton.disabled = true;
+
+    try {
+      const response = await fetch("/api/users/logout", { method: "POST", credentials: "same-origin" });
+
+      if (!response.ok) {
+        throw new Error(String(response.status));
+      }
+
+      location.reload();
+    } catch {
+      logoutButton.disabled = false;
+      alert("Logging out did not work. Please try again.");
+    }
+  });
+
+  logoutEntry.appendChild(logoutButton);
+  list.append(adminEntry, logoutEntry);
+}
+
+addAccountItems(setupMenu());

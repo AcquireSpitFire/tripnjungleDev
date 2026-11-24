@@ -1,6 +1,6 @@
 # Tripnjungle
 
-Toms Web-Galerie: Ausstellungen mit Fotos, Videos, Postern und Intro-Video.
+Tom's web gallery: exhibitions with photos, videos, posters and intro videos.
 
-Der gesamte Code liegt in [`cms/`](cms/) (Payload CMS + Next.js). Anleitung zum Starten,
-Pflegen und Hosten: [`cms/README.md`](cms/README.md).
+All code lives in [`cms/`](cms/) (Payload CMS + Next.js). How to run, maintain and host it:
+[`cms/README.md`](cms/README.md).

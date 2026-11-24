@@ -1,4 +1,4 @@
-// /events: liefert src/templates/events.html mit JSON-LD aller kommenden Ausstellungen.
+// /events: serves src/templates/events.html with JSON-LD of all upcoming exhibitions.
 import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 

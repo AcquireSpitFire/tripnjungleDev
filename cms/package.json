@@ -15,7 +15,8 @@
     "migrate": "cross-env NODE_OPTIONS=--no-deprecation payload migrate",
     "migrate:create": "cross-env NODE_OPTIONS=--no-deprecation payload migrate:create",
     "payload": "cross-env NODE_OPTIONS=--no-deprecation payload",
-    "start": "cross-env NODE_OPTIONS=--no-deprecation payload migrate && cross-env NODE_OPTIONS=--no-deprecation next start"
+    "start": "cross-env NODE_OPTIONS=--no-deprecation payload migrate && cross-env NODE_OPTIONS=--no-deprecation next start",
+    "test:access": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/check-access.ts"
   },
   "dependencies": {
     "@payloadcms/db-sqlite": "3.93.0",
@@ -26,12 +27,15 @@
     "graphql": "^16.8.1",
     "next": "^16.4.6",
     "payload": "3.93.0",
+    "pdf-lib": "1.17.1",
+    "qrcode": "1.5.4",
     "react": "19.2.6",
     "react-dom": "19.2.6",
     "sharp": "^0.35.5"
   },
   "devDependencies": {
     "@types/node": "22.19.9",
+    "@types/qrcode": "1.5.6",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "prettier": "^3.4.2",

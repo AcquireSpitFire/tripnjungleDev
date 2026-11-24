@@ -7,6 +7,8 @@ const __filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(__filename)
 
 const nextConfig: NextConfig = {
+  // No "X-Powered-By: Next.js" (tells attackers what to try)
+  poweredByHeader: false,
   images: {
     localPatterns: [
       {
@@ -14,11 +16,11 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  // Die Seiten liegen als Vorlagen in src/templates und werden von Route Handlern
-  // (src/app/**/route.ts) mit Meta-Daten ausgeliefert; public/ enthält nur CSS, JS, Bilder.
+  // The pages live as templates in src/templates and are served with meta data by
+  // route handlers (src/app/**/route.ts); public/ only contains CSS, JS and images.
   async redirects() {
     return [
-      // Alte Links weiterleiten (/exhibition.html?id=… erledigt src/app/exhibition.html/route.ts)
+      // Redirect old links (/exhibition.html?id=… is handled by src/app/exhibition.html/route.ts)
       { source: '/events.html', destination: '/events', permanent: true },
       { source: '/exhibitions.html', destination: '/exhibitions', permanent: true },
       { source: '/archive.html', destination: '/archive', permanent: true },
@@ -29,7 +31,7 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        // Sicherheits-Header für alle Antworten
+        // Security headers for all responses
         source: '/:path*',
         headers: [
           { key: 'X-Content-Type-Options', value: 'nosniff' },
@@ -37,16 +39,16 @@ const nextConfig: NextConfig = {
           { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
           { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' },
+          // Other windows (e.g. a page that opened ours) get no handle on our pages
+          { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
         ],
       },
       {
-        // Mediendateien ändern sich unter einer URL nicht (neue Datei = neuer Name).
-        // "sandbox": selbst wenn eine Datei Skripte enthielte, dürfte sie nichts ausführen.
+        // "sandbox": even if a file contained scripts, it could not run anything.
+        // Caching is set per response in src/collections/Media.ts (private: delivery depends
+        // on the login, so no shared cache may keep a copy).
         source: '/api/media/file/:path*',
-        headers: [
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
-          { key: 'Content-Security-Policy', value: "sandbox; default-src 'none'" },
-        ],
+        headers: [{ key: 'Content-Security-Policy', value: "sandbox; default-src 'none'" }],
       },
       {
         source: '/:path(css|js)/:file*',
