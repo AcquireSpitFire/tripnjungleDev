@@ -1,4 +1,5 @@
 import { sqliteAdapter } from '@payloadcms/db-sqlite'
+import { nodemailerAdapter } from '@payloadcms/email-nodemailer'
 import path from 'path'
 import { buildConfig } from 'payload'
 import { fileURLToPath } from 'url'
@@ -35,8 +36,35 @@ if (process.env.NODE_ENV === 'production' && !process.env.PAYLOAD_PUBLIC_SERVER_
   )
 }
 
+// E-mail (order confirmations, shipping notices, price requests, "Forgot password") over SMTP.
+// Without SMTP_HOST no e-mail leaves the server: Payload writes them to the console instead.
+const smtpPort = Number(process.env.SMTP_PORT || 587)
+const emailFrom = process.env.EMAIL_FROM || process.env.SMTP_USER || ''
+
+if (process.env.SMTP_HOST && !emailFrom) {
+  throw new Error('EMAIL_FROM is missing: set the sender address of the e-mails (e.g. shop@your-domain.com).')
+}
+
+const email = process.env.SMTP_HOST
+  ? nodemailerAdapter({
+      defaultFromAddress: emailFrom,
+      defaultFromName: process.env.EMAIL_FROM_NAME || 'Tripnjungle',
+      // Do not block the start when the mail server is briefly unreachable
+      skipVerify: true,
+      transportOptions: {
+        host: process.env.SMTP_HOST,
+        port: smtpPort,
+        // 465 = TLS from the start, otherwise STARTTLS is required (never plain text)
+        secure: smtpPort === 465,
+        requireTLS: smtpPort !== 465,
+        auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS || '' } : undefined,
+      },
+    })
+  : undefined
+
 export default buildConfig({
   serverURL,
+  email,
   admin: {
     user: Users.slug,
     components: {

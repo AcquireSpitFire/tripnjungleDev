@@ -1,6 +1,7 @@
 import type { CollectionConfig, Field, FieldAccess } from 'payload'
 
 import { canManageShop, isAdmin } from '../access/roles'
+import { sendShippedEmail } from '../lib/shop/emails'
 
 // Orders of prints (release 3.0). Created only by the server (src/lib/shop/checkout.ts) when a
 // buyer goes to the Stripe payment page, completed by the Stripe webhook (src/lib/shop/webhook.ts).
@@ -85,6 +86,47 @@ export const Orders: CollectionConfig = {
     delete: ({ req }) => isAdmin(req.user),
   },
   defaultSort: '-createdAt',
+  hooks: {
+    afterChange: [
+      async ({ doc, previousDoc, operation, req, context }) => {
+        if (operation !== 'update' || doc.status !== 'shipped' || previousDoc?.status === 'shipped' || context.tjShippedStamp) {
+          return doc
+        }
+
+        // "Shipped on" is a server-only field: stamp it with overrideAccess (marked in the
+        // context so this hook does not run a second time)
+        const stamped = await req.payload.update({
+          collection: 'orders',
+          id: doc.id,
+          data: { shippedAt: new Date().toISOString() },
+          overrideAccess: true,
+          context: { tjShippedStamp: true },
+          req,
+        })
+
+        if (doc.notifyOnShipping !== false) {
+          // An e-mail problem must not undo the status change; it is noted on the order
+          await sendShippedEmail(req.payload, stamped).catch(async (error) => {
+            req.payload.logger.error({ err: error, msg: `Shipping e-mail for ${doc.orderNumber} failed` })
+            await req.payload.update({
+              collection: 'orders',
+              id: doc.id,
+              data: {
+                internalNote: [doc.internalNote, `${new Date().toISOString()}: the shipping e-mail could not be sent.`]
+                  .filter(Boolean)
+                  .join('\n'),
+              },
+              overrideAccess: true,
+              context: { tjShippedStamp: true },
+              req,
+            })
+          })
+        }
+
+        return stamped
+      },
+    ],
+  },
   fields: [
     { ...readOnlyText('orderNumber', 'Order number'), index: true } as Field,
     {

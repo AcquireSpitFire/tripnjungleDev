@@ -48,9 +48,9 @@ In the admin under **Exhibitions**:
 ## Accounts and roles
 
 Accounts are managed by admins under **Accounts**. Everybody changes their own name and password via
-the avatar (top right). There is no e-mail sending yet (comes with the shop release), so “Forgot
-password” does not work: an admin sets the first password and tells the person; they change it after
-logging in. Passwords need at least 12 characters; 5 wrong attempts lock the account for 15 minutes.
+the avatar (top right). An admin sets the first password and tells the person; they change it after
+logging in. “Forgot password” on the login page sends a reset link once e-mail is set up (`SMTP_HOST`,
+`SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM`; without them e-mails only appear in the log). Passwords need at least 12 characters; 5 wrong attempts lock the account for 15 minutes.
 
 **Log out**: in the admin with the “Log out” button (top right, next to the account name and role);
 on the website, logged-in accounts find “Admin” and “Log out” at the end of the menu. Logging out
