@@ -526,6 +526,9 @@ function showExhibition(exhibition) {
   setupAboutArtists(exhibition);
   setupVideo(exhibition);
   setupViewer();
+
+  // "Prints from …" below the photos that are for sale (shop.js)
+  setupExhibitionShop(exhibition);
 }
 
 // id from /exhibition/<id>, fallback ?id=… (old links)

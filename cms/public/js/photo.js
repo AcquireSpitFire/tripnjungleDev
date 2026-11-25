@@ -169,6 +169,9 @@ async function startPhoto() {
   }
 
   renderPhoto(exhibition, exhibition.gallery[index], index);
+
+  // Prints of this photo below the navigation (shop.js)
+  setupPhotoShop(exhibition, exhibition.gallery[index], document.querySelector(".photo_page"));
 }
 
 startPhoto();
