@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>{{title}}</title>
+	<meta name="description" content="{{description}}">
+	<meta name="robots" content="{{robots}}">
+	<link rel="canonical" href="{{canonical}}">
+	<meta property="og:site_name" content="{{siteName}}">
+	<meta property="og:type" content="website">
+	<meta property="og:title" content="{{title}}">
+	<meta property="og:description" content="{{description}}">
+	<meta property="og:url" content="{{canonical}}">
+	<meta property="og:image" content="{{ogImage}}">
+	<meta name="twitter:card" content="summary">
+	<meta name="twitter:title" content="{{title}}">
+	<meta name="twitter:description" content="{{description}}">
+	<meta name="twitter:image" content="{{ogImage}}">
+	<meta name="theme-color" content="#000000">
+	<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+	<link rel="manifest" href="/manifest.webmanifest">
+	<link rel="stylesheet" href="/css/style.css">
+	{{{jsonLd}}}
+</head>
+<body>
+	<header>
+		<div class="header_inner">
+			<p class="site_name"><a href="/">Tripnjungle</a></p>
+			<h1 class="page_title">Right of withdrawal</h1>
+		</div>
+	</header>
+
+	<!-- From Admin → Site settings → Shop (empty = EU model instructions, src/lib/shop/legal.ts) -->
+	<main class="text_page legal_page">
+		<p class="legal_sub">Widerrufsbelehrung · Last updated {{updated}}</p>
+
+		<!-- Withdrawal function (Art. 11a Directive 2011/83/EU), sent by public/js/shop.js -->
+		<section class="withdrawal_box" aria-labelledby="withdraw_title">
+			<h2 id="withdraw_title">Withdraw from your contract here</h2>
+			<form id="withdrawal_form" class="shop_form" novalidate>
+				<label>Your name <input name="name" autocomplete="name" required maxlength="120"></label>
+				<label>Order number <input name="orderNumber" placeholder="TJ-2026-00012" required maxlength="40"></label>
+				<label>E-mail address used for the order <input name="email" type="email" autocomplete="email" required maxlength="254"></label>
+				<label>Statement (optional) <textarea name="statement" rows="3" maxlength="2000">I hereby withdraw from my contract of sale for the goods of this order.</textarea></label>
+				<p class="form_message" role="alert" hidden></p>
+				<button type="submit" class="shop_button shop_button_primary">Confirm withdrawal</button>
+			</form>
+		</section>
+
+		{{{withdrawalHtml}}}
+	</main>
+
+	<footer class="site_footer">
+		<nav aria-label="Footer">
+			<a href="/">Home</a>
+			<a href="/terms">Terms</a>
+			<a href="/withdrawal">Withdrawal</a>
+			<a href="/imprint">Legal notice</a>
+			<a href="/privacy">Privacy</a>
+		</nav>
+	</footer>
+
+	<script defer src="/js/data.js"></script>
+	<script defer src="/js/nav.js"></script>
+	<script defer src="/js/shop.js"></script>
+</body>
+</html>

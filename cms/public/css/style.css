@@ -1549,6 +1549,18 @@ main {
   justify-self: start;
 }
 
+/* Withdrawal function on /withdrawal */
+.withdrawal_box {
+  max-width: 70ch;
+  margin: 1rem 0 2.5rem;
+  padding: 1rem 1.25rem 1.25rem;
+  border: 1px solid #333;
+}
+
+.withdrawal_box h2 {
+  margin-top: 0;
+}
+
 /* Cart page */
 .cart_status {
   color: var(--muted);

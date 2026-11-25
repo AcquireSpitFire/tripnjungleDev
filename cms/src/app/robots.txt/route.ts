@@ -1,4 +1,4 @@
-// /robots.txt: do not crawl admin and API, announce the sitemap
+// /robots.txt: do not crawl admin, API, cart and shop endpoints; announce the sitemap
 import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 
@@ -10,9 +10,19 @@ export async function GET() {
   const payload = await getPayload({ config: configPromise })
   const base = getServerUrl(payload)
 
-  const text = ['User-agent: *', 'Allow: /', 'Disallow: /admin', 'Disallow: /api', '', `Sitemap: ${base}/sitemap.xml`, ''].join(
-    '\n',
-  )
+  // The cart, the order pages and the shop endpoints are nothing to index
+  const text = [
+    'User-agent: *',
+    'Allow: /',
+    'Disallow: /admin',
+    'Disallow: /api',
+    'Disallow: /shop/',
+    'Disallow: /order/',
+    'Disallow: /cart',
+    '',
+    `Sitemap: ${base}/sitemap.xml`,
+    '',
+  ].join('\n')
 
   return new Response(text, {
     headers: {

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>{{title}}</title>
+	<meta name="description" content="{{description}}">
+	<meta name="robots" content="{{robots}}">
+	<link rel="canonical" href="{{canonical}}">
+	<meta property="og:site_name" content="{{siteName}}">
+	<meta property="og:type" content="website">
+	<meta property="og:title" content="{{title}}">
+	<meta property="og:description" content="{{description}}">
+	<meta property="og:url" content="{{canonical}}">
+	<meta property="og:image" content="{{ogImage}}">
+	<meta name="twitter:card" content="summary">
+	<meta name="twitter:title" content="{{title}}">
+	<meta name="twitter:description" content="{{description}}">
+	<meta name="twitter:image" content="{{ogImage}}">
+	<meta name="theme-color" content="#000000">
+	<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+	<link rel="manifest" href="/manifest.webmanifest">
+	<link rel="stylesheet" href="/css/style.css">
+	{{{jsonLd}}}
+</head>
+<body data-order-thanks>
+	<header>
+		<div class="header_inner">
+			<p class="site_name"><a href="/">Tripnjungle</a></p>
+			<h1 class="page_title">Thank you!</h1>
+		</div>
+	</header>
+
+	<main class="text_page">
+		<p>Your order has been placed. You will receive the order confirmation with all details, the terms and the instructions on withdrawal by e-mail in a few minutes.</p>
+		<p>If you paid with a delayed method (e.g. SEPA direct debit), we ship as soon as the payment has arrived.</p>
+		<p>No e-mail? Please check your spam folder or contact us via the <a href="/imprint">legal notice</a>.</p>
+		<p><a href="/exhibitions">Back to the exhibitions ›</a></p>
+	</main>
+
+	<footer class="site_footer">
+		<nav aria-label="Footer">
+			<a href="/">Home</a>
+			<a href="/terms">Terms</a>
+			<a href="/withdrawal">Withdrawal</a>
+			<a href="/imprint">Legal notice</a>
+			<a href="/privacy">Privacy</a>
+		</nav>
+	</footer>
+
+	<script defer src="/js/data.js"></script>
+	<script defer src="/js/nav.js"></script>
+	<script defer src="/js/shop.js"></script>
+</body>
+</html>

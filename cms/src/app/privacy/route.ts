@@ -1,6 +1,7 @@
 // "/privacy": privacy policy from Admin → Site settings → Privacy
 import { renderStaticPage } from '@/lib/static-page'
 import { SITE_NAME } from '@/lib/seo'
+import { escapeHtml } from '@/lib/render-template'
 import { formatDate, mailLink, paragraphs, required, urlLink } from '@/lib/site'
 
 export const dynamic = 'force-dynamic'
@@ -10,7 +11,7 @@ export async function GET() {
     template: 'privacy.html',
     path: '/privacy',
     title: `Privacy policy – ${SITE_NAME}`,
-    description: `Privacy policy of ${SITE_NAME}: hosting, YouTube videos after consent, local storage, your rights.`,
+    description: `Privacy policy of ${SITE_NAME}: hosting, YouTube videos after consent, local storage, orders and payment, your rights.`,
     values: (settings) => {
       const austria = settings.jurisdiction === 'at'
       const hostLink = urlLink(settings.hostPrivacyUrl)
@@ -34,6 +35,10 @@ export async function GET() {
         authorityNote: austria
           ? 'In Austria this is the Datenschutzbehörde, Barichgasse 40–42, 1030 Vienna, <a href="https://www.dsb.gv.at" rel="noopener">dsb.gv.at</a>.'
           : 'In Germany the authority of the federal state in which the controller is based is responsible; a list is available at <a href="https://www.bfdi.bund.de" rel="noopener">bfdi.bund.de</a>.',
+        retentionNote: austria ? '7 years, § 132 BAO' : 'up to 10 years, § 147 AO and § 257 HGB',
+        mailProvider: settings.mailProviderName?.trim()
+          ? escapeHtml([settings.mailProviderName, settings.mailProviderAddress].map((part) => part?.trim()).filter(Boolean).join(', '))
+          : required('', 'E-mail provider, tab Shop'),
         privacyExtra: paragraphs(settings.privacyExtra),
       }
     },
