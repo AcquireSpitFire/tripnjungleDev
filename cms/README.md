@@ -73,6 +73,28 @@ ends the session on the server, not only in the browser.
   only managers change it.
 - “Created by” / “Last changed by” in the sidebar show who did what; visitors never see account details.
 
+**Contributor terms and responsibility** (every account except admins – artists, editors, managers):
+
+- After the first login (and whenever the text changes) the account has to accept the **contributor
+  terms**: click the account (top right) → read the text → “I have read and accept these terms”. Until
+  then it cannot upload files or change exhibitions and artist profiles (checked on the server); a red
+  notice in the admin says so. Only the account itself can accept – an admin cannot do it for others.
+- The terms make the uploader responsible for their uploads: they confirm holding all rights (copyright,
+  consent of the people shown) and that nothing is unlawful, and they indemnify the operator against claims
+  of third parties if they are at fault, also through negligence (e.g. not checking a file). An indemnity
+  regardless of any fault would usually not hold in standard terms (§ 879 Abs. 3 ABGB / § 307 BGB).
+  Criminal responsibility always lies with the uploader. The operator still has to remove unlawful
+  content as soon as they learn about it (DSA Art. 6) – no agreement changes that. Have the text checked.
+- **Every upload** additionally needs the checkbox **“Rights confirmed”**. Several files at once (bulk
+  upload, “Add several photos at once”): **“Edit all” → choose “Rights confirmed” → tick it once** for all
+  files. Admin uploads do not need it.
+- **Proof** that admins see: on the account – date, version and a copy of the accepted text; on every
+  upload – “Rights confirmed on” and “Rights confirmed by” (e-mail and account id, kept even if the account
+  is deleted). Neither can be changed afterwards.
+- Text: Site settings → **Contributor terms** (empty = standard text in `src/lib/contributor-terms.ts`).
+  The standard text names the operator and follows the country of the legal notice, so filling in or
+  changing these also asks every account to accept again.
+
 ## Artists
 
 Under **Artists**: name, ID (URL), portrait and the kind of artist page `/artist/<ID>`:
@@ -148,6 +170,11 @@ Stripe confirms them. Problems (e-mail not sent, amount differs) are noted in *I
 **Withdrawal:** `/withdrawal` shows the instructions, the model form and the withdrawal function required
 since 19 June 2026 (name, order number, e-mail, “Confirm withdrawal”). The order then shows “Withdrawal
 received”; the buyer and the shop get an e-mail.
+
+**Shop status:** the top of Site settings → Shop shows whether the shop is open for visitors and what is
+still missing (switch, Stripe keys, shipping zone; e-mail and legal notice as recommendations). While the
+shop is closed, visitors see no prices at all – check the prints with **“Preview (with your login)”** in
+the exhibition: there they appear with a note “the shop is closed” and the buttons disabled.
 
 **Site settings → Shop:** shop open (only takes effect with the Stripe keys and at least one shipping
 zone), e-mail for orders (empty = e-mail of the legal notice), VAT (*small business* with the standard note
@@ -318,6 +345,12 @@ the schema snapshot with
 (example: `src/migrations/20261122_230000_english_field_names.ts`). Back up the database first and test
 the migration on a copy.
 
+**Local database does not start** (`npm run dev` fails with “index … already exists”): when `npm run dev`
+adds a column with a reference to an existing table, drizzle-kit leaves out the foreign key and later tries
+to rebuild the table with every index twice. Stop the dev server and run `npm run db:repair-dev` (shows
+what it would do) and then `npm run db:repair-dev -- --yes`: it backs up the database file first, rebuilds
+the tables once and checks that no row is lost. Production is not affected (it uses the migrations).
+
 **Check:** `npm run migrate:create` adds references to other collections (e.g. `created_by_id`) without
 their delete rule; add `ON DELETE SET NULL` (single reference) or `ON DELETE CASCADE` (`*_rels` tables) by
 hand as in the generated `.json` snapshot, see the migrations of release 2.0.
@@ -334,7 +367,11 @@ QR codes, the security rules above) against a temporary database. Run it after e
 - `src/collections/Media.ts` – uploads (`MEDIA_DIR`), image sizes, public only with `locked: false`;
   watermarked URLs for photos for sale
 - `src/collections/Artists.ts` – artist profiles; `src/app/artist/[slug]/route.ts` – the artist page
-- `src/collections/Users.ts` – accounts, roles, login security
+- `src/collections/Users.ts` – accounts, roles, login security, accepting the contributor terms
+- `src/lib/contributor-terms.ts` – standard text, version and check of the contributor terms;
+  `src/components/ContributorTerms.tsx` (account page), `ContributorTermsNotice.tsx` (reminder in the admin)
+- `src/components/ShopStatus.tsx` – shop status in Site settings → Shop
+- `scripts/repair-dev-schema.ts` – repairs a local development database (`npm run db:repair-dev`)
 - `src/lib/media-lock.ts` – keeps `locked`, `forSale` and the watermark key of the media in sync with
   exhibitions and portraits
 - `src/lib/qr.ts`, `src/endpoints/exhibition-qr.ts` – QR PNG/PDF; `src/components/QrCodeField.tsx`,
