@@ -324,6 +324,12 @@ export interface Media {
   alt?: string | null;
   name?: string | null;
   /**
+   * By ticking I confirm: I hold all rights to this file (copyright, consent of the people shown), it is not illegal, and I am responsible for it under the contributor terms. Required for every upload except by admins. Several files at once: “Edit all” → “Rights confirmed” → tick it once for all files.
+   */
+  rightsConfirmed?: boolean | null;
+  rightsConfirmedAt?: string | null;
+  rightsConfirmedBy?: string | null;
+  /**
    * Set automatically by the exhibition.
    */
   locked?: boolean | null;
@@ -637,6 +643,9 @@ export interface ArtistsSelect<T extends boolean = true> {
 export interface MediaSelect<T extends boolean = true> {
   alt?: T;
   name?: T;
+  rightsConfirmed?: T;
+  rightsConfirmedAt?: T;
+  rightsConfirmedBy?: T;
   locked?: T;
   forSale?: T;
   watermarkKey?: T;

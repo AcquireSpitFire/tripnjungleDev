@@ -131,7 +131,7 @@ async function run() {
 
     return termsEndpoint('/contributor-terms/accept').handler(req) as Promise<Response>
   }
-  const uploadAs = (user: AnyDoc) => payload.create({ collection: 'media', data: { alt: 'T' }, file: file(), ...as(user) })
+  const uploadAs = (user: AnyDoc) => payload.create({ collection: 'media', data: { alt: 'T', rightsConfirmed: true }, file: file(), ...as(user) })
 
   const editorTerms = await getTerms(editor)
 
@@ -175,6 +175,44 @@ async function run() {
   )
   check('after accepting, the editor can upload', Boolean(await uploadAs(editor)))
 
+  // Confirmation of the rights for every upload
+  let rightsError = ''
+
+  try {
+    await payload.create({ collection: 'media', data: { alt: 'No confirmation' }, file: file(), ...as(editor) })
+  } catch (error) {
+    rightsError = JSON.stringify((error as AnyDoc)?.data ?? (error as Error).message)
+  }
+
+  check('an upload without the rights confirmation is refused', rightsError.includes('rightsConfirmed'), rightsError)
+  check(
+    'admins upload without the rights confirmation',
+    Boolean(await payload.create({ collection: 'media', data: { alt: 'Admin' }, file: file(), ...as(admin) })),
+  )
+
+  const confirmedUpload: AnyDoc = await uploadAs(editor)
+
+  check(
+    'the confirmation is stored with date and account',
+    confirmedUpload.rightsConfirmed === true &&
+      Boolean(confirmedUpload.rightsConfirmedAt) &&
+      String(confirmedUpload.rightsConfirmedBy).startsWith('editor@test.local (account '),
+    [confirmedUpload.rightsConfirmedAt, confirmedUpload.rightsConfirmedBy],
+  )
+
+  const unconfirmed: AnyDoc = await payload.update({
+    collection: 'media',
+    id: confirmedUpload.id,
+    data: { rightsConfirmed: false, rightsConfirmedBy: 'someone else' },
+    ...as(editor),
+  })
+
+  check(
+    'the confirmation cannot be changed afterwards',
+    unconfirmed.rightsConfirmed === true && unconfirmed.rightsConfirmedBy === confirmedUpload.rightsConfirmedBy,
+    [unconfirmed.rightsConfirmed, unconfirmed.rightsConfirmedBy],
+  )
+
   // The other test accounts accept now, so the checks below test what they always did
   for (const user of [manager, managerWithoutSection]) {
     await acceptTerms(user)
@@ -182,9 +220,9 @@ async function run() {
 
   console.log('Exhibitions')
 
-  const imageA: AnyDoc = await payload.create({ collection: 'media', data: { alt: 'A' }, file: file(), ...as(manager) })
-  const imageB: AnyDoc = await payload.create({ collection: 'media', data: { alt: 'B' }, file: file(), ...as(manager) })
-  const poster: AnyDoc = await payload.create({ collection: 'media', data: { alt: 'P' }, file: file(), ...as(manager) })
+  const imageA: AnyDoc = await payload.create({ collection: 'media', data: { alt: 'A', rightsConfirmed: true }, file: file(), ...as(manager) })
+  const imageB: AnyDoc = await payload.create({ collection: 'media', data: { alt: 'B', rightsConfirmed: true }, file: file(), ...as(manager) })
+  const poster: AnyDoc = await payload.create({ collection: 'media', data: { alt: 'P', rightsConfirmed: true }, file: file(), ...as(manager) })
 
   check('new uploads are locked', imageA.locked === true, imageA.locked)
   check('uploads remember who created them', String(imageA.createdBy?.id ?? imageA.createdBy) === String(manager.id))
@@ -295,7 +333,7 @@ async function run() {
 
   console.log('Artists')
 
-  const portrait: AnyDoc = await payload.create({ collection: 'media', data: { alt: 'Portrait' }, file: file(), ...as(manager) })
+  const portrait: AnyDoc = await payload.create({ collection: 'media', data: { alt: 'Portrait', rightsConfirmed: true }, file: file(), ...as(manager) })
   const profile: AnyDoc = await payload.create({
     collection: 'artists',
     data: {
@@ -347,7 +385,7 @@ async function run() {
 
   const artistImage: AnyDoc = await payload.create({
     collection: 'media',
-    data: { alt: 'Ana 1' },
+    data: { alt: 'Ana 1', rightsConfirmed: true },
     file: file(),
     ...as(artistUser),
   })
@@ -491,7 +529,7 @@ async function run() {
 
   const editorUpload: AnyDoc = await payload.create({
     collection: 'media',
-    data: { alt: 'Editor upload' },
+    data: { alt: 'Editor upload', rightsConfirmed: true },
     file: file(),
     ...as(editor),
   })
@@ -590,7 +628,7 @@ async function run() {
   console.log('Security')
 
   // Locked photos must not become public through artists/editors
-  const managerPhoto: AnyDoc = await payload.create({ collection: 'media', data: { alt: 'M' }, file: file(), ...as(manager) })
+  const managerPhoto: AnyDoc = await payload.create({ collection: 'media', data: { alt: 'M', rightsConfirmed: true }, file: file(), ...as(manager) })
 
   await payload.update({
     collection: 'exhibitions',
@@ -612,7 +650,7 @@ async function run() {
 
   check('an artist can use their own upload as portrait', String(ownPortrait.portrait?.id ?? ownPortrait.portrait) === String(artistImage.id))
 
-  const publicElsewhere: AnyDoc = await payload.create({ collection: 'media', data: { alt: 'Pub' }, file: file(), ...as(manager) })
+  const publicElsewhere: AnyDoc = await payload.create({ collection: 'media', data: { alt: 'Pub', rightsConfirmed: true }, file: file(), ...as(manager) })
   const editorOpen: AnyDoc = await payload.create({
     collection: 'exhibitions',
     data: { slug: 'editor-open', title: 'Editor open', visibility: 'public', editors: [editor.id] },
@@ -666,24 +704,24 @@ async function run() {
   // editorUpload is public now (gallery of a public exhibition)
   check('the editor upload is public now', (await reload(editorUpload.id)).locked === false)
   await fails('an editor cannot replace or change their upload once it is public', () =>
-    payload.update({ collection: 'media', id: editorUpload.id, data: { alt: 'changed' }, ...as(editor) }),
+    payload.update({ collection: 'media', id: editorUpload.id, data: { alt: 'changed', rightsConfirmed: true }, ...as(editor) }),
   )
   await fails('an editor cannot delete their upload once it is public', () =>
     payload.delete({ collection: 'media', id: editorUpload.id, ...as(editor) }),
   )
 
-  const draftUpload: AnyDoc = await payload.create({ collection: 'media', data: { alt: 'Draft' }, file: file(), ...as(editor) })
+  const draftUpload: AnyDoc = await payload.create({ collection: 'media', data: { alt: 'Draft', rightsConfirmed: true }, file: file(), ...as(editor) })
   const draftChanged: AnyDoc = await payload.update({
     collection: 'media',
     id: draftUpload.id,
-    data: { alt: 'Draft 2' },
+    data: { alt: 'Draft 2', rightsConfirmed: true },
     ...as(editor),
   })
 
   check('an editor can still change their own locked upload', draftChanged.alt === 'Draft 2', draftChanged.alt)
 
   // "Locked with link": content only for a direct lookup
-  const linkPhoto: AnyDoc = await payload.create({ collection: 'media', data: { alt: 'L' }, file: file(), ...as(manager) })
+  const linkPhoto: AnyDoc = await payload.create({ collection: 'media', data: { alt: 'L', rightsConfirmed: true }, file: file(), ...as(manager) })
 
   await payload.create({
     collection: 'exhibitions',
@@ -809,8 +847,8 @@ async function run() {
   // ---------- Shop (release 3.0): model and access ----------
   console.log('Shop – model')
 
-  const shopImage: AnyDoc = await payload.create({ collection: 'media', data: { alt: 'S' }, file: file(), ...as(manager) })
-  const plainImage: AnyDoc = await payload.create({ collection: 'media', data: { alt: 'N' }, file: file(), ...as(manager) })
+  const shopImage: AnyDoc = await payload.create({ collection: 'media', data: { alt: 'S', rightsConfirmed: true }, file: file(), ...as(manager) })
+  const plainImage: AnyDoc = await payload.create({ collection: 'media', data: { alt: 'N', rightsConfirmed: true }, file: file(), ...as(manager) })
   const shopExhibition: AnyDoc = await payload.create({
     collection: 'exhibitions',
     data: {
@@ -1214,7 +1252,7 @@ async function run() {
   const bigJpeg = await sharp({ create: { width: 1400, height: 1000, channels: 3, background: '#357' } }).jpeg().toBuffer()
   const wmPhoto: AnyDoc = await payload.create({
     collection: 'media',
-    data: { alt: 'For sale' },
+    data: { alt: 'For sale', rightsConfirmed: true },
     file: { data: bigJpeg, mimetype: 'image/jpeg', name: 'for-sale.jpg', size: bigJpeg.length },
     ...as(manager),
   })
@@ -1308,7 +1346,7 @@ async function run() {
     .toBuffer()
   const logo: AnyDoc = await payload.create({
     collection: 'media',
-    data: { alt: 'Logo' },
+    data: { alt: 'Logo', rightsConfirmed: true },
     file: { data: logoPng, mimetype: 'image/png', name: 'logo.png', size: logoPng.length },
     ...as(manager),
   })

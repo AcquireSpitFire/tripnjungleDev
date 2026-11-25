@@ -1,4 +1,4 @@
-import type { AccessResult, CollectionConfig, PayloadRequest, Where } from 'payload'
+import { ValidationError, type AccessResult, type CollectionConfig, type PayloadRequest, type Where } from 'payload'
 
 import {
   canManageExhibitions,
@@ -7,7 +7,7 @@ import {
   getUserId,
 } from '../access/roles'
 import { auditFields, auditHook } from '../lib/audit'
-import { assertTermsAccepted } from '../lib/contributor-terms'
+import { assertTermsAccepted, mustAcceptTerms } from '../lib/contributor-terms'
 import { syncMediaLocks } from '../lib/media-lock'
 import { limitPublicQueries } from '../lib/query-limits'
 import { toId } from '../lib/visibility'
@@ -115,11 +115,35 @@ export const Media: CollectionConfig = {
     // Page size for visitors/artists/editors at most 100 (src/lib/query-limits.ts)
     beforeOperation: [limitPublicQueries],
     beforeChange: [
-      // Uploading a new file (also replacing one) only after accepting the contributor terms.
-      // Updates without a file (alt text, the lock sync) are not affected.
-      async ({ data, operation, req }) => {
-        if (operation === 'create' || req.file) {
-          await assertTermsAccepted(req)
+      // Uploading a new file (also replacing one) only after accepting the contributor terms and
+      // with the rights confirmed for this file. Updates without a file (alt text, the lock sync)
+      // are not affected, and the confirmation cannot be changed afterwards.
+      async ({ data, operation, originalDoc, req }) => {
+        if (operation !== 'create' && !req.file) {
+          data.rightsConfirmed = originalDoc?.rightsConfirmed ?? false
+          return data
+        }
+
+        await assertTermsAccepted(req)
+
+        if (mustAcceptTerms(req.user)) {
+          if (data.rightsConfirmed !== true) {
+            throw new ValidationError({
+              collection: 'media',
+              errors: [
+                {
+                  path: 'rightsConfirmed',
+                  message:
+                    'Please confirm that you hold all rights to this file (“Rights confirmed”). Several files at once: “Edit all” → “Rights confirmed”.',
+                },
+              ],
+            })
+          }
+
+          const account = req.user as unknown as { id: number | string; email?: string }
+
+          data.rightsConfirmedAt = new Date().toISOString()
+          data.rightsConfirmedBy = `${account.email || 'unknown'} (account ${account.id})`
         }
 
         return data
@@ -274,6 +298,38 @@ export const Media: CollectionConfig = {
       name: 'name',
       label: 'Name / caption',
       type: 'text',
+    },
+    {
+      // Confirmation for every upload (not needed for admins), see the contributor terms
+      // (src/lib/contributor-terms.ts). Who and when is stored next to it.
+      name: 'rightsConfirmed',
+      label: 'Rights confirmed',
+      type: 'checkbox',
+      defaultValue: false,
+      admin: {
+        description:
+          'By ticking I confirm: I hold all rights to this file (copyright, consent of the people shown), it is not illegal, and I am responsible for it under the contributor terms. Required for every upload except by admins. Several files at once: “Edit all” → “Rights confirmed” → tick it once for all files.',
+      },
+    },
+    {
+      name: 'rightsConfirmedAt',
+      label: 'Rights confirmed on',
+      type: 'date',
+      access: { create: () => false, update: () => false },
+      admin: {
+        position: 'sidebar',
+        readOnly: true,
+        date: { pickerAppearance: 'dayAndTime' },
+        condition: (data) => Boolean(data?.rightsConfirmedAt),
+      },
+    },
+    {
+      // E-mail and id of the account – kept as text, so the proof stays even if the account is deleted
+      name: 'rightsConfirmedBy',
+      label: 'Rights confirmed by',
+      type: 'text',
+      access: { create: () => false, update: () => false },
+      admin: { position: 'sidebar', readOnly: true, condition: (data) => Boolean(data?.rightsConfirmedBy) },
     },
     {
       name: 'locked',
