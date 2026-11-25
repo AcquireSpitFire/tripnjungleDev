@@ -8,6 +8,7 @@ import * as migration_20261122_234526_artists from './20261122_234526_artists';
 import * as migration_20261122_235148_exhibition_editors from './20261122_235148_exhibition_editors';
 import * as migration_20261122_235813_qr_settings from './20261122_235813_qr_settings';
 import * as migration_20261125_183903_shop from './20261125_183903_shop';
+import * as migration_20261125_202413_contributor_terms from './20261125_202413_contributor_terms';
 
 export const migrations = [
   {
@@ -58,6 +59,11 @@ export const migrations = [
   {
     up: migration_20261125_183903_shop.up,
     down: migration_20261125_183903_shop.down,
-    name: '20261125_183903_shop'
+    name: '20261125_183903_shop',
+  },
+  {
+    up: migration_20261125_202413_contributor_terms.up,
+    down: migration_20261125_202413_contributor_terms.down,
+    name: '20261125_202413_contributor_terms'
   },
 ];

@@ -7,6 +7,7 @@ import {
   getUserId,
 } from '../access/roles'
 import { auditFields, auditHook } from '../lib/audit'
+import { assertTermsAccepted } from '../lib/contributor-terms'
 import { syncMediaLocks } from '../lib/media-lock'
 import { limitPublicQueries } from '../lib/query-limits'
 import { toId } from '../lib/visibility'
@@ -113,7 +114,18 @@ export const Media: CollectionConfig = {
   hooks: {
     // Page size for visitors/artists/editors at most 100 (src/lib/query-limits.ts)
     beforeOperation: [limitPublicQueries],
-    beforeChange: [auditHook({ updatedBy: false })],
+    beforeChange: [
+      // Uploading a new file (also replacing one) only after accepting the contributor terms.
+      // Updates without a file (alt text, the lock sync) are not affected.
+      async ({ data, operation, req }) => {
+        if (operation === 'create' || req.file) {
+          await assertTermsAccepted(req)
+        }
+
+        return data
+      },
+      auditHook({ updatedBy: false }),
+    ],
     // Photos for sale: visitors only get the watermarked copies (src/lib/watermark.ts). Every
     // URL of the medium points to /media-wm/…, so the site, the SEO data and Stripe use them
     // without knowing about it. Logged-in accounts (admin, preview) keep the plain files.

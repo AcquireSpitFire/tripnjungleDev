@@ -1,4 +1,14 @@
-import { APIError, ValidationError, type AccessResult, type CollectionConfig, type PayloadRequest } from 'payload'
+import {
+  APIError,
+  ValidationError,
+  addDataAndFileToRequest,
+  type AccessResult,
+  type CollectionConfig,
+  type FieldAccess,
+  type PayloadRequest,
+} from 'payload'
+
+import { currentContributorTerms, hasAcceptedCurrentTerms, mustAcceptTerms } from '../lib/contributor-terms'
 
 import {
   ROLE_OPTIONS,
@@ -34,6 +44,9 @@ async function countOtherAdmins(req: PayloadRequest, excludeId: number | string)
 
   return totalDocs
 }
+
+// Written only by the server (overrideAccess), never through the API or the form
+const serverOnly: { create: FieldAccess; update: FieldAccess } = { create: () => false, update: () => false }
 
 const lastAdminMessage = 'At least one admin account has to remain. Make another account admin first.'
 
@@ -96,6 +109,68 @@ export const Users: CollectionConfig = {
     delete: ({ req }) => isAdmin(req.user),
     unlock: ({ req }) => isAdmin(req.user),
   },
+  endpoints: [
+    {
+      // GET /api/users/contributor-terms: the current terms and whether this account has accepted them
+      // (src/components/ContributorTerms.tsx and ContributorTermsNotice.tsx)
+      path: '/contributor-terms',
+      method: 'get',
+      handler: async (req) => {
+        if (!getRole(req.user)) {
+          return Response.json({ error: 'Please log in.' }, { status: 401, headers: { 'Cache-Control': 'no-store' } })
+        }
+
+        const { text, version } = await currentContributorTerms(req)
+        const account = req.user as unknown as { termsAcceptedVersion?: string | null; termsAcceptedAt?: string | null }
+
+        return Response.json(
+          {
+            required: mustAcceptTerms(req.user),
+            accepted: await hasAcceptedCurrentTerms(req),
+            acceptedAt: account.termsAcceptedAt ?? null,
+            text,
+            version,
+          },
+          { headers: { 'Cache-Control': 'no-store' } },
+        )
+      },
+    },
+    {
+      // POST /api/users/contributor-terms/accept { version }: the logged-in account accepts the terms
+      // it was shown. Only ever for itself – nobody can accept for another account.
+      path: '/contributor-terms/accept',
+      method: 'post',
+      handler: async (req) => {
+        if (!mustAcceptTerms(req.user)) {
+          return Response.json({ error: 'Not needed for this account.' }, { status: 400, headers: { 'Cache-Control': 'no-store' } })
+        }
+
+        await addDataAndFileToRequest(req)
+
+        const { text, version } = await currentContributorTerms(req)
+
+        // The text may have changed while the page was open: then the new one has to be read first
+        if ((req.data as { version?: unknown } | undefined)?.version !== version) {
+          return Response.json(
+            { error: 'The terms have changed in the meantime. Please reload the page and read them again.' },
+            { status: 409, headers: { 'Cache-Control': 'no-store' } },
+          )
+        }
+
+        const acceptedAt = new Date().toISOString()
+
+        await req.payload.update({
+          collection: 'users',
+          id: getUserId(req.user) as number,
+          data: { termsAcceptedAt: acceptedAt, termsAcceptedVersion: version, termsAcceptedText: text },
+          overrideAccess: true,
+          req,
+        })
+
+        return Response.json({ accepted: true, acceptedAt }, { headers: { 'Cache-Control': 'no-store' } })
+      },
+    },
+  ],
   hooks: {
     // Before every operation that sets a password: create, update and reset (a field hook
     // would not see the new password on reset, Payload hashes it before the field hooks)
@@ -195,6 +270,51 @@ export const Users: CollectionConfig = {
         condition: (data) => data?.role === 'artist',
         description:
           'The profile this account belongs to. The account may edit this profile and every exhibition that credits it.',
+      },
+    },
+    {
+      // Text of the terms and the "I accept" button (only on the own account; src/lib/contributor-terms.ts)
+      name: 'contributorTerms',
+      type: 'ui',
+      admin: {
+        position: 'sidebar',
+        condition: (data) => data?.role !== 'admin',
+        components: { Field: '/components/ContributorTerms#ContributorTerms' },
+      },
+    },
+    // Proof of the acceptance: set only by POST /api/users/contributor-terms/accept
+    {
+      name: 'termsAcceptedAt',
+      label: 'Contributor terms accepted on',
+      type: 'date',
+      access: serverOnly,
+      admin: {
+        position: 'sidebar',
+        readOnly: true,
+        date: { pickerAppearance: 'dayAndTime' },
+        condition: (data) => data?.role !== 'admin' && Boolean(data?.termsAcceptedAt),
+      },
+    },
+    {
+      name: 'termsAcceptedVersion',
+      label: 'Accepted version',
+      type: 'text',
+      access: serverOnly,
+      admin: {
+        position: 'sidebar',
+        readOnly: true,
+        condition: (data) => data?.role !== 'admin' && Boolean(data?.termsAcceptedVersion),
+      },
+    },
+    {
+      name: 'termsAcceptedText',
+      label: 'Accepted text (copy)',
+      type: 'textarea',
+      access: serverOnly,
+      admin: {
+        position: 'sidebar',
+        readOnly: true,
+        condition: (data) => data?.role !== 'admin' && Boolean(data?.termsAcceptedText),
       },
     },
   ],

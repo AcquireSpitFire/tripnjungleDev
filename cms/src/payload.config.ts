@@ -68,8 +68,15 @@ export default buildConfig({
   admin: {
     user: Users.slug,
     components: {
-      // Visible "Log out" button with the logged-in account (top right on every admin page)
-      actions: ['/components/LogoutAction#LogoutAction'],
+      // Top right on every admin page: reminder to accept the contributor terms (only if needed),
+      // then the visible "Log out" button with the logged-in account
+      actions: [
+        { path: '/components/ContributorTermsNotice#ContributorTermsNotice', clientProps: { variant: 'action' } },
+        '/components/LogoutAction#LogoutAction',
+      ],
+      beforeDashboard: [
+        { path: '/components/ContributorTermsNotice#ContributorTermsNotice', clientProps: { variant: 'dashboard' } },
+      ],
     },
     importMap: {
       baseDir: path.resolve(dirname),

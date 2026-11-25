@@ -6,6 +6,7 @@ import {
   getArtistProfileId,
   isArtist,
 } from '../access/roles'
+import { requireAcceptedTerms } from '../lib/contributor-terms'
 import { assertMediaMayBeAdded, syncMediaLocks } from '../lib/media-lock'
 import { limitPublicQueries } from '../lib/query-limits'
 import { toId } from '../lib/visibility'
@@ -69,6 +70,8 @@ export const Artists: CollectionConfig = {
     // Page size for visitors/artists/editors at most 100 (src/lib/query-limits.ts)
     beforeOperation: [limitPublicQueries],
     beforeChange: [
+      // Artist accounts and managers only after accepting the contributor terms
+      requireAcceptedTerms,
       async ({ data, originalDoc, req }) => {
         // A portrait becomes public: artist accounts may only choose public media or their own uploads
         const next = toId('portrait' in data ? data.portrait : originalDoc?.portrait)

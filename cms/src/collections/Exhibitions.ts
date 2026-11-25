@@ -12,6 +12,7 @@ import {
 } from '../access/roles'
 import { exhibitionQrEndpoint } from '../endpoints/exhibition-qr'
 import { auditFields, auditHook } from '../lib/audit'
+import { requireAcceptedTerms } from '../lib/contributor-terms'
 import { limitPublicQueries } from '../lib/query-limits'
 import { assertMediaMayBeAdded, mediaIdsOf, syncMediaLocks } from '../lib/media-lock'
 import {
@@ -223,6 +224,8 @@ export const Exhibitions: CollectionConfig = {
     // Page size for visitors/artists/editors at most 100 (src/lib/query-limits.ts)
     beforeOperation: [limitPublicQueries],
     beforeChange: [
+      // Artists, editors and managers only after accepting the contributor terms
+      requireAcceptedTerms,
       auditHook(),
       ({ data, operation, req }) => {
         // An artist creates: credited to their own profile, nothing goes public without a manager

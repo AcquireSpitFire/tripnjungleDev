@@ -251,6 +251,9 @@ export interface User {
    * The profile this account belongs to. The account may edit this profile and every exhibition that credits it.
    */
   artist?: (number | null) | Artist;
+  termsAcceptedAt?: string | null;
+  termsAcceptedVersion?: string | null;
+  termsAcceptedText?: string | null;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -785,6 +788,9 @@ export interface UsersSelect<T extends boolean = true> {
   role?: T;
   sections?: T;
   artist?: T;
+  termsAcceptedAt?: T;
+  termsAcceptedVersion?: T;
+  termsAcceptedText?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -981,6 +987,10 @@ export interface Site {
    */
   mailProviderName?: string | null;
   mailProviderAddress?: string | null;
+  /**
+   * Empty = the standard text (responsibility for uploads, indemnity if at fault, rights of use, removal). Blank line = new paragraph, a line starting with “## ” = heading. Have it checked before going live.
+   */
+  contributorTermsText?: string | null;
   qrFormat?: ('a6' | 'a5' | 'square100') | null;
   qrShowTitle?: boolean | null;
   qrShowArtist?: boolean | null;
@@ -1038,6 +1048,7 @@ export interface SiteSelect<T extends boolean = true> {
   withdrawalText?: T;
   mailProviderName?: T;
   mailProviderAddress?: T;
+  contributorTermsText?: T;
   qrFormat?: T;
   qrShowTitle?: T;
   qrShowArtist?: T;
