@@ -1,6 +1,7 @@
 import type { GlobalConfig } from 'payload'
 
 import { isAdmin } from '../access/roles'
+import { syncMediaLocks } from '../lib/media-lock'
 import { COUNTRY_OPTIONS } from '../lib/shop/countries'
 
 // Site-wide settings: About text, contact, legal notice, privacy policy, shop.
@@ -13,6 +14,39 @@ export const Site: GlobalConfig = {
   access: {
     read: ({ req }) => isAdmin(req.user),
     update: ({ req }) => isAdmin(req.user),
+  },
+  hooks: {
+    afterChange: [
+      async ({ doc, previousDoc, req }) => {
+        const watermarkOf = (site: typeof doc) =>
+          JSON.stringify([
+            site?.watermarkImage && typeof site.watermarkImage === 'object' ? site.watermarkImage.id : site?.watermarkImage,
+            site?.watermarkOpacity,
+            site?.watermarkSize,
+            site?.watermarkPosition,
+          ])
+
+        // A new watermark: every photo for sale gets a new key (and so new watermarked files)
+        if (watermarkOf(doc) !== watermarkOf(previousDoc)) {
+          const { docs } = await req.payload.find({
+            collection: 'media',
+            where: { forSale: { equals: true } },
+            depth: 0,
+            pagination: false,
+            overrideAccess: true,
+            select: {},
+            req,
+          })
+
+          await syncMediaLocks(
+            req,
+            docs.map((medium) => medium.id),
+          )
+        }
+
+        return doc
+      },
+    ],
   },
   admin: {
     hidden: ({ user }) => !isAdmin(user),

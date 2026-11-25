@@ -7,7 +7,10 @@ import {
   getUserId,
 } from '../access/roles'
 import { auditFields, auditHook } from '../lib/audit'
+import { syncMediaLocks } from '../lib/media-lock'
 import { limitPublicQueries } from '../lib/query-limits'
+import { toId } from '../lib/visibility'
+import { WATERMARK_SIZES, removeWatermarkedFiles, watermarkFileName, type WatermarkSize } from '../lib/watermark'
 
 // Images, videos and posters.
 //
@@ -111,6 +114,72 @@ export const Media: CollectionConfig = {
     // Page size for visitors/artists/editors at most 100 (src/lib/query-limits.ts)
     beforeOperation: [limitPublicQueries],
     beforeChange: [auditHook({ updatedBy: false })],
+    // Photos for sale: visitors only get the watermarked copies (src/lib/watermark.ts). Every
+    // URL of the medium points to /media-wm/…, so the site, the SEO data and Stripe use them
+    // without knowing about it. Logged-in accounts (admin, preview) keep the plain files.
+    afterRead: [
+      ({ doc, req }) => {
+        if (req.user || !doc?.forSale || !doc.watermarkKey) {
+          return doc
+        }
+
+        const base = (req.payload.config.serverURL || '').replace(/\/$/, '')
+        const url = (size: WatermarkSize) => `${base}/media-wm/${watermarkFileName(doc.id, doc.watermarkKey, size)}`
+        const sizes = { ...(doc.sizes || {}) } as Record<string, { url?: string | null; filename?: string | null } | null>
+        let largest: WatermarkSize = 'large'
+
+        for (const size of WATERMARK_SIZES) {
+          if (sizes[size]?.filename) {
+            sizes[size] = { ...sizes[size], url: url(size) }
+            largest = size
+          }
+        }
+
+        return { ...doc, url: url(largest), thumbnailURL: url('thumb'), sizes }
+      },
+    ],
+    afterChange: [
+      async ({ doc, previousDoc, operation, req }) => {
+        // A new file (re-upload): new watermark key for this photo, and for all photos for sale
+        // if it is used as a watermark
+        if (operation !== 'update' || (doc.filename === previousDoc?.filename && doc.filesize === previousDoc?.filesize)) {
+          return doc
+        }
+
+        const site = await req.payload.findGlobal({ slug: 'site', depth: 0, overrideAccess: true, req })
+        const { totalDocs: usedByExhibitions } = await req.payload.count({
+          collection: 'exhibitions',
+          where: { watermark: { equals: doc.id } },
+          overrideAccess: true,
+          req,
+        })
+        const isWatermark = String(toId(site.watermarkImage)) === String(doc.id) || usedByExhibitions > 0
+        const ids = isWatermark
+          ? (
+              await req.payload.find({
+                collection: 'media',
+                where: { forSale: { equals: true } },
+                depth: 0,
+                pagination: false,
+                overrideAccess: true,
+                select: {},
+                req,
+              })
+            ).docs.map((medium) => medium.id)
+          : doc.forSale
+            ? [doc.id]
+            : []
+
+        await syncMediaLocks(req, ids)
+
+        return doc
+      },
+    ],
+    afterDelete: [
+      ({ doc }) => {
+        removeWatermarkedFiles(doc.id)
+      },
+    ],
   },
   upload: {
     // Where the files are stored; when hosting, point it at a persistent volume (MEDIA_DIR)
@@ -118,6 +187,14 @@ export const Media: CollectionConfig = {
     // Runs after the read access check of the file route (locked media are 403 already)
     handlers: [
       (req, { doc, params }) => {
+        // Photos for sale: visitors get the watermarked copies (/media-wm/…), never these files
+        if (!req.user && (doc as { forSale?: boolean | null }).forSale) {
+          return Response.json({ errors: [{ message: 'Not found.' }] }, {
+            status: 404,
+            headers: { 'Cache-Control': 'no-store' },
+          })
+        }
+
         if (!req.user && isProtectedOriginal(doc as MediaFileDoc, params.filename)) {
           return Response.json({ errors: [{ message: 'Not found.' }] }, {
             status: 404,

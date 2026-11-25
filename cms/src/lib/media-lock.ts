@@ -1,4 +1,5 @@
-// Keeps the "locked" flag of media in sync with the exhibitions that use them.
+// Keeps the "locked" flag of media in sync with the exhibitions that use them – and, since
+// release 3.0, "forSale" and "watermarkKey" (see saleState below and src/lib/watermark.ts).
 //
 // A medium is public (locked: false) as soon as ANY exhibition makes it public:
 //   - as a poster of an exhibition that is not in "planning"
@@ -14,7 +15,10 @@
 import { ValidationError, type PayloadRequest } from 'payload'
 
 import { canManageExhibitions, getUserId } from '../access/roles'
+import type { Exhibition, Media } from '../payload-types'
+import { isOffered, isSellableMedia } from './shop/catalog'
 import { contentIsOpen, getRelease, toId, type Ref } from './visibility'
+import { watermarkKey, watermarkSettings } from './watermark'
 
 type ExhibitionMedia = {
   posters?: Ref[] | null
@@ -153,18 +157,81 @@ export async function syncMediaLocks(req: PayloadRequest, mediaIds: Iterable<Id>
     req,
   })
 
+  const sale = await saleState(req, exhibitions)
+
   for (const medium of media) {
     const locked = !open.has(String(medium.id))
+    const forSale = sale.forSale.has(String(medium.id)) && isSellableMedia(medium)
+    const watermarkKey = forSale ? sale.keyFor(medium) : ''
 
-    if (medium.locked !== locked) {
+    if (medium.locked !== locked || Boolean(medium.forSale) !== forSale || (medium.watermarkKey || '') !== watermarkKey) {
       await req.payload.update({
         collection: 'media',
         id: medium.id,
-        data: { locked },
+        data: { locked, forSale, watermarkKey },
         depth: 0,
         overrideAccess: true,
         req,
       })
     }
+  }
+}
+
+// Which media are for sale (some exhibition offers a print of them, src/lib/shop/catalog.ts) and
+// which watermark each one gets: the image of the exhibition with the lowest id that has one,
+// otherwise the image of the Site settings, otherwise the built-in default (src/lib/watermark.ts).
+async function saleState(
+  req: PayloadRequest,
+  exhibitions: Pick<Exhibition, 'id' | 'gallery' | 'watermark'>[],
+): Promise<{ forSale: Set<string>; keyFor: (medium: Media) => string }> {
+  const forSale = new Set<string>()
+  const override = new Map<string, Id>()
+
+  for (const exhibition of [...exhibitions].sort((a, b) => Number(a.id) - Number(b.id))) {
+    const watermark = toId(exhibition.watermark)
+
+    for (const row of exhibition.gallery || []) {
+      const id = toId(row.file)
+
+      if (id === null || !(row.prints || []).some(isOffered)) {
+        continue
+      }
+
+      forSale.add(String(id))
+
+      if (watermark !== null && !override.has(String(id))) {
+        override.set(String(id), watermark)
+      }
+    }
+  }
+
+  if (!forSale.size) {
+    return { forSale, keyFor: () => '' }
+  }
+
+  const site = await req.payload.findGlobal({ slug: 'site', depth: 0, overrideAccess: true, req })
+  const settings = watermarkSettings(site)
+  const siteWatermark = toId(site.watermarkImage)
+  const sourceIds = [...new Set([...override.values(), ...(siteWatermark === null ? [] : [siteWatermark])].map(String))]
+  const { docs: sources } = sourceIds.length
+    ? await req.payload.find({
+        collection: 'media',
+        where: { id: { in: sourceIds } },
+        depth: 0,
+        pagination: false,
+        overrideAccess: true,
+        req,
+      })
+    : { docs: [] as Media[] }
+  const sourceById = new Map(sources.map((source) => [String(source.id), source]))
+
+  return {
+    forSale,
+    keyFor: (medium) => {
+      const sourceId = override.get(String(medium.id)) ?? siteWatermark
+      const source = sourceId === null ? null : sourceById.get(String(sourceId)) || null
+
+      return watermarkKey(medium, source, settings)
+    },
   }
 }

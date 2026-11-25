@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 130" width="860" height="130">
+  <!-- Default watermark "TRIPNJUNGLE" (src/lib/watermark.ts). The letters are drawn as strokes,
+       so no font is needed on the server. A dark outline under the white strokes keeps it
+       readable on light and dark photos; the opacity is applied when it is laid over a photo. -->
+  <defs>
+    <g id="letters" fill="none" stroke-linecap="square" stroke-linejoin="miter">
+      <path transform="translate(15 15)" d="M5 5H55M30 5V95"/>
+      <path transform="translate(93 15)" d="M8 95V5H38Q55 5 55 27Q55 50 38 50H8M33 50L55 95"/>
+      <path transform="translate(171 15)" d="M10 5V95"/>
+      <path transform="translate(209 15)" d="M8 95V5H38Q55 5 55 27Q55 50 38 50H8"/>
+      <path transform="translate(287 15)" d="M8 95V5L52 95V5"/>
+      <path transform="translate(365 15)" d="M52 5V70Q52 95 30 95Q8 95 8 72"/>
+      <path transform="translate(443 15)" d="M8 5V70Q8 95 30 95Q52 95 52 70V5"/>
+      <path transform="translate(521 15)" d="M8 95V5L52 95V5"/>
+      <path transform="translate(599 15)" d="M52 22Q48 5 30 5Q8 5 8 50Q8 95 30 95Q52 95 52 60V52H32"/>
+      <path transform="translate(677 15)" d="M8 5V95H52"/>
+      <path transform="translate(755 15)" d="M52 5H8V95H52M8 50H44"/>
+    </g>
+  </defs>
+  <use href="#letters" stroke="#000" stroke-opacity="0.55" stroke-width="16"/>
+  <use href="#letters" stroke="#fff" stroke-width="9"/>
+</svg>

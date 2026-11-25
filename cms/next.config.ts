@@ -51,6 +51,11 @@ const nextConfig: NextConfig = {
         headers: [{ key: 'Content-Security-Policy', value: "sandbox; default-src 'none'" }],
       },
       {
+        // Watermarked copies of photos for sale (src/app/media-wm/[file]/route.ts): same sandbox
+        source: '/media-wm/:path*',
+        headers: [{ key: 'Content-Security-Policy', value: "sandbox; default-src 'none'" }],
+      },
+      {
         source: '/:path(css|js)/:file*',
         headers: [
           { key: 'Cache-Control', value: 'public, max-age=3600, stale-while-revalidate=86400' },
