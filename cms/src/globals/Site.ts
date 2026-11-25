@@ -3,6 +3,7 @@ import type { GlobalConfig } from 'payload'
 import { isAdmin } from '../access/roles'
 import { syncMediaLocks } from '../lib/media-lock'
 import { COUNTRY_OPTIONS } from '../lib/shop/countries'
+import { shopStatus } from '../lib/shop/settings'
 
 // Site-wide settings: About text, contact, legal notice, privacy policy, shop.
 // Read by the route handlers (/about, /imprint, /privacy) and inserted into
@@ -15,6 +16,23 @@ export const Site: GlobalConfig = {
     read: ({ req }) => isAdmin(req.user),
     update: ({ req }) => isAdmin(req.user),
   },
+  endpoints: [
+    {
+      // GET /api/globals/site/shop-status: what the shop still needs (src/components/ShopStatus.tsx).
+      // Admins only; tells which server variables are set, never their values.
+      path: '/shop-status',
+      method: 'get',
+      handler: async (req) => {
+        if (!isAdmin(req.user)) {
+          return Response.json({ error: 'Not allowed.' }, { status: 403, headers: { 'Cache-Control': 'no-store' } })
+        }
+
+        const site = await req.payload.findGlobal({ slug: 'site', depth: 0, overrideAccess: true, req })
+
+        return Response.json(shopStatus(site), { headers: { 'Cache-Control': 'no-store' } })
+      },
+    },
+  ],
   hooks: {
     afterChange: [
       async ({ doc, previousDoc, req }) => {
@@ -177,6 +195,12 @@ export const Site: GlobalConfig = {
           description:
             'Selling prints of the photos (Exhibitions → Images and videos → Prints for sale). Payment through Stripe, e-mails through SMTP (see README). The cart shows everything below before the buyer pays.',
           fields: [
+            {
+              // Checklist: open or closed for visitors, and what is missing
+              name: 'shopStatus',
+              type: 'ui',
+              admin: { components: { Field: '/components/ShopStatus#ShopStatus' } },
+            },
             {
               name: 'shopEnabled',
               type: 'checkbox',

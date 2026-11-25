@@ -109,12 +109,13 @@ function updateCartLink() {
 
 // ---------- Requests ----------
 
-async function shopRequest(path, body) {
+// Without the login cookie, like a visitor – except "withLogin" (the admin preview)
+async function shopRequest(path, body, options = {}) {
   const response = await fetch(path, {
     method: body ? "POST" : "GET",
     headers: body ? { "Content-Type": "application/json" } : undefined,
     body: body ? JSON.stringify(body) : undefined,
-    credentials: "omit",
+    credentials: options.withLogin ? "same-origin" : "omit",
     cache: "no-store",
   });
   let data = null;
@@ -136,15 +137,26 @@ async function shopRequest(path, body) {
   return data;
 }
 
-// { enabled, vatNote, offers: [ { exhibition, photo, print, label, size, material, details,
-//   pricing ("fixed" | "request"), price, copies, left } ] }
+// { enabled, preview?, vatNote, offers: [ { exhibition, photo, print, label, size, material,
+//   details, pricing ("fixed" | "request"), price, copies, left } ] }
+// In the admin preview (?preview, see data.js) the login is sent along: the prints are then shown
+// even while the shop is closed ("preview": true, "enabled": false), with the buttons disabled.
 async function loadPrintOffers(exhibitionId) {
   try {
-    return await shopRequest("/shop/offers?exhibition=" + encodeURIComponent(exhibitionId));
+    return await shopRequest(
+      "/shop/offers?exhibition=" + encodeURIComponent(exhibitionId) + (PREVIEW ? "&preview" : ""),
+      undefined,
+      { withLogin: PREVIEW }
+    );
   } catch (error) {
     console.warn("Prints could not be loaded", error);
     return { enabled: false, offers: [] };
   }
+}
+
+// Shown at all: open shop, or the preview of a logged-in account
+function showsOffers(data) {
+  return Boolean((data.enabled || data.preview) && data.offers.length);
 }
 
 function groupOffersByPhoto(offers) {
@@ -193,11 +205,17 @@ function paragraph(className, text) {
   return element;
 }
 
-function createAddButton(offer, feedback) {
+function createAddButton(offer, feedback, closed) {
   const button = document.createElement("button");
 
   button.type = "button";
   button.className = "shop_button";
+
+  if (closed) {
+    button.textContent = "Add to cart";
+    button.disabled = true;
+    return button;
+  }
 
   if (offer.left !== null && offer.left < 1) {
     button.textContent = "Sold out";
@@ -225,7 +243,7 @@ function createAddButton(offer, feedback) {
 }
 
 // The list of prints with "Add to cart" / "Request price".
-//   context: { photoName, vatNote, onRequest(offer) }
+//   context: { photoName, vatNote, closed (preview of a closed shop), onRequest(offer) }
 function createOffersList(offers, context) {
   const list = document.createElement("ul");
 
@@ -266,13 +284,14 @@ function createOffersList(offers, context) {
     }
 
     if (offer.pricing === "fixed") {
-      row.appendChild(createAddButton(offer, feedback));
+      row.appendChild(createAddButton(offer, feedback, context.closed));
     } else {
       const button = document.createElement("button");
 
       button.type = "button";
       button.className = "shop_button";
       button.textContent = "Request price";
+      button.disabled = Boolean(context.closed);
       button.addEventListener("click", () => context.onRequest(offer));
       row.appendChild(button);
     }
@@ -360,6 +379,13 @@ function createOffersBlock(offers, context) {
   const links = createShopLinks();
 
   block.className = "print_block";
+
+  if (context.closed) {
+    block.appendChild(
+      paragraph("print_preview_note", "Preview: the shop is closed – visitors do not see these prints yet (see Site settings → Shop).")
+    );
+  }
+
   block.appendChild(
     createOffersList(offers, {
       ...context,
@@ -427,11 +453,12 @@ function openPrintDialog(item, offers, context) {
 async function setupExhibitionShop(exhibition) {
   const data = await loadPrintOffers(exhibition.id);
 
-  if (!data.enabled || !data.offers.length) {
+  if (!showsOffers(data)) {
     return;
   }
 
   const groups = groupOffersByPhoto(data.offers);
+  const context = { vatNote: data.vatNote, closed: !data.enabled };
 
   (exhibition.gallery || []).forEach((item) => {
     const offers = groups.get(String(item.id));
@@ -447,7 +474,7 @@ async function setupExhibitionShop(exhibition) {
     button.type = "button";
     button.className = "print_button";
     button.textContent = offersSummary(offers) + " ›";
-    button.addEventListener("click", () => openPrintDialog(item, offers, { photoName, vatNote: data.vatNote }));
+    button.addEventListener("click", () => openPrintDialog(item, offers, { ...context, photoName }));
     figure.appendChild(button);
   });
 }
@@ -457,7 +484,7 @@ async function setupExhibitionShop(exhibition) {
 // Called by photo.js after the photo is shown
 async function setupPhotoShop(exhibition, item, container) {
   const data = await loadPrintOffers(exhibition.id);
-  const offers = data.enabled ? groupOffersByPhoto(data.offers).get(String(item.id)) : null;
+  const offers = showsOffers(data) ? groupOffersByPhoto(data.offers).get(String(item.id)) : null;
 
   if (!offers || !container) {
     return;
@@ -470,7 +497,7 @@ async function setupPhotoShop(exhibition, item, container) {
   section.className = "photo_prints";
   heading.className = "section_title";
   heading.textContent = offers.length > 1 ? "Prints of this photo" : "Print of this photo";
-  section.append(heading, createOffersBlock(offers, { photoName, vatNote: data.vatNote }));
+  section.append(heading, createOffersBlock(offers, { photoName, vatNote: data.vatNote, closed: !data.enabled }));
   container.appendChild(section);
 }
 

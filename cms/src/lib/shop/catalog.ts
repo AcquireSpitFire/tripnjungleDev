@@ -128,9 +128,10 @@ function artistNames(exhibition: Exhibition, rowArtist: unknown): string {
     .join(', ')
 }
 
-// All offers of an exhibition (only when visitors may see its content)
-export function offersOf(exhibition: Exhibition, base: string): Offer[] {
-  if (!contentIsOpen(exhibition)) {
+// All offers of an exhibition: only when visitors may see its content, or in the preview of a
+// logged-in account (the exhibition was then loaded with the rights of that account)
+export function offersOf(exhibition: Exhibition, base: string, options: { preview?: boolean } = {}): Offer[] {
+  if (!options.preview && !contentIsOpen(exhibition)) {
     return []
   }
 

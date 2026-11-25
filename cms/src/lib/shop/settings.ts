@@ -94,6 +94,62 @@ export async function getShopSettings(payload: Payload): Promise<ShopSettings> {
   return toShopSettings(await payload.findGlobal({ slug: 'site', depth: 0, overrideAccess: true }))
 }
 
+// Checklist for Site settings → Shop (src/components/ShopStatus.tsx): what the shop still needs.
+// "required" items keep the shop closed; "recommended" items only warn.
+export type ShopStatusItem = { label: string; ok: boolean; required: boolean; hint: string }
+
+export function shopStatus(site: Site): { open: boolean; items: ShopStatusItem[] } {
+  const settings = toShopSettings(site)
+  const legalNotice = [site.operatorName, site.operatorStreet, site.operatorCity, site.operatorCountry, site.operatorEmail]
+
+  const items: ShopStatusItem[] = [
+    {
+      label: '“Shop is open” is ticked',
+      ok: Boolean(site.shopEnabled),
+      required: true,
+      hint: 'Tick it below and save.',
+    },
+    {
+      label: 'Stripe secret key (STRIPE_SECRET_KEY)',
+      ok: Boolean(process.env.STRIPE_SECRET_KEY),
+      required: true,
+      hint: 'Server variable (Railway → Variables, locally cms/.env), then restart. See README → Shop.',
+    },
+    {
+      label: 'Stripe webhook secret (STRIPE_WEBHOOK_SECRET)',
+      ok: Boolean(process.env.STRIPE_WEBHOOK_SECRET),
+      required: true,
+      hint: 'From Stripe → Developers → Webhooks (locally: “stripe listen”), then restart.',
+    },
+    {
+      label: 'At least one shipping zone with countries',
+      ok: settings.zones.length > 0,
+      required: true,
+      hint: 'Add a zone below: name, countries, cost, delivery time.',
+    },
+    {
+      label: 'E-mail sending (SMTP_HOST)',
+      ok: Boolean(process.env.SMTP_HOST),
+      required: false,
+      hint: 'Without it buyers get no order confirmation (it only appears in the server log).',
+    },
+    {
+      label: 'Legal notice complete (name, address, e-mail)',
+      ok: legalNotice.every((value) => Boolean(value?.trim())),
+      required: false,
+      hint: 'Tab “Legal notice”. Needed for the cart, the terms and the e-mails.',
+    },
+    {
+      label: 'E-mail for new orders',
+      ok: Boolean(settings.shopEmail),
+      required: false,
+      hint: 'Field below, or the e-mail of the legal notice.',
+    },
+  ]
+
+  return { open: settings.enabled, items }
+}
+
 // The zone of a country (first match), null if it is not shipped to
 export function zoneFor(settings: ShopSettings, country: string): ShippingZone | null {
   return settings.zones.find((zone) => zone.countries.includes(country)) || null

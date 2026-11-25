@@ -1434,6 +1434,15 @@ main {
   margin: 1rem 0 0;
 }
 
+/* Admin preview of a closed shop: prints shown with the buttons disabled */
+.print_preview_note {
+  margin: 0 0 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #ffd54a;
+  font-size: 0.85rem;
+  color: #ffd54a;
+}
+
 /* Dialog with the prints of a gallery photo */
 .print_dialog {
   width: min(720px, calc(100vw - 2rem));
