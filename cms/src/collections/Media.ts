@@ -197,6 +197,29 @@ export const Media: CollectionConfig = {
         description: 'Set automatically by the exhibition.',
       },
     },
+    {
+      // A print of this photo is offered (fixed price or price on request) in some exhibition:
+      // visitors only get the watermarked versions (src/lib/watermark.ts). Set by the sync in
+      // src/lib/media-lock.ts, like "locked".
+      name: 'forSale',
+      label: 'For sale (shown with watermark)',
+      type: 'checkbox',
+      defaultValue: false,
+      access: { create: () => false, update: () => false },
+      admin: {
+        readOnly: true,
+        position: 'sidebar',
+        description: 'Set automatically by the prints of the exhibitions.',
+      },
+    },
+    {
+      // Which watermark (image, opacity, size, position) – part of the watermarked file names,
+      // so a new watermark gives new URLs. Readable by everybody: it is part of those URLs anyway.
+      name: 'watermarkKey',
+      type: 'text',
+      access: { create: () => false, update: () => false },
+      admin: { hidden: true },
+    },
     ...auditFields({ updatedBy: false }),
   ],
 }

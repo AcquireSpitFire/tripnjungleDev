@@ -18,8 +18,13 @@ export const ROLE_OPTIONS = [
   { label: 'Editor (assigned exhibitions)', value: 'editor' },
 ] as const
 
-// Sub pages a manager can be responsible for. Release 4.0 adds radio, shop, mag, adventure.
-export const SECTION_OPTIONS = [{ label: 'Exhibitions', value: 'exhibitions' }] as const
+// Sub pages a manager can be responsible for. Release 4.0 adds radio, mag, adventure.
+//   exhibitions – exhibitions, media, artists and the prints offered in them (prices, copies, watermark)
+//   shop        – orders and price requests (buyers' data, shipping)
+export const SECTION_OPTIONS = [
+  { label: 'Exhibitions', value: 'exhibitions' },
+  { label: 'Shop (orders and price requests)', value: 'shop' },
+] as const
 
 export type Role = (typeof ROLE_OPTIONS)[number]['value']
 export type Section = (typeof SECTION_OPTIONS)[number]['value']
@@ -58,6 +63,11 @@ export function managesSection(user: MaybeUser, section: Section): boolean {
 
 export function canManageExhibitions(user: MaybeUser): boolean {
   return managesSection(user, 'exhibitions')
+}
+
+// Orders and price requests contain buyers' data: only for the section "Shop"
+export function canManageShop(user: MaybeUser): boolean {
+  return managesSection(user, 'shop')
 }
 
 export function isArtist(user: MaybeUser): boolean {

@@ -70,6 +70,8 @@ export interface Config {
     exhibitions: Exhibition;
     artists: Artist;
     media: Media;
+    orders: Order;
+    'price-requests': PriceRequest;
     users: User;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
@@ -81,6 +83,8 @@ export interface Config {
     exhibitions: ExhibitionsSelect<false> | ExhibitionsSelect<true>;
     artists: ArtistsSelect<false> | ArtistsSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
+    orders: OrdersSelect<false> | OrdersSelect<true>;
+    'price-requests': PriceRequestsSelect<false> | PriceRequestsSelect<true>;
     users: UsersSelect<false> | UsersSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
@@ -139,6 +143,10 @@ export interface Exhibition {
    * Editor or artist accounts that may change texts, captions, alt texts, photos and their order. They cannot change ID, release, visibility or these assignments, and cannot delete the exhibition.
    */
   editors?: (number | User)[] | null;
+  /**
+   * PNG with transparency, laid lightly over the photos for sale in this exhibition. Empty = the watermark of Site settings → Shop.
+   */
+  watermark?: (number | null) | Media;
   title: string;
   theme?: string | null;
   /**
@@ -189,6 +197,31 @@ export interface Exhibition {
          * Leave empty if it is by the artists of the exhibition.
          */
         artist?: (number | null) | Artist;
+        /**
+         * Optional: prints of this photo that visitors can order. “No price” shows nothing; with a fixed price or “Price on request” the print is shown below the photo and the photo gets the watermark. Photos only, not videos.
+         */
+        prints?:
+          | {
+              label: string;
+              width?: number | null;
+              height?: number | null;
+              material?: string | null;
+              /**
+               * Shown to buyers, in the cart and in the order confirmation: edition, signed/numbered, frame, production time …
+               */
+              details?: string | null;
+              pricing: 'none' | 'fixed' | 'request';
+              /**
+               * Empty = not shown, like “No price”.
+               */
+              price?: number | null;
+              /**
+               * Empty = no limit (open edition). Visitors see how many are left.
+               */
+              copies?: number | null;
+              id?: string | null;
+            }[]
+          | null;
         id?: string | null;
       }[]
     | null;
@@ -213,7 +246,7 @@ export interface User {
   /**
    * The sub pages this manager is responsible for.
    */
-  sections?: 'exhibitions'[] | null;
+  sections?: ('exhibitions' | 'shop')[] | null;
   /**
    * The profile this account belongs to. The account may edit this profile and every exhibition that credits it.
    */
@@ -291,6 +324,11 @@ export interface Media {
    * Set automatically by the exhibition.
    */
   locked?: boolean | null;
+  /**
+   * Set automatically by the prints of the exhibitions.
+   */
+  forSale?: boolean | null;
+  watermarkKey?: string | null;
   createdBy?: (number | null) | User;
   updatedAt: string;
   createdAt: string;
@@ -331,6 +369,106 @@ export interface Media {
   };
 }
 /**
+ * Orders from the website. “Checkout started” holds the copies for 35 minutes, then they are free again. Set “Shipped” (with tracking) once the parcel is out. Refunds are made in the Stripe dashboard, then set “Refunded” here.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "orders".
+ */
+export interface Order {
+  id: number;
+  orderNumber?: string | null;
+  status: 'pending' | 'awaitingPayment' | 'paid' | 'shipped' | 'cancelled' | 'refunded';
+  trackingNumber?: string | null;
+  /**
+   * https://… of the parcel service, sent to the buyer.
+   */
+  trackingUrl?: string | null;
+  notifyOnShipping?: boolean | null;
+  paidAt?: string | null;
+  shippedAt?: string | null;
+  expiresAt?: string | null;
+  withdrawalReceivedAt?: string | null;
+  withdrawalStatement?: string | null;
+  /**
+   * Only visible here. Problems with payment or e-mails are noted here too.
+   */
+  internalNote?: string | null;
+  items?:
+    | {
+        photoName?: string | null;
+        artistName?: string | null;
+        exhibitionTitle?: string | null;
+        printLabel?: string | null;
+        size?: string | null;
+        material?: string | null;
+        details?: string | null;
+        quantity?: number | null;
+        unitPrice?: number | null;
+        lineTotal?: number | null;
+        exhibition?: (number | null) | Exhibition;
+        exhibitionSlug?: string | null;
+        mediaId?: string | null;
+        printId?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  subtotal?: number | null;
+  shippingCost?: number | null;
+  total?: number | null;
+  vatNote?: string | null;
+  vatAmount?: number | null;
+  shippingZone?: string | null;
+  deliveryTime?: string | null;
+  customerName?: string | null;
+  customerEmail?: string | null;
+  customerPhone?: string | null;
+  shippingAddress?: {
+    name?: string | null;
+    line1?: string | null;
+    line2?: string | null;
+    postalCode?: string | null;
+    city?: string | null;
+    state?: string | null;
+    country?: string | null;
+  };
+  billingAddress?: {
+    name?: string | null;
+    line1?: string | null;
+    line2?: string | null;
+    postalCode?: string | null;
+    city?: string | null;
+    state?: string | null;
+    country?: string | null;
+  };
+  stripeSessionId?: string | null;
+  stripePaymentIntent?: string | null;
+  confirmationSent?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Requests for prints with “Price on request” (also sent to the shop e-mail). Answer by e-mail, then set the status. Delete requests once they are settled.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "price-requests".
+ */
+export interface PriceRequest {
+  id: number;
+  status: 'open' | 'answered' | 'closed';
+  internalNote?: string | null;
+  name?: string | null;
+  email: string;
+  message?: string | null;
+  photoName?: string | null;
+  printLabel?: string | null;
+  exhibitionTitle?: string | null;
+  photoUrl?: string | null;
+  exhibition?: (number | null) | Exhibition;
+  printId?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
@@ -365,6 +503,14 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'media';
         value: number | Media;
+      } | null)
+    | ({
+        relationTo: 'orders';
+        value: number | Order;
+      } | null)
+    | ({
+        relationTo: 'price-requests';
+        value: number | PriceRequest;
       } | null)
     | ({
         relationTo: 'users';
@@ -419,6 +565,7 @@ export interface PayloadMigration {
 export interface ExhibitionsSelect<T extends boolean = true> {
   slug?: T;
   editors?: T;
+  watermark?: T;
   title?: T;
   theme?: T;
   artists?: T;
@@ -440,6 +587,19 @@ export interface ExhibitionsSelect<T extends boolean = true> {
         name?: T;
         alt?: T;
         artist?: T;
+        prints?:
+          | T
+          | {
+              label?: T;
+              width?: T;
+              height?: T;
+              material?: T;
+              details?: T;
+              pricing?: T;
+              price?: T;
+              copies?: T;
+              id?: T;
+            };
         id?: T;
       };
   createdBy?: T;
@@ -475,6 +635,8 @@ export interface MediaSelect<T extends boolean = true> {
   alt?: T;
   name?: T;
   locked?: T;
+  forSale?: T;
+  watermarkKey?: T;
   createdBy?: T;
   updatedAt?: T;
   createdAt?: T;
@@ -521,6 +683,98 @@ export interface MediaSelect<T extends boolean = true> {
               filename?: T;
             };
       };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "orders_select".
+ */
+export interface OrdersSelect<T extends boolean = true> {
+  orderNumber?: T;
+  status?: T;
+  trackingNumber?: T;
+  trackingUrl?: T;
+  notifyOnShipping?: T;
+  paidAt?: T;
+  shippedAt?: T;
+  expiresAt?: T;
+  withdrawalReceivedAt?: T;
+  withdrawalStatement?: T;
+  internalNote?: T;
+  items?:
+    | T
+    | {
+        photoName?: T;
+        artistName?: T;
+        exhibitionTitle?: T;
+        printLabel?: T;
+        size?: T;
+        material?: T;
+        details?: T;
+        quantity?: T;
+        unitPrice?: T;
+        lineTotal?: T;
+        exhibition?: T;
+        exhibitionSlug?: T;
+        mediaId?: T;
+        printId?: T;
+        id?: T;
+      };
+  subtotal?: T;
+  shippingCost?: T;
+  total?: T;
+  vatNote?: T;
+  vatAmount?: T;
+  shippingZone?: T;
+  deliveryTime?: T;
+  customerName?: T;
+  customerEmail?: T;
+  customerPhone?: T;
+  shippingAddress?:
+    | T
+    | {
+        name?: T;
+        line1?: T;
+        line2?: T;
+        postalCode?: T;
+        city?: T;
+        state?: T;
+        country?: T;
+      };
+  billingAddress?:
+    | T
+    | {
+        name?: T;
+        line1?: T;
+        line2?: T;
+        postalCode?: T;
+        city?: T;
+        state?: T;
+        country?: T;
+      };
+  stripeSessionId?: T;
+  stripePaymentIntent?: T;
+  confirmationSent?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "price-requests_select".
+ */
+export interface PriceRequestsSelect<T extends boolean = true> {
+  status?: T;
+  internalNote?: T;
+  name?: T;
+  email?: T;
+  message?: T;
+  photoName?: T;
+  printLabel?: T;
+  exhibitionTitle?: T;
+  photoUrl?: T;
+  exhibition?: T;
+  printId?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -590,7 +844,7 @@ export interface PayloadMigrationsSelect<T extends boolean = true> {
   createdAt?: T;
 }
 /**
- * Texts for About, the legal notice (Impressum), the privacy policy and the QR labels. Fill in everything before going live.
+ * Texts for About, the legal notice (Impressum), the privacy policy, the shop and the QR labels. Fill in everything before going live.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "site".
@@ -635,6 +889,98 @@ export interface Site {
   hostOutsideEu?: boolean | null;
   hostPrivacyUrl?: string | null;
   privacyExtra?: string | null;
+  /**
+   * Only takes effect with the Stripe keys and at least one shipping zone. Open it once the legal notice, terms and shipping zones are filled in.
+   */
+  shopEnabled?: boolean | null;
+  /**
+   * Empty = the e-mail of the legal notice.
+   */
+  shopEmail?: string | null;
+  vatMode: 'smallBusiness' | 'included';
+  vatRate?: number | null;
+  /**
+   * Empty = the standard note of the country (Austria: § 6 Abs. 1 Z 27 UStG, Germany: § 19 UStG).
+   */
+  smallBusinessNote?: string | null;
+  /**
+   * Where you ship to and what it costs per order. Buyers choose their country in the cart; countries without a zone cannot order.
+   */
+  shippingZones?:
+    | {
+        name: string;
+        price: number;
+        /**
+         * Empty = never free.
+         */
+        freeFrom?: number | null;
+        countries: (
+          | 'AT'
+          | 'DE'
+          | 'CH'
+          | 'LI'
+          | 'IT'
+          | 'FR'
+          | 'NL'
+          | 'BE'
+          | 'LU'
+          | 'DK'
+          | 'SE'
+          | 'FI'
+          | 'IE'
+          | 'ES'
+          | 'PT'
+          | 'PL'
+          | 'CZ'
+          | 'SK'
+          | 'SI'
+          | 'HU'
+          | 'HR'
+          | 'RO'
+          | 'BG'
+          | 'GR'
+          | 'CY'
+          | 'MT'
+          | 'EE'
+          | 'LV'
+          | 'LT'
+          | 'NO'
+          | 'IS'
+          | 'GB'
+          | 'US'
+          | 'CA'
+          | 'AU'
+          | 'NZ'
+          | 'JP'
+        )[];
+        deliveryTime: string;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Optional, e.g. “Prints are made to order and checked by hand.”
+   */
+  shopNote?: string | null;
+  /**
+   * PNG with transparency (e.g. a white logo). Empty = the built-in “TRIPNJUNGLE” lettering. The image itself is never shown on its own.
+   */
+  watermarkImage?: (number | null) | Media;
+  watermarkOpacity?: number | null;
+  watermarkSize?: number | null;
+  watermarkPosition?: ('center' | 'bottomRight' | 'tiled') | null;
+  /**
+   * Shown on /terms and sent with every order confirmation. Empty = the standard terms (see /terms). Blank line = new paragraph, a line starting with “## ” = heading. Have them checked before going live.
+   */
+  termsText?: string | null;
+  /**
+   * Shown on /withdrawal and sent with every order confirmation. Empty = the EU model instructions with the details of the legal notice and the model withdrawal form.
+   */
+  withdrawalText?: string | null;
+  /**
+   * Who sends the shop e-mails (SMTP), e.g. your mail host.
+   */
+  mailProviderName?: string | null;
+  mailProviderAddress?: string | null;
   qrFormat?: ('a6' | 'a5' | 'square100') | null;
   qrShowTitle?: boolean | null;
   qrShowArtist?: boolean | null;
@@ -668,6 +1014,30 @@ export interface SiteSelect<T extends boolean = true> {
   hostOutsideEu?: T;
   hostPrivacyUrl?: T;
   privacyExtra?: T;
+  shopEnabled?: T;
+  shopEmail?: T;
+  vatMode?: T;
+  vatRate?: T;
+  smallBusinessNote?: T;
+  shippingZones?:
+    | T
+    | {
+        name?: T;
+        price?: T;
+        freeFrom?: T;
+        countries?: T;
+        deliveryTime?: T;
+        id?: T;
+      };
+  shopNote?: T;
+  watermarkImage?: T;
+  watermarkOpacity?: T;
+  watermarkSize?: T;
+  watermarkPosition?: T;
+  termsText?: T;
+  withdrawalText?: T;
+  mailProviderName?: T;
+  mailProviderAddress?: T;
   qrFormat?: T;
   qrShowTitle?: T;
   qrShowArtist?: T;
