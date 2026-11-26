@@ -217,8 +217,8 @@ function mapMedia(media, name, alt, artist) {
     id: String(media.id),
     type: (media.mimeType || "").startsWith("video/") ? "video" : "image",
     src: media.url,
-    // Alt text of the gallery row, otherwise the one of the file
-    alt: alt || media.alt || "",
+    // Alt text of the gallery row, otherwise the one of the file, otherwise the name
+    alt: alt || media.alt || name || media.name || "",
     name: name || media.name || "",
     width: media.width,
     height: media.height,

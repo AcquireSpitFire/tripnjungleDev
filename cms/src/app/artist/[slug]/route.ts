@@ -7,7 +7,7 @@ import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 
 import { escapeHtml, htmlResponse, renderTemplate, summarize } from '@/lib/render-template'
-import { defaultOgImage, jsonLdScript } from '@/lib/page'
+import { jsonLdScript, mediaOgImage, ogImageValues } from '@/lib/page'
 import { absolute, asMedia, findPublicExhibitions, imageUrl } from '@/lib/seo'
 import { SITE_NAME, serverUrl } from '@/lib/site-identity'
 import { getSiteSettings, htmlMailLink, htmlParagraphs, mailtoHref } from '@/lib/site-settings'
@@ -104,7 +104,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
   const base = serverUrl()
 
   const common = {
-    ogImage: defaultOgImage(),
+    ...ogImageValues(),
     ogType: 'profile',
     jsonLd: '',
   }
@@ -199,7 +199,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
       heading: artist.name,
       description,
       canonical,
-      ogImage: image || common.ogImage,
+      ...ogImageValues(mediaOgImage(portrait, artist.name)),
       robots: 'index, follow',
       jsonLd,
       artistBody:

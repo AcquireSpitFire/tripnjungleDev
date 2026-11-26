@@ -121,8 +121,20 @@ function setupGallery(exhibition) {
     // Every image/video sits in a <figure>, its name below it (if any)
     const figure = document.createElement("figure");
     const name = getName(item);
+    const media = createMedia(item, { sizes: "(max-width: 600px) 100vw, 480px" });
 
-    figure.appendChild(createMedia(item, { sizes: "(max-width: 600px) 100vw, 480px" }));
+    // Every photo has a page of its own (QR codes, prints): the image links there. A plain click
+    // opens the fullscreen view instead (setupViewer); Ctrl/Cmd/middle click opens the page.
+    if (item.type === "image" && item.id) {
+      const link = document.createElement("a");
+
+      link.href = getExhibitionLink(exhibition) + "/photo/" + encodeURIComponent(item.id);
+      link.className = "photo_link";
+      link.appendChild(media);
+      figure.appendChild(link);
+    } else {
+      figure.appendChild(media);
+    }
 
     // Aspect ratio of the image: on phones the figure is sized by it
     // (portrait images larger instead of small inside the 3:2 box, see CSS).
@@ -219,9 +231,17 @@ function setupViewer(exhibition) {
 
   [slideContent, galleryElement].forEach((container) => {
     container.addEventListener("click", (event) => {
-      if (event.target.tagName === "IMG") {
-        viewer.open(findMediaForImage(event.target, exhibition), event.target);
+      if (event.target.tagName !== "IMG") {
+        return;
       }
+
+      // With a modifier key the link to the photo page works as usual
+      if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) {
+        return;
+      }
+
+      event.preventDefault();
+      viewer.open(findMediaForImage(event.target, exhibition), event.target);
     });
   });
 }

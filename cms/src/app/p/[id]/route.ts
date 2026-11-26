@@ -7,7 +7,7 @@ import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 
 import { htmlResponse, renderTemplate } from '@/lib/render-template'
-import { defaultOgImage } from '@/lib/page'
+import { ogImageValues } from '@/lib/page'
 import { SITE_DESCRIPTION, SITE_NAME, serverUrl } from '@/lib/site-identity'
 
 export const dynamic = 'force-dynamic'
@@ -23,7 +23,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
         title: 'Photo not found – ' + SITE_NAME,
         description: SITE_DESCRIPTION,
         canonical: base + '/p/' + encodeURIComponent(id),
-        ogImage: defaultOgImage(),
+        ...ogImageValues(),
         robots: 'noindex',
         ogType: 'article',
         jsonLd: '',

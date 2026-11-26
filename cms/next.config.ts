@@ -50,6 +50,16 @@ const nextConfig: NextConfig = {
         headers: [{ key: 'Content-Security-Policy', value: "sandbox; default-src 'none'" }],
       },
       {
+        // The exhibition data is open to search engines (robots.txt) so they can render the pages,
+        // but the JSON itself is no page for the search results
+        source: '/api/exhibitions/:path*',
+        headers: [{ key: 'X-Robots-Tag', value: 'noindex' }],
+      },
+      {
+        source: '/api/exhibitions',
+        headers: [{ key: 'X-Robots-Tag', value: 'noindex' }],
+      },
+      {
         // Watermarked copies of photos for sale (src/app/media-wm/[file]/route.ts): same sandbox
         source: '/media-wm/:path*',
         headers: [{ key: 'Content-Security-Policy', value: "sandbox; default-src 'none'" }],

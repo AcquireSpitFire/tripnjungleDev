@@ -615,6 +615,11 @@ main {
   scroll-snap-align: start;
 }
 
+/* Link of a gallery image to its photo page (a plain click opens the fullscreen view) */
+.photo_link {
+  display: block;
+}
+
 /* Fullscreen view: clicking an image shows it filling the screen */
 
 .exhibition_slideshow img,

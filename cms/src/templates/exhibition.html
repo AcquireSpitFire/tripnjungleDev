@@ -7,10 +7,11 @@
 	<header>
 		<div class="header_inner">
 			<a href="/">‹ Back to overview</a>
-			<h1 id="title">Tripnjungle</h1>
-			<p id="theme"></p>
+			<h1 id="title">{{heading}}</h1>
+			<p id="theme">{{theme}}</p>
 			<p id="artists" class="artist_credit" hidden></p>
 		</div>
+{{> nav}}
 	</header>
 
 	<main>
@@ -27,7 +28,7 @@
 
 		</div>
 
-		<p id="description"></p>
+		<p id="description">{{descriptionText}}</p>
 
 		<div id="gallery" class="gallery"></div>
 

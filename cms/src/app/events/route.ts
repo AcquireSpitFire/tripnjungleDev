@@ -3,7 +3,7 @@ import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 
 import { htmlResponse, renderTemplate } from '@/lib/render-template'
-import { defaultOgImage, jsonLdScript } from '@/lib/page'
+import { jsonLdScript, ogImageValues } from '@/lib/page'
 import { eventJsonLd, findPublicExhibitions, hasUpcomingDate } from '@/lib/seo'
 import { SITE_NAME, serverUrl } from '@/lib/site-identity'
 
@@ -33,7 +33,7 @@ export async function GET() {
       description: `Upcoming ${SITE_NAME} exhibitions: posters, dates, times and locations.`,
       robots: 'index, follow',
       canonical: base + '/events',
-      ogImage: defaultOgImage(),
+      ...ogImageValues(),
       jsonLd,
     }),
   )

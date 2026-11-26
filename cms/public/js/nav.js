@@ -1,26 +1,20 @@
-// Navigation: hamburger button (three bars) top right in the header,
-// the menu opens below it. The markup is created here so it is only
-// maintained in one place and is the same on every page.
+// Navigation: hamburger button (three bars) top right in the header, the menu opens below it.
+// The menu itself is in the HTML of every page (src/templates/partials/nav.html), so search
+// engines and screen readers see the links; this script adds the button and opens/closes it.
 //
 // Needs:    –
 // Provides: –
 
-const MENU_ITEMS = [
-  { label: "Home", href: "/" },
-  { label: "Exhibitions", href: "/exhibitions" },
-  { label: "Events", href: "/events" },
-  { label: "Archive", href: "/archive" },
-  { label: "About", href: "/about" },
-];
-
 function setupMenu() {
   const header = document.querySelector("header");
+  const menu = document.getElementById("menu");
 
-  if (!header) {
-    return;
+  if (!header || !menu) {
+    return null;
   }
 
   const headerInner = header.querySelector(".header_inner") || header;
+  const list = menu.querySelector("ul");
   const toggle = document.createElement("button");
 
   toggle.className = "menu_toggle";
@@ -30,35 +24,18 @@ function setupMenu() {
   toggle.setAttribute("aria-controls", "menu");
   toggle.innerHTML = "<span></span><span></span><span></span>";
 
-  const menu = document.createElement("nav");
-  const list = document.createElement("ul");
-
-  menu.id = "menu";
-  menu.className = "menu";
-  menu.setAttribute("aria-label", "Main navigation");
-  menu.hidden = true;
-
   // Current page: "/" or "/exhibitions" … (without query and trailing slash)
   const currentPath = location.pathname.replace(/\/$/, "") || "/";
 
-  MENU_ITEMS.forEach((item) => {
-    const entry = document.createElement("li");
-    const link = document.createElement("a");
-
-    link.href = item.href;
-    link.textContent = item.label;
-
-    if (item.href === currentPath) {
+  list.querySelectorAll("a").forEach((link) => {
+    if (link.getAttribute("href") === currentPath) {
       link.setAttribute("aria-current", "page");
     }
-
-    entry.appendChild(link);
-    list.appendChild(entry);
   });
 
-  menu.appendChild(list);
-  headerInner.appendChild(toggle);
+  // The menu drops down below the header
   header.appendChild(menu);
+  headerInner.appendChild(toggle);
 
   function setOpen(open) {
     menu.hidden = !open;

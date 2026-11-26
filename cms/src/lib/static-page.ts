@@ -4,7 +4,7 @@ import configPromise from '@payload-config'
 import { getPayload, type Payload } from 'payload'
 
 import { htmlResponse, renderTemplate } from './render-template'
-import { defaultOgImage, jsonLdScript } from './page'
+import { jsonLdScript, ogImageValues } from './page'
 import { SITE_DESCRIPTION, SITE_NAME, serverUrl } from './site-identity'
 import { getSiteSettings, type SiteSettings } from './site-settings'
 
@@ -13,7 +13,7 @@ type StaticPage = {
   path: string
   title: string
   // If missing, the site description from the Site settings applies
-  description?: string
+  description?: string | ((settings: SiteSettings) => string)
   robots?: string
   // "summary" for text pages (small preview without the large image)
   twitterCard?: 'summary'
@@ -26,7 +26,10 @@ export async function renderStaticPage(page: StaticPage): Promise<Response> {
   const payload = await getPayload({ config: configPromise })
   const settings = await getSiteSettings(payload)
   const base = serverUrl()
-  const description = page.description || settings.siteDescription?.trim() || SITE_DESCRIPTION
+  const description =
+    (typeof page.description === 'function' ? page.description(settings) : page.description) ||
+    settings.siteDescription?.trim() ||
+    SITE_DESCRIPTION
   const data = page.jsonLd?.(base, description)
 
   return htmlResponse(
@@ -34,7 +37,7 @@ export async function renderStaticPage(page: StaticPage): Promise<Response> {
       title: page.title,
       description,
       canonical: base + page.path,
-      ogImage: defaultOgImage(),
+      ...ogImageValues(),
       robots: page.robots || 'index, follow',
       ...(page.twitterCard ? { twitterCard: page.twitterCard } : {}),
       jsonLd: jsonLdScript(data),
