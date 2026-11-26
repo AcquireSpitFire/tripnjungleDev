@@ -6,9 +6,15 @@
 // to rebuild that table and writes the index statements twice – the second one fails and the
 // server does not start. Production is not affected: it uses the migrations in src/migrations.
 //
+// A second drizzle-kit bug: when a table is rebuilt and also gets a new column, the copy statement
+// ("INSERT INTO __new_x (…) SELECT … FROM x") reads the new column from the old table, where it does
+// not exist yet. The new column simply gets its default value, so only existing columns are copied.
+//
 // What it does: makes a copy of the database file first, then runs the pending schema statements
-// of the push with foreign keys switched off and every index statement only once, and checks that
-// every table still has the same number of rows and no reference is broken.
+// of the push in ONE transaction, with foreign keys switched off, every index statement only once,
+// leftover "__new_…" tables of an aborted push removed and only existing columns copied. Before the
+// commit it checks that every table still has the same number of rows and no reference is broken;
+// otherwise everything is rolled back and the database stays exactly as it was.
 //
 //   cd cms && npx tsx --env-file=.env scripts/repair-dev-schema.ts          (shows what it would do)
 //   cd cms && npx tsx --env-file=.env scripts/repair-dev-schema.ts --yes    (repairs)
@@ -119,33 +125,72 @@ async function run() {
     return result
   }
 
+  const sql = (raw: string) => adapter.execute({ drizzle: adapter.drizzle, raw })
+  const columnsOf = async (table: string) =>
+    new Set((await sql(`PRAGMA table_info(\`${table}\`)`)).rows.map((row) => String(row.name)))
+
   fs.copyFileSync(file, backup)
   console.log(`Backup: ${backup}`)
 
   const before = await counts(await tables())
 
-  await adapter.execute({ drizzle: adapter.drizzle, raw: 'PRAGMA foreign_keys=OFF' })
+  // Switching foreign keys is not possible inside a transaction, so it happens around it
+  await sql('PRAGMA foreign_keys=OFF')
 
   try {
-    for (const statement of statements) {
-      await adapter.execute({ drizzle: adapter.drizzle, raw: statement })
+    await sql('BEGIN')
+
+    try {
+      for (const statement of statements) {
+        const rebuilt = /^CREATE TABLE `(__new_[a-z0-9_]+)`/i.exec(statement)
+        const copy = /^INSERT INTO `(__new_[a-z0-9_]+)`\s*\(([^)]*)\)\s*SELECT\s+(.+?)\s+FROM\s+`([a-z0-9_]+)`;?$/is.exec(
+          statement,
+        )
+
+        if (rebuilt) {
+          // Left over from an aborted push: never holds data of its own
+          await sql(`DROP TABLE IF EXISTS \`${rebuilt[1]}\``)
+        }
+
+        if (copy) {
+          const existing = await columnsOf(copy[4])
+          const columns = copy[2]
+            .split(',')
+            .map((column) => column.trim().replace(/^"|"$/g, ''))
+            .filter((column) => existing.has(column))
+            .map((column) => `"${column}"`)
+            .join(', ')
+
+          await sql(`INSERT INTO \`${copy[1]}\`(${columns}) SELECT ${columns} FROM \`${copy[4]}\`;`)
+          continue
+        }
+
+        await sql(statement)
+      }
+
+      const after = await counts([...before.keys()])
+      const changed = [...before].filter(([name, count]) => after.get(name) !== count)
+      const { rows: problems } = await sql('PRAGMA foreign_key_check')
+
+      if (changed.length || problems.length) {
+        throw new Error(
+          'Check failed, nothing was changed. ' +
+            (changed.length ? 'Row counts differ: ' + JSON.stringify(changed) + '. ' : '') +
+            (problems.length ? problems.length + ' foreign key problems.' : ''),
+        )
+      }
+
+      await sql('COMMIT')
+    } catch (error) {
+      await sql('ROLLBACK')
+      throw error
     }
   } finally {
-    await adapter.execute({ drizzle: adapter.drizzle, raw: 'PRAGMA foreign_keys=ON' })
+    await sql('PRAGMA foreign_keys=ON')
   }
 
-  const after = await counts([...before.keys()])
-  const changed = [...before].filter(([name, count]) => after.get(name) !== count)
-
-  if (changed.length) {
-    console.error('Row counts differ after the repair – restore the backup:', changed)
-    process.exit(1)
-  }
-
-  const { rows: problems } = await adapter.execute({ drizzle: adapter.drizzle, raw: 'PRAGMA foreign_key_check' })
-
-  console.log(`Done. ${before.size} tables, row counts unchanged, ${problems.length} foreign key problems.`)
-  process.exit(problems.length ? 1 : 0)
+  console.log(`Done. ${before.size} tables, row counts unchanged, no foreign key problems.`)
+  process.exit(0)
 }
 
 run().catch((error) => {
