@@ -1,6 +1,6 @@
 // "/order/thanks": Stripe sends the buyer here after the payment. The order is completed by the
 // webhook (src/app/shop/webhook/route.ts); this page only says thank you and empties the cart in
-// the browser (public/js/shop.js).
+// the browser (public/js/cart-store.js).
 import { renderStaticPage } from '@/lib/static-page'
 import { SITE_NAME } from '@/lib/site-identity'
 

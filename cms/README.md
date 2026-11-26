@@ -403,17 +403,21 @@ QR codes, the security rules above) against a temporary database. Run it after e
   `legal.ts` (standard terms and withdrawal instructions), `settings.ts`, `countries.ts`, `http.ts`
 - `src/app/shop/*/route.ts` – shop endpoints (offers, quote, checkout, webhook, request, withdrawal);
   `src/app/cart`, `src/app/order/thanks`, `src/app/terms`, `src/app/withdrawal` – the shop pages;
-  `public/js/shop.js` (cart, prints, forms), `public/js/cart.js` (cart page)
+  `public/js/cart-store.js` (cart in the browser), `shop.js` (prints, price requests), `cart.js` (cart page),
+  `withdrawal-form.js`
 - `src/lib/watermark.ts`, `src/app/media-wm/[file]/route.ts`, `src/assets/watermark-default.svg` – the
   watermark; `src/lib/media-lock.ts` decides which photos are for sale
-- `src/globals/Site.ts` – Site settings (About, legal notice, privacy, shop); `src/lib/site.ts` prepares them for the templates
+- `src/globals/Site.ts` – Site settings, one tab per file in `src/globals/site/`; `src/lib/site-settings.ts` prepares them
+  for the templates
 - `src/templates/*.html` – the pages; `src/app/**/route.ts` serves them with title, description,
   Open Graph and JSON-LD (`/`, `/exhibitions`, `/events`, `/archive`, `/about`, `/imprint`, `/privacy`,
   `/exhibition/<id>`, `/exhibition/<id>/photo/<photo id>`, `/artist/<id>`, `/cart`, `/terms`, `/withdrawal`,
   `/order/thanks`)
 - `src/app/sitemap.xml`, `src/app/robots.txt` – SEO
 - `src/migrations/` – database migrations for production
-- `public/` – CSS, JS, favicon, OG image; `public/js/data.js` talks to the API and picks the image size
+- `public/` – CSS, JS, favicon, OG image; `public/js/data.js` talks to the API, `elements.js` picks the image
+  size, `slideshow.js` and `viewer.js` are shared by the home, exhibition and photo pages (each file starts
+  with what it needs and provides)
 - `scripts/regenerate-sizes.ts` – regenerate image sizes for existing media (`npm run media:regenerate -- --yes`; without `--yes` it only shows which database and folder it would change)
 - `scripts/set-locked.ts` – lock/unlock an exhibition from the command line (for testing; needs `--yes`)
 - `scripts/write-schema-snapshot.ts` – schema snapshot for hand-written migrations (see above)

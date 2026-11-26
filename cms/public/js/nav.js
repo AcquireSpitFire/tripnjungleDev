@@ -1,6 +1,9 @@
 // Navigation: hamburger button (three bars) top right in the header,
 // the menu opens below it. The markup is created here so it is only
 // maintained in one place and is the same on every page.
+//
+// Needs:    –
+// Provides: –
 
 const MENU_ITEMS = [
   { label: "Home", href: "/" },
@@ -35,8 +38,8 @@ function setupMenu() {
   menu.setAttribute("aria-label", "Main navigation");
   menu.hidden = true;
 
-  // Current page: "/" or "/exhibitions" … (without .html, without query)
-  const currentPath = location.pathname.replace(/\.html$/, "").replace(/\/$/, "") || "/";
+  // Current page: "/" or "/exhibitions" … (without query and trailing slash)
+  const currentPath = location.pathname.replace(/\/$/, "") || "/";
 
   MENU_ITEMS.forEach((item) => {
     const entry = document.createElement("li");

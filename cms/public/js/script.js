@@ -1,171 +1,59 @@
-// Home page. The exhibitions are loaded via data.js:
-// every public exhibition is a slide with its cover.
-// If there is an upcoming exhibition with a poster, its poster sits above
-// the slideshow, all other upcoming posters below it.
-// Clicks on posters with a video are caught by intro.js, slides lead straight to the exhibition.
-let slides = [];
-
-let currentSlide = 0;
-let timer;
+// Home page. Every public exhibition is a slide with its cover (slideshow.js). If there is an
+// upcoming exhibition with a poster, its poster sits above the slideshow, all other upcoming
+// posters below it. Clicks on posters with a video are caught by intro.js, slides lead straight
+// to the exhibition.
+//
+// Needs:    data.js, elements.js, slideshow.js
+// Provides: window.pauseSlideshow / window.resumeSlideshow (for intro.js)
 
 const slideContent = document.getElementById("slide_content");
-const dotsContainer = document.getElementById("dots");
 const posterContainer = document.getElementById("front_poster");
 
-function showSlide(index) {
-  clearTimeout(timer);
-  currentSlide = (index + slides.length) % slides.length;
+let slideshow = null;
 
-  const exhibition = slides[currentSlide];
+// One slide: the cover (image as a link, or video) and the title as a link below it – for
+// videos the only link, because the video controls catch clicks on the video itself
+function renderSlide(exhibition, index, content) {
   const frontPage = exhibition.frontPage;
   const link = getExhibitionLink(exhibition);
-
-  slideContent.innerHTML = "";
+  let video = null;
 
   if (frontPage?.type === "image") {
-    // The whole image is a link to the exhibition
     const anchor = document.createElement("a");
-    anchor.href = link;
-
     const image = document.createElement("img");
 
+    anchor.href = link;
     setImageSources(image, frontPage, {
       size: "medium",
       sizes: "(max-width: 600px) 100vw, min(1200px, 90vw)",
       priority: index === 0,
     });
     image.alt = frontPage.alt || exhibition.title;
-
     anchor.appendChild(image);
-    slideContent.appendChild(anchor);
-    startTimer(5000);
-  }
-
-  if (frontPage?.type === "video") {
-    const video = document.createElement("video");
-
+    content.appendChild(anchor);
+  } else if (frontPage?.type === "video") {
+    video = document.createElement("video");
     video.src = frontPage.src;
     video.controls = true;
     video.autoplay = true;
     video.muted = true;
     video.playsInline = true;
-
-    slideContent.appendChild(video);
-
-    // Move to the next slide when the video ends
-    video.addEventListener("ended", nextSlide);
-  } else if (!frontPage) {
-    startTimer(5000);
+    content.appendChild(video);
   }
 
-  // Title as a link below every slide (for videos the only link,
-  // because the video controls catch clicks on the video itself)
   const titleLink = document.createElement("a");
+
   titleLink.href = link;
   titleLink.className = "slide_link";
   titleLink.textContent = exhibition.title + " – view exhibition ›";
-  slideContent.appendChild(titleLink);
+  content.appendChild(titleLink);
 
-  updateDots();
-}
-
-function nextSlide() {
-  showSlide(currentSlide + 1);
-}
-
-function previousSlide() {
-  showSlide(currentSlide - 1);
-}
-
-// Swipe left = next slide, swipe right = previous slide
-function setupSwipe() {
-  let startX = 0;
-  let startY = 0;
-
-  slideContent.addEventListener("touchstart", (event) => {
-    startX = event.touches[0].clientX;
-    startY = event.touches[0].clientY;
-  }, { passive: true });
-
-  slideContent.addEventListener("touchend", (event) => {
-    const deltaX = event.changedTouches[0].clientX - startX;
-    const deltaY = event.changedTouches[0].clientY - startY;
-
-    // Only clear, mostly horizontal swipes count (no scrolling, no tapping)
-    if (Math.abs(deltaX) < 50 || Math.abs(deltaX) < Math.abs(deltaY)) {
-      return;
-    }
-
-    if (deltaX < 0) {
-      nextSlide();
-    } else {
-      previousSlide();
-    }
-  });
-}
-
-// Arrow right = next slide, arrow left = previous slide
-function setupKeys() {
-  document.addEventListener("keydown", (event) => {
-    // A focused video uses the arrow keys itself for seeking,
-    // and while the intro is open the slideshow stays put
-    if (event.target.tagName === "VIDEO" || document.getElementById("intro")) {
-      return;
-    }
-
-    if (event.key === "ArrowRight") {
-      nextSlide();
-    } else if (event.key === "ArrowLeft") {
-      previousSlide();
-    }
-  });
-}
-
-function startTimer(duration) {
-  clearTimeout(timer);
-  timer = setTimeout(nextSlide, duration);
+  return video;
 }
 
 // For intro.js: pause the slideshow while the intro video plays
-window.pauseSlideshow = () => {
-  clearTimeout(timer);
-  slideContent.querySelector("video")?.pause();
-};
-
-window.resumeSlideshow = () => {
-  if (slides.length === 0) {
-    return;
-  }
-
-  const video = slideContent.querySelector("video");
-
-  if (video) {
-    video.play().catch(() => {});
-  } else {
-    startTimer(5000);
-  }
-};
-
-function updateDots() {
-  dotsContainer.innerHTML = "";
-
-  slides.forEach((slide, index) => {
-    const dot = document.createElement("button");
-
-    dot.className = "dot";
-    dot.setAttribute("aria-label", `Slide ${index + 1}`);
-
-    if (index === currentSlide) {
-      dot.classList.add("active");
-    }
-
-    dot.addEventListener("click", () => {
-      showSlide(index);
-    });
-
-    dotsContainer.appendChild(dot);
-  });
-}
+window.pauseSlideshow = () => slideshow?.pause();
+window.resumeSlideshow = () => slideshow?.resume();
 
 // ---------- Posters ----------
 
@@ -220,7 +108,7 @@ function showUpcomingPosters(exhibitions, shownPoster) {
       const caption = document.createElement("p");
 
       caption.className = "upcoming_caption";
-      caption.textContent = exhibition.title + " · " + formatDate(exhibition);
+      caption.textContent = exhibition.title + " · " + formatExhibitionDate(exhibition);
 
       element.appendChild(caption);
       container.appendChild(element);
@@ -257,23 +145,27 @@ async function start() {
 
   showUpcomingPosters(exhibitions, nextExhibition?.posters[0]);
 
-  // Only public exhibitions in the slideshow: locked ones are visible
-  // through their poster, their cover should not be seen yet
-  slides = exhibitions
-    .filter((exhibition) => !isLocked(exhibition))
-    .map(resolveFrontPage);
+  // Only public exhibitions in the slideshow: locked ones are visible through their poster,
+  // their cover should not be seen yet
+  const slides = exhibitions.filter((exhibition) => !isLocked(exhibition));
 
   if (slides.length === 0) {
     slideContent.textContent = "No exhibitions available yet.";
     return;
   }
 
-  document.getElementById("next").addEventListener("click", nextSlide);
-  document.getElementById("prev").addEventListener("click", previousSlide);
-  setupSwipe();
-  setupKeys();
-
-  showSlide(0);
+  slideshow = createSlideshow({
+    content: slideContent,
+    dots: document.getElementById("dots"),
+    prev: document.getElementById("prev"),
+    next: document.getElementById("next"),
+    items: slides,
+    render: renderSlide,
+    dotLabel: (index) => `Slide ${index + 1}`,
+    // While the intro is open the slideshow stays put
+    keysPaused: () => Boolean(document.getElementById("intro")),
+  });
+  slideshow.show(0);
 }
 
 start();

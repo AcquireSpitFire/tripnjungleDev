@@ -1,6 +1,9 @@
 // Exhibitions: grid of all public exhibitions (locked: false).
 // Every card shows the cover, the title and the theme.
 // Click → straight to the exhibition.
+//
+// Needs:    data.js, elements.js
+// Provides: –
 
 const listElement = document.getElementById("list");
 
@@ -66,8 +69,7 @@ async function startExhibitions() {
   }
 
   const open = exhibitions
-    .filter((exhibition) => !isLocked(exhibition))
-    .map(resolveFrontPage);
+    .filter((exhibition) => !isLocked(exhibition));
 
   if (open.length === 0) {
     listElement.textContent = "No exhibitions available yet.";

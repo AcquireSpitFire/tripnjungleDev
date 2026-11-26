@@ -7,6 +7,9 @@
 // description and the link to the exhibition (when locked: only a notice,
 // posters not clickable). Click on a poster → intro video (if any),
 // click on the link → straight to the exhibition.
+//
+// Needs:    data.js, elements.js (intro.js handles the poster clicks)
+// Provides: –
 
 const listElement = document.getElementById("list");
 const isArchive = document.body.dataset.page === "archive";
@@ -64,7 +67,7 @@ function createEvent(exhibition, eventIndex) {
   }
 
   // Date · time · location (only what is there)
-  const details = [formatDate(exhibition)];
+  const details = [formatExhibitionDate(exhibition)];
 
   if (!isArchive) {
     if (exhibition.time) {

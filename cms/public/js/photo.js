@@ -5,6 +5,9 @@
 // photo and to the whole exhibition. Arrow keys switch photos, a click opens
 // the fullscreen view. Same visibility as the exhibition page: public and
 // "locked with link" show the photo, otherwise "not available yet".
+//
+// Needs:    data.js, elements.js, shop.js (setupPhotoShop), viewer.js
+// Provides: –
 
 const photoTitle = document.getElementById("title");
 const photoArtists = document.getElementById("artists");
@@ -12,8 +15,10 @@ const photoFigure = document.getElementById("photo");
 const photoNote = document.getElementById("photo_note");
 const prevLink = document.getElementById("prev_photo");
 const nextLink = document.getElementById("next_photo");
-const photoViewer = document.getElementById("viewer");
-const photoViewerImage = document.getElementById("viewer_image");
+const photoViewer = createViewer({
+  element: document.getElementById("viewer"),
+  image: document.getElementById("viewer_image"),
+});
 
 // /exhibition/<slug>/photo/<id>
 function getPhotoIds() {
@@ -35,30 +40,6 @@ function setCredit(artists) {
   if (artists.length) {
     photoArtists.appendChild(createArtistCredit(artists));
     photoArtists.hidden = false;
-  }
-}
-
-function openPhotoViewer(item) {
-  setImageSources(photoViewerImage, item, { size: "large", sizes: "100vw" });
-  photoViewerImage.alt = item.alt || "";
-  photoViewer.hidden = false;
-  document.documentElement.classList.add("viewer_open");
-
-  if (photoViewer.requestFullscreen) {
-    photoViewer.requestFullscreen().catch(() => {});
-  }
-}
-
-function closePhotoViewer() {
-  if (photoViewer.hidden) {
-    return;
-  }
-
-  photoViewer.hidden = true;
-  document.documentElement.classList.remove("viewer_open");
-
-  if (document.fullscreenElement) {
-    document.exitFullscreen().catch(() => {});
   }
 }
 
@@ -85,7 +66,7 @@ function renderPhoto(exhibition, item, index) {
       priority: true,
     });
     image.alt = item.alt || item.name || "";
-    image.addEventListener("click", () => openPhotoViewer(item));
+    image.addEventListener("click", () => photoViewer.open(item, image));
     photoFigure.appendChild(image);
   }
 
@@ -102,7 +83,7 @@ function renderPhoto(exhibition, item, index) {
     nextLink.hidden = false;
 
     document.addEventListener("keydown", (event) => {
-      if (!photoViewer.hidden || event.target.tagName === "VIDEO") {
+      if (photoViewer.isOpen() || event.target.tagName === "VIDEO") {
         return;
       }
 
@@ -113,18 +94,6 @@ function renderPhoto(exhibition, item, index) {
       }
     });
   }
-
-  photoViewer.addEventListener("click", closePhotoViewer);
-  document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") {
-      closePhotoViewer();
-    }
-  });
-  document.addEventListener("fullscreenchange", () => {
-    if (!document.fullscreenElement) {
-      closePhotoViewer();
-    }
-  });
 }
 
 async function startPhoto() {

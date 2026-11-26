@@ -1,8 +1,9 @@
-// Cart page (/cart). The items come from localStorage (shop.js); everything shown about them –
-// name, details, price, copies left, shipping, total – comes from the server (/shop/quote).
+// Cart page (/cart). The items come from localStorage (cart-store.js); everything shown about
+// them – name, details, price, copies left, shipping, total – comes from the server (/shop/quote).
 // "Continue to payment" asks the server for a Stripe payment page (/shop/checkout) and goes there.
-
-const COUNTRY_KEY = "tj:cart:country";
+//
+// Needs:    data.js (STORAGE_KEYS), elements.js (createParagraph), cart-store.js
+// Provides: –
 
 const cartStatus = document.getElementById("cart_status");
 const cartLines = document.getElementById("cart_lines");
@@ -16,7 +17,7 @@ let quoteRequest = 0;
 
 function readCountry() {
   try {
-    return localStorage.getItem(COUNTRY_KEY) || "";
+    return localStorage.getItem(STORAGE_KEYS.cartCountry) || "";
   } catch (error) {
     return "";
   }
@@ -24,7 +25,7 @@ function readCountry() {
 
 function writeCountry(code) {
   try {
-    localStorage.setItem(COUNTRY_KEY, code);
+    localStorage.setItem(STORAGE_KEYS.cartCountry, code);
   } catch (error) {
     // not available: the choice only applies to this page
   }
@@ -104,10 +105,10 @@ function createLine(line) {
     line.left !== null && !line.problem ? line.left + (line.left === 1 ? " copy" : " copies") + " left" : "",
   ]
     .filter(Boolean)
-    .forEach((value) => text.appendChild(paragraph("", value)));
+    .forEach((value) => text.appendChild(createParagraph("", value)));
 
   if (line.problem) {
-    text.appendChild(paragraph("cart_problem", line.problem));
+    text.appendChild(createParagraph("cart_problem", line.problem));
   }
 
   entry.appendChild(text);
@@ -115,7 +116,7 @@ function createLine(line) {
   const controls = document.createElement("div");
   const quantity = document.createElement("select");
   const max = Math.max(line.quantity, Math.min(CART_MAX_QUANTITY, line.left ?? CART_MAX_QUANTITY));
-  const price = paragraph("cart_line_price", line.price ? formatPrice(line.lineTotal) : "");
+  const price = createParagraph("cart_line_price", line.price ? formatPrice(line.lineTotal) : "");
   const remove = document.createElement("button");
 
   controls.className = "cart_line_controls";
