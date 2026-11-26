@@ -54,13 +54,19 @@ export async function POST(request: Request) {
 
   const receivedAt = new Date()
 
+  // The first withdrawal counts for the deadline; later ones are added below it, never replace it
   await payload.update({
     collection: 'orders',
     id: order.id,
     overrideAccess: true,
     data: {
-      withdrawalReceivedAt: receivedAt.toISOString(),
-      withdrawalStatement: [name, statement].filter(Boolean).join(': '),
+      withdrawalReceivedAt: order.withdrawalReceivedAt || receivedAt.toISOString(),
+      withdrawalStatement: [
+        order.withdrawalStatement,
+        `${receivedAt.toISOString()}: ${[name, statement].filter(Boolean).join(': ')}`,
+      ]
+        .filter(Boolean)
+        .join('\n'),
     },
   })
 

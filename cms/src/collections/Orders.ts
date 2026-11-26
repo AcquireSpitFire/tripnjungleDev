@@ -87,6 +87,16 @@ export const Orders: CollectionConfig = {
   },
   defaultSort: '-createdAt',
   hooks: {
+    beforeChange: [
+      // The anonymous connection key is only needed while the checkout runs (src/lib/shop/hold.ts)
+      ({ data }) => {
+        if (data.status && data.status !== 'pending') {
+          data.holdKey = null
+        }
+
+        return data
+      },
+    ],
     afterChange: [
       async ({ doc, previousDoc, operation, req, context }) => {
         if (operation !== 'update' || doc.status !== 'shipped' || previousDoc?.status === 'shipped' || context.tjShippedStamp) {
@@ -188,6 +198,15 @@ export const Orders: CollectionConfig = {
         date: { pickerAppearance: 'dayAndTime' },
         condition: (data) => data?.status === 'pending',
       },
+    },
+    {
+      // Anonymous key of the buyer's connection while a checkout with limited copies runs
+      // (src/lib/shop/hold.ts): at most 2 such checkouts per connection. Removed when it ends.
+      name: 'holdKey',
+      type: 'text',
+      index: true,
+      access: { read: () => false, create: () => false, update: () => false },
+      admin: { hidden: true },
     },
     {
       // Set by the withdrawal function on /withdrawal (the buyer gets an acknowledgement)

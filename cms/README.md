@@ -230,7 +230,8 @@ quantity, address), so a print lab API can be added as a step after “paid” w
   caches, because what may be delivered depends on the login. Pages are cached publicly and never
   contain anything account-specific.
 - **“Locked with link”**: lists (`/api/exhibitions`) show such exhibitions like locked ones (poster and
-  details); the content only comes with a lookup of exactly that ID.
+  details); the content only comes with a lookup of exactly that ID. The ID is part of those public
+  lists, so the address is **not a secret**: use it only for previews that anybody may see.
 - **API limits**: visitors, artists and editors get at most 100 results per request; `depth` is at most 2.
 - **Uploads**: only JPEG, PNG, WebP, AVIF, GIF, MP4, WebM and QuickTime (checked from the file content,
   no SVG); files are served with a sandbox CSP. Files only come from the own computer (“paste URL” is
@@ -246,6 +247,9 @@ quantity, address), so a print lab API can be added as a step after “paid” w
   requests 5, withdrawals 5 per 15 minutes). Price requests are only e-mailed to the shop and the
   withdrawal acknowledgement only to the address stored with the order: the forms cannot send e-mails to
   strangers. Orders and price requests are only visible to admins and managers of the section *Shop*.
+  Artists and editors cannot change prints, and cannot put another photo into a gallery item that has
+  prints. Watermark images can only be changed or deleted by managers. A second withdrawal for the same
+  order is added below the first one; the date of the first stays.
 - **Watermark**: for photos for sale, visitors get only the watermarked copies (`/media-wm/…`, made
   with sharp, without EXIF); the plain files of such photos answer 404 to them.
 - `npm run test:access` checks all of this against a temporary database.
@@ -264,8 +268,11 @@ Accepted on purpose (known, low risk):
   the first deploy.
 - The login rate limit counts per server process; with several instances it multiplies. The same holds
   for the lock that stops two checkouts from taking the last copy: run the site as one instance.
-- A checkout holds its copies for 35 minutes even if nobody pays; the rate limit keeps one address at
-  10 checkouts per 15 minutes. A unique print may therefore show “Sold out” for a while and come back.
+- A checkout holds its copies for 35 minutes even if nobody pays. One connection can have at most 2
+  running checkouts with limited copies (stored only as an anonymous key, removed when the checkout
+  ends), and going back from the Stripe page frees the copies at once. A unique print may still show
+  “Sold out” for a while and come back. Many buyers on one network (e.g. the Wi-Fi at an opening)
+  share that limit of 2 at the same moment.
 - Admins and the preview see photos for sale without the watermark (they are logged in). A watermark
   makes copying harder, it does not make it impossible.
 

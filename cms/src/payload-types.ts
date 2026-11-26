@@ -162,7 +162,7 @@ export interface Exhibition {
   time?: string | null;
   location?: string | null;
   /**
-   * Locked: poster and details are visible, the exhibition itself (cover, images, videos) is not. Locked with link: like locked, but whoever knows the address /exhibition/<ID> sees the exhibition. Public: visible to everyone, also in the slideshow and Exhibitions.
+   * Locked: poster and details are visible, the exhibition itself (cover, images, videos) is not. Locked with link: like locked, but whoever opens the address /exhibition/<ID> sees the exhibition. The address is not secret (the ID appears in the public lists): only for previews that anybody may see. Public: visible to everyone, also in the slideshow and Exhibitions.
    */
   visibility?: ('locked' | 'link' | 'public') | null;
   locked?: boolean | null;
@@ -394,6 +394,7 @@ export interface Order {
   paidAt?: string | null;
   shippedAt?: string | null;
   expiresAt?: string | null;
+  holdKey?: string | null;
   withdrawalReceivedAt?: string | null;
   withdrawalStatement?: string | null;
   /**
@@ -707,6 +708,7 @@ export interface OrdersSelect<T extends boolean = true> {
   paidAt?: T;
   shippedAt?: T;
   expiresAt?: T;
+  holdKey?: T;
   withdrawalReceivedAt?: T;
   withdrawalStatement?: T;
   internalNote?: T;

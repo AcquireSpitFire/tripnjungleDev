@@ -1042,6 +1042,23 @@ async function run() {
   )
   check('an editor can still change the caption of a photo for sale', editedShop.gallery[0].name === 'Sunset 2')
 
+  const swapError = await payload
+    .update({
+      collection: 'exhibitions',
+      id: shopExhibition.id,
+      data: {
+        gallery: [
+          { id: shopRow.id, file: plainImage.id, name: 'Swapped' },
+          { id: shopExhibition.gallery[1].id, file: plainImage.id, name: 'Just shown' },
+        ],
+      },
+      ...as(editor),
+    })
+    .then(() => 'no error')
+    .catch((error: Error) => JSON.stringify((error as AnyDoc).data ?? error.message))
+
+  check('an editor cannot put another photo into an item with prints', swapError.includes('only a manager can replace'), swapError)
+
   const visitorShop: AnyDoc = (
     await payload.find({ collection: 'exhibitions', where: { slug: { equals: 'shop-one' } }, overrideAccess: false })
   ).docs[0]
@@ -1345,6 +1362,33 @@ async function run() {
   check('a repeated webhook is accepted', (await stripeWebhook(webhookRequest(signed))).status === 200)
   check('a repeated webhook sends no e-mails again', sentMails.length === mailsAfterFirst, sentMails.length)
 
+  // Paid after the copies were no longer held: noted for the shop
+  const lateOrder: AnyDoc = await makeOrder('pending', -1)
+  const lateBody = eventBody
+    .replace(/evt_access_check/g, 'evt_access_late')
+    .replace(/cs_test_access_check/g, 'cs_test_access_late')
+    .replace(new RegExp(`"${webhookOrder.id}"`, 'g'), `"${lateOrder.id}"`)
+  const lateResponse = await stripeWebhook(
+    new Request('http://localhost:3000/shop/webhook', {
+      method: 'POST',
+      body: lateBody,
+      headers: {
+        'stripe-signature': new StripeSdk('sk_test_access_check').webhooks.generateTestHeaderString({
+          payload: lateBody,
+          secret: 'whsec_access_check',
+        }),
+        'content-type': 'application/json',
+      },
+    }),
+  )
+  const latePaid: AnyDoc = await payload.findByID({ collection: 'orders', id: lateOrder.id, overrideAccess: true })
+
+  check(
+    'a payment after the hold ran out is noted for the shop',
+    lateResponse.status === 200 && latePaid.status === 'paid' && String(latePaid.internalNote).includes('no longer held'),
+    [latePaid.status, latePaid.internalNote],
+  )
+
   payload.sendEmail = originalSendEmail
 
   // Shop routes: same origin only, rate limited
@@ -1381,6 +1425,77 @@ async function run() {
   check('the 6th price request per address is blocked (429)', requestStatuses[5] === 429 && requestStatuses[4] !== 429, requestStatuses)
   check('the 11th checkout per address is blocked (429)', checkoutStatuses[10] === 429 && checkoutStatuses[9] !== 429, checkoutStatuses)
   check('the shop limits do not block the login', (await attempt('203.0.113.21')) !== 429)
+
+  // Running checkouts per connection, release when coming back from Stripe (src/lib/shop/hold.ts)
+  const { holdCopies } = await import('../src/lib/shop/checkout')
+  const { holdKeyFor, releaseValue } = await import('../src/lib/shop/hold')
+  const holdImage: AnyDoc = await payload.create({ collection: 'media', data: { alt: 'H', rightsConfirmed: true }, file: file(), ...as(manager) })
+  const holdExhibition: AnyDoc = await payload.create({
+    collection: 'exhibitions',
+    data: {
+      slug: 'hold-one',
+      title: 'Hold',
+      visibility: 'public',
+      release: 'scheduled',
+      gallery: [
+        {
+          file: holdImage.id,
+          name: 'Edition',
+          prints: [
+            { label: 'Limited', pricing: 'fixed', price: 50, copies: 10 },
+            { label: 'Open', pricing: 'fixed', price: 40 },
+          ],
+        },
+      ],
+    },
+    ...as(manager),
+  })
+  const [limitedPrint, openPrint] = holdExhibition.gallery[0].prints.map((print: AnyDoc) => print.id)
+  const holdCart = (print: string) => [{ exhibition: 'hold-one', photo: String(holdImage.id), print, quantity: 1 }]
+  const connection = holdKeyFor(payload.secret, '203.0.113.30')
+  const hold = (print: string, key = connection): Promise<AnyDoc> => holdCopies(payload, shopSettings, holdCart(print), 'AT', key)
+  const firstHold = await hold(limitedPrint)
+  const secondHold = await hold(limitedPrint)
+  const thirdHold = await hold(limitedPrint)
+
+  check('two running checkouts with limited copies per connection are allowed', Boolean(firstHold.order && secondHold.order))
+  check('a third one from the same connection is refused', !thirdHold.order && String(thirdHold.error).includes('two unfinished'), thirdHold.error)
+  check('another connection can still buy', Boolean((await hold(limitedPrint, holdKeyFor(payload.secret, '203.0.113.31'))).order))
+  check('open editions are not limited per connection', Boolean((await hold(openPrint)).order))
+  check(
+    'the connection is stored only as an anonymous key, not readable through the API',
+    firstHold.order.holdKey === connection &&
+      !connection.includes('203.0.113') &&
+      (await payload.findByID({ collection: 'orders', id: firstHold.order.id, ...as(shopManager) })).holdKey === undefined,
+  )
+
+  const { POST: releaseRoute } = await import('../src/app/shop/checkout/release/route')
+  const release = (value: string) =>
+    releaseRoute(
+      new Request('http://localhost:3000/shop/checkout/release', {
+        method: 'POST',
+        body: JSON.stringify({ release: value }),
+        headers: { 'content-type': 'application/json', origin: 'http://localhost:3000' },
+      }),
+    )
+  const firstValue = releaseValue(payload.secret, firstHold.order.id)
+
+  check('a release with a wrong token is refused (403)', (await release(`${firstHold.order.id}.${'0'.repeat(32)}`)).status === 403)
+  check(
+    'the token of one checkout does not release another one',
+    (await release(firstValue.replace(/^\d+/, String(secondHold.order.id)))).status === 403,
+  )
+
+  const releasedJson = (await (await release(firstValue)).json()) as AnyDoc
+  const releasedOrder: AnyDoc = await payload.findByID({ collection: 'orders', id: firstHold.order.id, overrideAccess: true })
+
+  check(
+    'coming back from Stripe releases the copies at once',
+    releasedJson.released === true && releasedOrder.status === 'cancelled' && !releasedOrder.holdKey,
+    [releasedJson, releasedOrder.status, releasedOrder.holdKey],
+  )
+  check('the connection can start a checkout again', Boolean((await hold(limitedPrint)).order))
+  check('a checkout cannot be released twice', ((await (await release(firstValue)).json()) as AnyDoc).released === false)
 
   // ---------- Shop: watermark on photos for sale ----------
   console.log('Shop – watermark')
@@ -1498,6 +1613,53 @@ async function run() {
     (await getWatermarked(`${wmPhoto.id}-${overrideKey}-thumb.webp`)).status === 200,
   )
 
+  // One rule for the key and the file: only exhibitions that OFFER the photo choose its watermark
+  const { watermarkSourceId } = await import('../src/lib/watermark')
+  const sells = { pricing: 'fixed', price: 10 }
+
+  check(
+    'an exhibition that only shows a photo does not choose its watermark',
+    watermarkSourceId(
+      5,
+      [
+        { id: 1, watermark: 77, gallery: [{ file: 5, prints: [] }] },
+        { id: 2, watermark: null, gallery: [{ file: 5, prints: [sells] }] },
+      ] as AnyDoc,
+      99,
+    ) === 99,
+  )
+  check(
+    'the selling exhibition with the lowest id and an own watermark wins',
+    watermarkSourceId(
+      5,
+      [
+        { id: 3, watermark: 88, gallery: [{ file: 5, prints: [{ pricing: 'request' }] }] },
+        { id: 2, watermark: 66, gallery: [{ file: 5, prints: [sells] }] },
+      ] as AnyDoc,
+      99,
+    ) === 66,
+  )
+
+  // Watermark images are only changed by managers (even an own, locked upload)
+  const editorLogo: AnyDoc = await uploadAs(editor)
+
+  check(
+    'an editor can change an own locked upload that is not a watermark',
+    Boolean(await payload.update({ collection: 'media', id: editorLogo.id, data: { alt: 'Mine' }, ...as(editor) })),
+  )
+
+  await payload.update({ collection: 'exhibitions', id: holdExhibition.id, data: { watermark: editorLogo.id }, ...as(manager) })
+  await fails('an editor cannot change an upload once it is used as a watermark', () =>
+    payload.update({ collection: 'media', id: editorLogo.id, data: { alt: 'Changed' }, ...as(editor) }),
+  )
+  await fails('an editor cannot delete an upload used as a watermark', () =>
+    payload.delete({ collection: 'media', id: editorLogo.id, ...as(editor) }),
+  )
+  check(
+    'a manager can still change a watermark image',
+    Boolean(await payload.update({ collection: 'media', id: editorLogo.id, data: { alt: 'Logo E' }, ...as(manager) })),
+  )
+
   await payload.updateGlobal({ slug: 'site', data: { watermarkOpacity: 30, watermarkPosition: 'tiled' }, overrideAccess: true })
 
   const siteKey: string = (await reloadMedia(wmPhoto.id)).watermarkKey
@@ -1582,6 +1744,18 @@ async function run() {
   const withdrawn: AnyDoc = await payload.findByID({ collection: 'orders', id: paidOrder.id, overrideAccess: true })
 
   check('the order shows the withdrawal', Boolean(withdrawn.withdrawalReceivedAt) && withdrawn.withdrawalStatement.includes('I withdraw.'))
+
+  await postJson('withdrawal', { name: 'Buyer', orderNumber: paidOrder.orderNumber, email: 'buyer@test.local', statement: 'Second note.' })
+
+  const withdrawnTwice: AnyDoc = await payload.findByID({ collection: 'orders', id: paidOrder.id, overrideAccess: true })
+
+  check(
+    'a second withdrawal is added and keeps the date of the first',
+    withdrawnTwice.withdrawalReceivedAt === withdrawn.withdrawalReceivedAt &&
+      withdrawnTwice.withdrawalStatement.includes('I withdraw.') &&
+      withdrawnTwice.withdrawalStatement.includes('Second note.'),
+    withdrawnTwice.withdrawalStatement,
+  )
   check(
     'the acknowledgement goes to the address of the order, a note to the shop',
     sentMails.some((mail) => mail.to === 'buyer@test.local' && mail.subject.startsWith('Acknowledgement')) &&

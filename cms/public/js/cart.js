@@ -247,5 +247,23 @@ window.addEventListener("pageshow", (event) => {
   }
 });
 
+// Back from the payment page with Stripe's "back" link (/cart?released=…): the copies held for
+// that checkout are given back at once instead of after 35 minutes
+async function releaseCheckout() {
+  const release = new URLSearchParams(window.location.search).get("released");
+
+  if (!release) {
+    return;
+  }
+
+  history.replaceState(null, "", window.location.pathname);
+
+  try {
+    await shopRequest("/shop/checkout/release", { release });
+  } catch (error) {
+    // The checkout simply runs out after 35 minutes
+  }
+}
+
 setupCountries();
-refresh();
+releaseCheckout().finally(refresh);

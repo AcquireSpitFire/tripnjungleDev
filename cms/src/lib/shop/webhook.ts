@@ -15,6 +15,7 @@ import type Stripe from 'stripe'
 import type { Order } from '../../payload-types'
 import { formatOrderNumber } from './checkout'
 import { sendOrderConfirmation, sendOrderNotification } from './emails'
+import { withNote } from './order-note'
 import { toCents } from './settings'
 
 type Session = Stripe.Checkout.Session
@@ -71,10 +72,6 @@ function customerData(session: Session) {
   }
 }
 
-function withNote(order: Order, note: string): string {
-  return [order.internalNote, `${new Date().toISOString()}: ${note}`].filter(Boolean).join('\n')
-}
-
 async function update(payload: Payload, order: Order, data: Partial<Order>): Promise<Order> {
   return payload.update({ collection: 'orders', id: order.id, overrideAccess: true, data })
 }
@@ -112,6 +109,9 @@ async function markPaid(payload: Payload, order: Order, session: Session): Promi
 
   if (order.status === 'cancelled') {
     warnings.push('Payment arrived for an order that was already cancelled/expired – check the copies left before shipping.')
+  } else if (order.status === 'pending' && order.expiresAt && new Date(order.expiresAt).getTime() < Date.now()) {
+    // The copies were no longer held: somebody else may have bought the last one meanwhile
+    warnings.push('Paid after the copies were no longer held – check the copies left before shipping.')
   }
 
   if (typeof session.amount_total === 'number' && session.amount_total !== toCents(order.total ?? 0)) {

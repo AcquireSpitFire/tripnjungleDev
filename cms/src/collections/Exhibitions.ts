@@ -1,4 +1,4 @@
-import type { CollectionConfig, Field, FieldAccess, Where } from 'payload'
+import { ValidationError, type CollectionBeforeChangeHook, type CollectionConfig, type Field, type FieldAccess, type Where } from 'payload'
 
 import {
   canManageExhibitions,
@@ -181,6 +181,38 @@ const printsField: Field = {
   ],
 }
 
+type GalleryRow = { id?: string | null; file?: Ref; prints?: unknown[] | null }
+
+// A print belongs to its photo. Artists and editors cannot change prints, but by putting another
+// file into a row that has prints they could sell them with a different photo: only managers may
+// replace the file of such a row (a new photo can always be added as a new row).
+const keepPrintsWithTheirPhoto: CollectionBeforeChangeHook = ({ data, originalDoc, req }) => {
+  if (canManageExhibitions(req.user) || !Array.isArray(data.gallery) || !originalDoc?.gallery) {
+    return data
+  }
+
+  const before = new Map((originalDoc.gallery as GalleryRow[]).map((row) => [String(row.id), row]))
+  const replaced = (data.gallery as GalleryRow[]).some((row) => {
+    const old = row.id ? before.get(String(row.id)) : undefined
+
+    return Boolean(old?.prints?.length) && String(toId(row.file)) !== String(toId(old?.file))
+  })
+
+  if (replaced) {
+    throw new ValidationError({
+      collection: 'exhibitions',
+      errors: [
+        {
+          path: 'gallery',
+          message: 'This item has prints: only a manager can replace its photo. Add the new photo as a new item instead.',
+        },
+      ],
+    })
+  }
+
+  return data
+}
+
 export const Exhibitions: CollectionConfig = {
   slug: 'exhibitions',
   labels: {
@@ -226,6 +258,7 @@ export const Exhibitions: CollectionConfig = {
     beforeChange: [
       // Artists, editors and managers only after accepting the contributor terms
       requireAcceptedTerms,
+      keepPrintsWithTheirPhoto,
       auditHook(),
       ({ data, operation, req }) => {
         // An artist creates: credited to their own profile, nothing goes public without a manager
@@ -497,7 +530,7 @@ export const Exhibitions: CollectionConfig = {
       admin: {
         isClearable: false,
         description:
-          'Locked: poster and details are visible, the exhibition itself (cover, images, videos) is not. Locked with link: like locked, but whoever knows the address /exhibition/<ID> sees the exhibition. Public: visible to everyone, also in the slideshow and Exhibitions.',
+          'Locked: poster and details are visible, the exhibition itself (cover, images, videos) is not. Locked with link: like locked, but whoever opens the address /exhibition/<ID> sees the exhibition. The address is not secret (the ID appears in the public lists): only for previews that anybody may see. Public: visible to everyone, also in the slideshow and Exhibitions.',
       },
     },
     {

@@ -4,7 +4,8 @@
 //                 shipping for the chosen country, totals and VAT. Nothing is reserved.
 // createCheckout: the same calculation inside the stock lock, then an order "pending" that holds
 //                 the copies, then the Stripe Checkout session (hosted payment page). The webhook
-//                 (webhook.ts) completes the order once Stripe reports the payment.
+//                 (webhook.ts) completes the order once Stripe reports the payment. At most
+//                 MAX_OPEN_CHECKOUTS running checkouts with limited copies per connection (hold.ts).
 import type { Payload } from 'payload'
 
 import type { Order } from '../../payload-types'
@@ -21,6 +22,7 @@ import {
   zoneFor,
   type ShopSettings,
 } from './settings'
+import { MAX_OPEN_CHECKOUTS, releaseValue } from './hold'
 import { copiesLeft, countTaken, withStockLock } from './stock'
 
 // Stripe allows 30 minutes at least. The copies are held a little longer than the payment page
@@ -147,12 +149,30 @@ export async function quoteCart(
   return (await buildQuote(payload, settings, items, country)).quote
 }
 
-// Count, check and hold the copies: one checkout at a time
-async function holdCopies(
+async function openCheckoutsOf(payload: Payload, holdKey: string): Promise<number> {
+  const { totalDocs } = await payload.count({
+    collection: 'orders',
+    where: {
+      and: [
+        { holdKey: { equals: holdKey } },
+        { status: { equals: 'pending' } },
+        { expiresAt: { greater_than: new Date().toISOString() } },
+      ],
+    },
+    overrideAccess: true,
+  })
+
+  return totalDocs
+}
+
+// Count, check and hold the copies: one checkout at a time. "holdKey" is the anonymous key of the
+// buyer's connection (hold.ts); exported for the checks in scripts/check-access.ts.
+export async function holdCopies(
   payload: Payload,
   settings: ShopSettings,
   items: CartItemInput[],
   country: string,
+  holdKey: string,
 ): Promise<{ order: Order; quote: Quote } | { error: string; quote: Quote }> {
   return withStockLock(async () => {
     const { quote, offers } = await buildQuote(payload, settings, items, country)
@@ -161,11 +181,23 @@ async function holdCopies(
       return { error: quote.message || 'Some items are no longer available.', quote }
     }
 
+    // Only limited editions can be blocked; open editions never run out
+    const holdsLimitedCopies = quote.lines.some((line) => line.left !== null)
+
+    if (holdsLimitedCopies && (await openCheckoutsOf(payload, holdKey)) >= MAX_OPEN_CHECKOUTS) {
+      return {
+        error:
+          'There are already two unfinished payments from your connection. Complete one of them, go back from the payment page to cancel it, or try again in half an hour.',
+        quote,
+      }
+    }
+
     const order = await payload.create({
       collection: 'orders',
       overrideAccess: true,
       data: {
         status: 'pending',
+        holdKey: holdsLimitedCopies ? holdKey : null,
         expiresAt: new Date(Date.now() + HOLD_MINUTES * 60_000).toISOString(),
         items: quote.lines.map((line) => ({
           photoName: line.photoName,
@@ -210,8 +242,9 @@ export async function createCheckout(
   items: CartItemInput[],
   country: string,
   base: string,
+  holdKey: string,
 ): Promise<CheckoutResult> {
-  const held = await holdCopies(payload, settings, items, country)
+  const held = await holdCopies(payload, settings, items, country, holdKey)
 
   if ('error' in held) {
     return held
@@ -273,7 +306,8 @@ export async function createCheckout(
           },
         },
         success_url: `${base}/order/thanks?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${base}/cart`,
+        // Back to the cart; the release value lets it give the held copies back at once
+        cancel_url: `${base}/cart?released=${releaseValue(payload.secret, order.id)}`,
       },
       // A retry of the same request never creates a second session for the order
       { idempotencyKey: `checkout-order-${order.id}` },

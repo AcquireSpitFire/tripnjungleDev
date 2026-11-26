@@ -57,6 +57,8 @@ const LIMITED_PATHS = new Map<string, Limit[]>([
   // Every checkout holds copies for 35 minutes: a low limit stops anybody from blocking a
   // limited edition with endless unpaid checkouts
   ['/shop/checkout', [{ bucket: 'checkout', per: 'address', max: 10, windowMs: 15 * MINUTE }]],
+  // Needs a token from the Stripe cancel link; limited anyway
+  ['/shop/checkout/release', [{ bucket: 'release', per: 'address', max: 20, windowMs: 15 * MINUTE }]],
   // Each request e-mails the shop
   ['/shop/request', [{ bucket: 'request', per: 'address', max: 5, windowMs: 15 * MINUTE }]],
   // Order number + e-mail must match: few tries, no guessing

@@ -11,6 +11,7 @@ import * as migration_20261125_183903_shop from './20261125_183903_shop';
 import * as migration_20261125_202413_contributor_terms from './20261125_202413_contributor_terms';
 import * as migration_20261125_202951_rights_confirmation from './20261125_202951_rights_confirmation';
 import * as migration_20261126_190945_login_without_lock from './20261126_190945_login_without_lock';
+import * as migration_20261126_191747_checkout_holds from './20261126_191747_checkout_holds';
 
 export const migrations = [
   {
@@ -76,6 +77,11 @@ export const migrations = [
   {
     up: migration_20261126_190945_login_without_lock.up,
     down: migration_20261126_190945_login_without_lock.down,
-    name: '20261126_190945_login_without_lock'
+    name: '20261126_190945_login_without_lock',
+  },
+  {
+    up: migration_20261126_191747_checkout_holds.up,
+    down: migration_20261126_191747_checkout_holds.down,
+    name: '20261126_191747_checkout_holds'
   },
 ];

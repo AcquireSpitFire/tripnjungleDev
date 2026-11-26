@@ -52,16 +52,47 @@ import { WATERMARK_SIZES, removeWatermarkedFiles, watermarkFileName, type Waterm
 //     readable for logged-in accounts.
 //   - /api/media itself (list and single documents) is not public: the site only gets media
 //     embedded in exhibitions and artists, so nobody can browse all public files at once.
-function ownLockedUploadsOrManager(user: Parameters<typeof getRole>[0]): boolean | Where {
-  if (canManageExhibitions(user)) {
+//
+// Watermark images (Site settings → Shop, or the watermark of an exhibition) are only changed by
+// managers, even when they are somebody's own locked upload: replacing the file would change the
+// watermark on every photo for sale.
+async function watermarkImageIds(req: PayloadRequest): Promise<(number | string)[]> {
+  const site = await req.payload.findGlobal({ slug: 'site', depth: 0, overrideAccess: true, req })
+  const { docs } = await req.payload.find({
+    collection: 'exhibitions',
+    where: { watermark: { exists: true } },
+    depth: 0,
+    pagination: false,
+    overrideAccess: true,
+    select: { watermark: true },
+    req,
+  })
+
+  return [site.watermarkImage, ...docs.map((exhibition) => exhibition.watermark)]
+    .map(toId)
+    .filter((id): id is number | string => id !== null)
+}
+
+async function ownLockedUploadsOrManager(req: PayloadRequest): Promise<boolean | Where> {
+  if (canManageExhibitions(req.user)) {
     return true
   }
 
-  const userId = getUserId(user)
+  const userId = getUserId(req.user)
 
-  return getRole(user) && userId !== null
-    ? { and: [{ createdBy: { equals: userId } }, { locked: { equals: true } }] }
-    : false
+  if (!getRole(req.user) || userId === null) {
+    return false
+  }
+
+  const watermarks = await watermarkImageIds(req)
+
+  return {
+    and: [
+      { createdBy: { equals: userId } },
+      { locked: { equals: true } },
+      ...(watermarks.length ? [{ id: { not_in: watermarks } }] : []),
+    ],
+  }
 }
 
 type MediaFileDoc = {
@@ -160,8 +191,8 @@ export const Media: CollectionConfig = {
       return { or: conditions }
     },
     create: ({ req }) => Boolean(getRole(req.user)),
-    update: ({ req }) => ownLockedUploadsOrManager(req.user),
-    delete: ({ req }) => ownLockedUploadsOrManager(req.user),
+    update: ({ req }) => ownLockedUploadsOrManager(req),
+    delete: ({ req }) => ownLockedUploadsOrManager(req),
   },
   hooks: {
     // Page size for visitors/artists/editors at most 100 (src/lib/query-limits.ts)

@@ -7,8 +7,7 @@ import fs from 'fs'
 import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 
-import { toId } from '@/lib/visibility'
-import { ensureWatermarked, parseWatermarkFileName, watermarkSettings } from '@/lib/watermark'
+import { ensureWatermarked, parseWatermarkFileName, watermarkSettings, watermarkSourceId } from '@/lib/watermark'
 import type { Media } from '@/payload-types'
 
 export const dynamic = 'force-dynamic'
@@ -33,18 +32,17 @@ export async function GET(_request: Request, { params }: { params: Promise<{ fil
     return notFound()
   }
 
-  // Which watermark: the exhibition override (lowest id) or the site image – the same rule as
-  // the key in src/lib/media-lock.ts
+  // Which watermark: the same rule as the key in src/lib/media-lock.ts (watermarkSourceId)
   const site = await payload.findGlobal({ slug: 'site', depth: 0, overrideAccess: true })
-  const { docs: withOverride } = await payload.find({
+  const { docs: exhibitions } = await payload.find({
     collection: 'exhibitions',
-    where: { and: [{ 'gallery.file': { equals: medium.id } }, { watermark: { exists: true } }] },
-    sort: 'id',
-    limit: 1,
+    where: { 'gallery.file': { equals: medium.id } },
     depth: 0,
+    pagination: false,
     overrideAccess: true,
+    select: { gallery: true, watermark: true },
   })
-  const sourceId = toId(withOverride[0]?.watermark) ?? toId(site.watermarkImage)
+  const sourceId = watermarkSourceId(medium.id, exhibitions, site.watermarkImage)
   const source: Media | null =
     sourceId === null
       ? null

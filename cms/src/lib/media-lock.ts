@@ -18,7 +18,7 @@ import { canManageExhibitions, getUserId } from '../access/roles'
 import type { Exhibition, Media } from '../payload-types'
 import { isOffered, isSellableMedia } from './shop/catalog'
 import { contentIsOpen, getRelease, toId, type Ref } from './visibility'
-import { watermarkKey, watermarkSettings } from './watermark'
+import { watermarkKey, watermarkSettings, watermarkSourceId } from './watermark'
 
 type ExhibitionMedia = {
   posters?: Ref[] | null
@@ -178,29 +178,19 @@ export async function syncMediaLocks(req: PayloadRequest, mediaIds: Iterable<Id>
 }
 
 // Which media are for sale (some exhibition offers a print of them, src/lib/shop/catalog.ts) and
-// which watermark each one gets: the image of the exhibition with the lowest id that has one,
-// otherwise the image of the Site settings, otherwise the built-in default (src/lib/watermark.ts).
+// the watermark key of each one (the watermark image follows watermarkSourceId in src/lib/watermark.ts)
 async function saleState(
   req: PayloadRequest,
   exhibitions: Pick<Exhibition, 'id' | 'gallery' | 'watermark'>[],
 ): Promise<{ forSale: Set<string>; keyFor: (medium: Media) => string }> {
   const forSale = new Set<string>()
-  const override = new Map<string, Id>()
 
-  for (const exhibition of [...exhibitions].sort((a, b) => Number(a.id) - Number(b.id))) {
-    const watermark = toId(exhibition.watermark)
-
+  for (const exhibition of exhibitions) {
     for (const row of exhibition.gallery || []) {
       const id = toId(row.file)
 
-      if (id === null || !(row.prints || []).some(isOffered)) {
-        continue
-      }
-
-      forSale.add(String(id))
-
-      if (watermark !== null && !override.has(String(id))) {
-        override.set(String(id), watermark)
+      if (id !== null && (row.prints || []).some(isOffered)) {
+        forSale.add(String(id))
       }
     }
   }
@@ -211,8 +201,8 @@ async function saleState(
 
   const site = await req.payload.findGlobal({ slug: 'site', depth: 0, overrideAccess: true, req })
   const settings = watermarkSettings(site)
-  const siteWatermark = toId(site.watermarkImage)
-  const sourceIds = [...new Set([...override.values(), ...(siteWatermark === null ? [] : [siteWatermark])].map(String))]
+  const sourceOf = new Map([...forSale].map((id) => [id, watermarkSourceId(id, exhibitions, site.watermarkImage)]))
+  const sourceIds = [...new Set([...sourceOf.values()].filter((id) => id !== null).map(String))]
   const { docs: sources } = sourceIds.length
     ? await req.payload.find({
         collection: 'media',
@@ -228,8 +218,8 @@ async function saleState(
   return {
     forSale,
     keyFor: (medium) => {
-      const sourceId = override.get(String(medium.id)) ?? siteWatermark
-      const source = sourceId === null ? null : sourceById.get(String(sourceId)) || null
+      const sourceId = sourceOf.get(String(medium.id))
+      const source = sourceId === null || sourceId === undefined ? null : sourceById.get(String(sourceId)) || null
 
       return watermarkKey(medium, source, settings)
     },

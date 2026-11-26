@@ -17,7 +17,9 @@ import fs from 'fs'
 import path from 'path'
 import sharp, { type OverlayOptions } from 'sharp'
 
-import type { Media, Site } from '../payload-types'
+import type { Exhibition, Media, Site } from '../payload-types'
+import { isOffered } from './shop/catalog'
+import { toId, type Ref } from './visibility'
 
 export const WATERMARK_SIZES = ['thumb', 'medium', 'large'] as const
 export type WatermarkSize = (typeof WATERMARK_SIZES)[number]
@@ -52,6 +54,36 @@ export function watermarkSettings(site: Pick<Site, 'watermarkOpacity' | 'waterma
     size: clamp(site.watermarkSize, 10, 90, 35),
     position,
   }
+}
+
+type Id = number | string
+
+// Which watermark image a photo for sale gets: the image of the exhibition with the lowest id that
+// OFFERS a print of the photo and has an image of its own, otherwise the image of the Site settings;
+// null = the built-in lettering. The key (src/lib/media-lock.ts) and the file
+// (src/app/media-wm/[file]/route.ts) both use this, so they always agree.
+export function watermarkSourceId(
+  mediumId: Id,
+  exhibitions: Pick<Exhibition, 'id' | 'gallery' | 'watermark'>[],
+  siteWatermark: Ref,
+): Id | null {
+  const sellers = exhibitions
+    .filter((exhibition) =>
+      (exhibition.gallery || []).some(
+        (row) => String(toId(row.file)) === String(mediumId) && (row.prints || []).some(isOffered),
+      ),
+    )
+    .sort((a, b) => Number(a.id) - Number(b.id))
+
+  for (const exhibition of sellers) {
+    const own = toId(exhibition.watermark)
+
+    if (own !== null) {
+      return own
+    }
+  }
+
+  return toId(siteWatermark)
 }
 
 // Short hash of everything that changes the watermarked file
