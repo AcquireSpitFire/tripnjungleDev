@@ -1,7 +1,7 @@
 {
   "name": "tripnjungle-cms",
   "version": "1.0.0",
-  "description": "Tripnjungle: Payload-Admin (SQLite) + statisches Frontend aus public/",
+  "description": "Tripnjungle: Payload CMS (SQLite) with the website pages, the admin and the print shop",
   "private": true,
   "license": "MIT",
   "type": "module",
@@ -16,6 +16,8 @@
     "migrate:create": "cross-env NODE_OPTIONS=--no-deprecation payload migrate:create",
     "payload": "cross-env NODE_OPTIONS=--no-deprecation payload",
     "start": "cross-env NODE_OPTIONS=--no-deprecation payload migrate && cross-env NODE_OPTIONS=--no-deprecation next start",
+    "format": "prettier --write src scripts public/js",
+    "format:check": "prettier --check src scripts public/js",
     "test:access": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/check-access.ts",
     "db:repair-dev": "cross-env NODE_OPTIONS=--no-deprecation tsx --env-file=.env scripts/repair-dev-schema.ts"
   },

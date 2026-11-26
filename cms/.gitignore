@@ -49,6 +49,6 @@ node_modules/
 /blob-report/
 /playwright/.cache/
 
-# SQLite-Datenbank
+# SQLite database (local; production uses the volume on Railway)
 *.db
 *.db-journal

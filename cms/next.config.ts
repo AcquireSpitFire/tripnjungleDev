@@ -55,7 +55,16 @@ const nextConfig: NextConfig = {
         headers: [{ key: 'Content-Security-Policy', value: "sandbox; default-src 'none'" }],
       },
       {
+        // The pages link CSS and JS with ?v=<deploy> (src/lib/render-template.ts): a new deploy
+        // gives new addresses, so these files may be kept for a year
         source: '/:path(css|js)/:file*',
+        has: [{ type: 'query', key: 'v' }],
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
+      },
+      {
+        // Without the version (e.g. opened by hand): short, so a change shows up soon
+        source: '/:path(css|js)/:file*',
+        missing: [{ type: 'query', key: 'v' }],
         headers: [
           { key: 'Cache-Control', value: 'public, max-age=3600, stale-while-revalidate=86400' },
         ],

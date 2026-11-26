@@ -95,7 +95,6 @@ async function buildQuote(
       problem = left === 1 ? 'Only 1 copy left.' : `Only ${left} copies left.`
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { exhibitionId, copies, ...visible } = offer
 
     return { ...visible, quantity: item.quantity, left, lineTotal: roundMoney((offer.price ?? 0) * item.quantity), problem }

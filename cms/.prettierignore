@@ -1,0 +1,6 @@
+# Generated (Payload): do not format by hand
+src/payload-types.ts
+src/migrations/
+src/app/(payload)/
+# HTML templates with {{placeholders}}: formatted by hand (tabs)
+src/templates/

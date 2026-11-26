@@ -66,7 +66,6 @@ export const QrCodeField: UIFieldClientComponent = ({ path }) => {
     <div className="field-type" style={{ marginBottom: 'var(--base)' }}>
       <label className="field-label">QR code</label>
       <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={pngUrl}
           alt={`QR code for ${shortUrl}`}
