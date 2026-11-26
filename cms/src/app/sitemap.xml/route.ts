@@ -33,7 +33,11 @@ export async function GET() {
         const id = row.file && typeof row.file === 'object' ? row.file.id : row.file
 
         if (id) {
-          entries.push({ loc: `${page}/photo/${encodeURIComponent(String(id))}`, lastmod, priority: '0.5' })
+          entries.push({
+            loc: `${page}/photo/${encodeURIComponent(String(id))}`,
+            lastmod,
+            priority: '0.5',
+          })
         }
       }
     }

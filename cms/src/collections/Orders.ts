@@ -1,4 +1,9 @@
-import type { CollectionAfterChangeHook, CollectionBeforeChangeHook, CollectionConfig, Field } from 'payload'
+import type {
+  CollectionAfterChangeHook,
+  CollectionBeforeChangeHook,
+  CollectionConfig,
+  Field,
+} from 'payload'
 
 import { canManageShop, isAdmin } from '../access/roles'
 import { hiddenServerOnly, readOnlyText, serverOnly } from '../fields/server-only'
@@ -51,8 +56,19 @@ const clearHoldKey: CollectionBeforeChangeHook = ({ data }) => {
 // Set to "Shipped": stamp "Shipped on" (a server-only field, so with overrideAccess) and e-mail the
 // buyer the tracking details. An e-mail problem must not undo the status change; it is noted on
 // the order.
-const stampShippedAndNotify: CollectionAfterChangeHook = async ({ doc, previousDoc, operation, req, context }) => {
-  if (operation !== 'update' || doc.status !== 'shipped' || previousDoc?.status === 'shipped' || context[SKIP_SHIPPING_HOOK]) {
+const stampShippedAndNotify: CollectionAfterChangeHook = async ({
+  doc,
+  previousDoc,
+  operation,
+  req,
+  context,
+}) => {
+  if (
+    operation !== 'update' ||
+    doc.status !== 'shipped' ||
+    previousDoc?.status === 'shipped' ||
+    context[SKIP_SHIPPING_HOOK]
+  ) {
     return doc
   }
 
@@ -131,9 +147,14 @@ export const Orders: CollectionConfig = {
       label: 'Tracking link',
       type: 'text',
       maxLength: 500,
-      admin: { position: 'sidebar', description: 'https://… of the parcel service, sent to the buyer.' },
+      admin: {
+        position: 'sidebar',
+        description: 'https://… of the parcel service, sent to the buyer.',
+      },
       validate: (value: unknown) =>
-        !value || (typeof value === 'string' && /^https:\/\/\S+$/.test(value)) ? true : 'Only https:// links.',
+        !value || (typeof value === 'string' && /^https:\/\/\S+$/.test(value))
+          ? true
+          : 'Only https:// links.',
     },
     {
       name: 'notifyOnShipping',
@@ -196,14 +217,21 @@ export const Orders: CollectionConfig = {
       label: 'Withdrawal statement',
       type: 'textarea',
       access: serverOnly,
-      admin: { position: 'sidebar', readOnly: true, condition: (data) => Boolean(data?.withdrawalReceivedAt) },
+      admin: {
+        position: 'sidebar',
+        readOnly: true,
+        condition: (data) => Boolean(data?.withdrawalReceivedAt),
+      },
     },
     {
       name: 'internalNote',
       label: 'Internal note',
       type: 'textarea',
       maxLength: 5000,
-      admin: { position: 'sidebar', description: 'Only visible here. Problems with payment or e-mails are noted here too.' },
+      admin: {
+        position: 'sidebar',
+        description: 'Only visible here. Problems with payment or e-mails are noted here too.',
+      },
     },
     {
       name: 'items',
@@ -233,12 +261,22 @@ export const Orders: CollectionConfig = {
           type: 'row',
           fields: [
             { name: 'quantity', label: 'Quantity', type: 'number', admin: { width: '33%' } },
-            { name: 'unitPrice', label: 'Unit price (EUR)', type: 'number', admin: { width: '33%' } },
+            {
+              name: 'unitPrice',
+              label: 'Unit price (EUR)',
+              type: 'number',
+              admin: { width: '33%' },
+            },
             { name: 'lineTotal', label: 'Total (EUR)', type: 'number', admin: { width: '33%' } },
           ],
         },
         // References for the stock count and for finding the photo again
-        { name: 'exhibition', label: 'Exhibition', type: 'relationship', relationTo: 'exhibitions' },
+        {
+          name: 'exhibition',
+          label: 'Exhibition',
+          type: 'relationship',
+          relationTo: 'exhibitions',
+        },
         { name: 'exhibitionSlug', type: 'text', admin: { hidden: true } },
         { name: 'mediaId', label: 'Photo ID', type: 'text' },
         { name: 'printId', type: 'text', index: true, admin: { hidden: true } },
@@ -246,7 +284,11 @@ export const Orders: CollectionConfig = {
     },
     {
       type: 'row',
-      fields: [money('subtotal', 'Items (EUR)'), money('shippingCost', 'Shipping (EUR)'), money('total', 'Total (EUR)')],
+      fields: [
+        money('subtotal', 'Items (EUR)'),
+        money('shippingCost', 'Shipping (EUR)'),
+        money('total', 'Total (EUR)'),
+      ],
     },
     {
       type: 'row',
@@ -254,7 +296,10 @@ export const Orders: CollectionConfig = {
     },
     {
       type: 'row',
-      fields: [readOnlyText('shippingZone', 'Shipping zone', '50%'), readOnlyText('deliveryTime', 'Delivery time promised', '50%')],
+      fields: [
+        readOnlyText('shippingZone', 'Shipping zone', '50%'),
+        readOnlyText('deliveryTime', 'Delivery time promised', '50%'),
+      ],
     },
     {
       type: 'collapsible',

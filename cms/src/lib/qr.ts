@@ -76,7 +76,13 @@ function safeText(font: PDFFont, text: string): string {
 }
 
 // Splits text into at most maxLines lines that fit the width; the last one ends with "…"
-function wrap(font: PDFFont, text: string, size: number, width: number, maxLines: number): string[] {
+function wrap(
+  font: PDFFont,
+  text: string,
+  size: number,
+  width: number,
+  maxLines: number,
+): string[] {
   const words = safeText(font, text).split(' ').filter(Boolean)
   const lines: string[] = []
   let current = ''
@@ -154,7 +160,11 @@ function drawQr(page: PDFPage, url: string, x: number, y: number, size: number) 
   }
 }
 
-export async function buildQrPdf(labels: QrLabel[], settings: QrPdfSettings, title: string): Promise<Uint8Array> {
+export async function buildQrPdf(
+  labels: QrLabel[],
+  settings: QrPdfSettings,
+  title: string,
+): Promise<Uint8Array> {
   const pdf = await PDFDocument.create()
   const regular = await pdf.embedFont(StandardFonts.Helvetica)
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold)

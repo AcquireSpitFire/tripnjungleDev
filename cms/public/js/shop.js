@@ -14,7 +14,7 @@ async function loadPrintOffers(exhibitionId) {
     return await shopRequest(
       "/shop/offers?exhibition=" + encodeURIComponent(exhibitionId) + (PREVIEW ? "&preview" : ""),
       undefined,
-      { withLogin: PREVIEW }
+      { withLogin: PREVIEW },
     );
   } catch (error) {
     console.warn("Prints could not be loaded", error);
@@ -112,7 +112,10 @@ function createOffersList(offers, context) {
     const entry = document.createElement("li");
     const specs = [offer.size, offer.material].filter(Boolean).join(" · ");
     const row = document.createElement("div");
-    const price = createParagraph("print_offer_price", offer.pricing === "fixed" ? formatPrice(offer.price) : "Price on request");
+    const price = createParagraph(
+      "print_offer_price",
+      offer.pricing === "fixed" ? formatPrice(offer.price) : "Price on request",
+    );
     const feedback = createParagraph("print_offer_feedback", "");
 
     entry.className = "print_offer";
@@ -139,7 +142,12 @@ function createOffersList(offers, context) {
     row.appendChild(price);
 
     if (stockText(offer)) {
-      row.appendChild(createParagraph("print_offer_stock" + (offer.left < 1 ? " sold_out" : ""), stockText(offer)));
+      row.appendChild(
+        createParagraph(
+          "print_offer_stock" + (offer.left < 1 ? " sold_out" : ""),
+          stockText(offer),
+        ),
+      );
     }
 
     if (offer.pricing === "fixed") {
@@ -193,7 +201,8 @@ function createRequestForm(offer, photoName) {
     '<p class="shop_form_note">We only use your details to answer this request, see the <a href="/privacy">privacy policy</a>.</p>' +
     '<p class="form_message" role="alert" hidden></p>' +
     '<button type="submit" class="shop_button shop_button_primary">Send request</button>';
-  form.querySelector(".shop_form_title").textContent = "Request the price of “" + photoName + "” – " + offer.label;
+  form.querySelector(".shop_form_title").textContent =
+    "Request the price of “" + photoName + "” – " + offer.label;
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -221,7 +230,12 @@ function createRequestForm(offer, photoName) {
         message: data.message,
         website: data.website,
       });
-      form.replaceChildren(createParagraph("shop_form_done", "Thank you! Your request has been sent; we will answer by e-mail."));
+      form.replaceChildren(
+        createParagraph(
+          "shop_form_done",
+          "Thank you! Your request has been sent; we will answer by e-mail.",
+        ),
+      );
     } catch (error) {
       message.textContent = error.message;
       message.hidden = false;
@@ -241,7 +255,10 @@ function createOffersBlock(offers, context) {
 
   if (context.closed) {
     block.appendChild(
-      createParagraph("print_preview_note", "Preview: the shop is closed – visitors do not see these prints yet (see Site settings → Shop).")
+      createParagraph(
+        "print_preview_note",
+        "Preview: the shop is closed – visitors do not see these prints yet (see Site settings → Shop).",
+      ),
     );
   }
 
@@ -253,7 +270,7 @@ function createOffersBlock(offers, context) {
         block.insertBefore(createRequestForm(offer, context.photoName), links);
         block.querySelector(".shop_form input")?.focus();
       },
-    })
+    }),
   );
   block.appendChild(links);
 
@@ -333,7 +350,9 @@ async function setupExhibitionShop(exhibition) {
     button.type = "button";
     button.className = "print_button";
     button.textContent = offersSummary(offers) + " ›";
-    button.addEventListener("click", () => openPrintDialog(item, offers, { ...context, photoName }));
+    button.addEventListener("click", () =>
+      openPrintDialog(item, offers, { ...context, photoName }),
+    );
     figure.appendChild(button);
   });
 }
@@ -356,6 +375,9 @@ async function setupPhotoShop(exhibition, item, container) {
   section.className = "photo_prints";
   heading.className = "section_title";
   heading.textContent = offers.length > 1 ? "Prints of this photo" : "Print of this photo";
-  section.append(heading, createOffersBlock(offers, { photoName, vatNote: data.vatNote, closed: !data.enabled }));
+  section.append(
+    heading,
+    createOffersBlock(offers, { photoName, vatNote: data.vatNote, closed: !data.enabled }),
+  );
   container.appendChild(section);
 }

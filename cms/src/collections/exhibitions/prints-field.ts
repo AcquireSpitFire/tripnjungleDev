@@ -33,8 +33,22 @@ export const printsField: Field = {
     {
       type: 'row',
       fields: [
-        { name: 'width', label: 'Width (cm)', type: 'number', min: 1, max: 1000, admin: { width: '25%' } },
-        { name: 'height', label: 'Height (cm)', type: 'number', min: 1, max: 1000, admin: { width: '25%' } },
+        {
+          name: 'width',
+          label: 'Width (cm)',
+          type: 'number',
+          min: 1,
+          max: 1000,
+          admin: { width: '25%' },
+        },
+        {
+          name: 'height',
+          label: 'Height (cm)',
+          type: 'number',
+          min: 1,
+          max: 1000,
+          admin: { width: '25%' },
+        },
         {
           name: 'material',
           label: 'Paper / material',

@@ -34,8 +34,11 @@ function readTemplate(name: string): string {
     return cached
   }
 
-  const read = (file: string) => fs.readFileSync(path.join(templatesDir, file), 'utf8').replace(/\r\n/g, '\n')
-  const html = read(name).replace(/\{\{> ([\w-]+)\}\}\n?/g, (_, partial: string) => read(`partials/${partial}.html`))
+  const read = (file: string) =>
+    fs.readFileSync(path.join(templatesDir, file), 'utf8').replace(/\r\n/g, '\n')
+  const html = read(name).replace(/\{\{> ([\w-]+)\}\}\n?/g, (_, partial: string) =>
+    read(`partials/${partial}.html`),
+  )
 
   cache.set(name, html)
 
@@ -63,8 +66,10 @@ export function renderTemplate(name: string, pageValues: Record<string, string>)
   // Partials and the asset version are part of the template itself, put in before any value.
   return readTemplate(name)
     .replace(/((?:href|src)="\/(?:css|js)\/[^"?#]+)"/g, `$1?v=${assetVersion}"`)
-    .replace(/\{\{\{(\w+)\}\}\}|\{\{(\w+)\}\}/g, (_, rawKey: string | undefined, key: string | undefined) =>
-      rawKey !== undefined ? (values[rawKey] ?? '') : escapeHtml(values[key ?? ''] ?? ''),
+    .replace(
+      /\{\{\{(\w+)\}\}\}|\{\{(\w+)\}\}/g,
+      (_, rawKey: string | undefined, key: string | undefined) =>
+        rawKey !== undefined ? (values[rawKey] ?? '') : escapeHtml(values[key ?? ''] ?? ''),
     )
 }
 

@@ -20,7 +20,12 @@ import { shopTab } from './site/shop'
 // new watermarked files (src/lib/watermark.ts)
 const resyncWatermarkedMedia: GlobalAfterChangeHook = async ({ doc, previousDoc, req }) => {
   const watermarkOf = (site: typeof doc) =>
-    JSON.stringify([toId(site?.watermarkImage), site?.watermarkOpacity, site?.watermarkSize, site?.watermarkPosition])
+    JSON.stringify([
+      toId(site?.watermarkImage),
+      site?.watermarkOpacity,
+      site?.watermarkSize,
+      site?.watermarkPosition,
+    ])
 
   if (watermarkOf(doc) !== watermarkOf(previousDoc)) {
     const { docs } = await req.payload.find({

@@ -84,7 +84,10 @@ function setupSlideshow(exhibition) {
   const gallery = exhibition.gallery || [];
   const frontPage = exhibition.frontPage;
   const items = frontPage
-    ? [frontPage, ...gallery.filter((item) => item.id !== frontPage.id && item.src !== frontPage.src)]
+    ? [
+        frontPage,
+        ...gallery.filter((item) => item.id !== frontPage.id && item.src !== frontPage.src),
+      ]
     : gallery.slice();
 
   if (items.length === 0) {
@@ -119,9 +122,7 @@ function setupGallery(exhibition) {
     const figure = document.createElement("figure");
     const name = getName(item);
 
-    figure.appendChild(
-      createMedia(item, { sizes: "(max-width: 600px) 100vw, 480px" })
-    );
+    figure.appendChild(createMedia(item, { sizes: "(max-width: 600px) 100vw, 480px" }));
 
     // Aspect ratio of the image: on phones the figure is sized by it
     // (portrait images larger instead of small inside the 3:2 box, see CSS).
@@ -172,7 +173,7 @@ function setupGallery(exhibition) {
       const canScroll = galleryElement.scrollWidth > galleryElement.clientWidth;
 
       if (!canScroll || Math.abs(event.deltaX) > Math.abs(event.deltaY)) {
-        return;   // no strip (phone) or the touchpad already scrolls sideways
+        return; // no strip (phone) or the touchpad already scrolls sideways
       }
 
       const atStart = galleryElement.scrollLeft <= 0;
@@ -186,7 +187,7 @@ function setupGallery(exhibition) {
       event.preventDefault();
       galleryElement.scrollLeft += event.deltaY;
     },
-    { passive: false }
+    { passive: false },
   );
 }
 
@@ -201,7 +202,9 @@ function findMediaForImage(image, exhibition) {
     (item) =>
       image.currentSrc === item.src ||
       image.src === item.src ||
-      Object.values(item.sizes || {}).some((size) => size.url === image.currentSrc || size.url === image.src),
+      Object.values(item.sizes || {}).some(
+        (size) => size.url === image.currentSrc || size.url === image.src,
+      ),
   );
 }
 
@@ -272,7 +275,9 @@ function setupAboutArtists(exhibition) {
 
     link.className = "about_artist_link";
     link.href = artist.link;
-    link.textContent = artist.shortText ? "More about " + artist.name + " ›" : "Website of " + artist.name + " ›";
+    link.textContent = artist.shortText
+      ? "More about " + artist.name + " ›"
+      : "Website of " + artist.name + " ›";
     entry.appendChild(link);
 
     aboutArtistsList.appendChild(entry);
@@ -307,7 +312,10 @@ function embedVideo(exhibition, videoId, autoplay) {
   const iframe = document.createElement("iframe");
 
   iframe.src =
-    "https://www.youtube-nocookie.com/embed/" + videoId + "?rel=0" + (autoplay ? "&autoplay=1" : "");
+    "https://www.youtube-nocookie.com/embed/" +
+    videoId +
+    "?rel=0" +
+    (autoplay ? "&autoplay=1" : "");
   iframe.title = "Video: " + exhibition.title;
   iframe.allow = "autoplay; fullscreen; picture-in-picture";
   iframe.allowFullscreen = true;
@@ -333,7 +341,7 @@ function setupVideo(exhibition) {
       createYouTubeNotice({
         cover,
         onPlay: () => embedVideo(exhibition, videoId, true),
-      })
+      }),
     );
   }
 
@@ -347,7 +355,8 @@ function showPreviewNote(exhibition) {
   note.className = "preview_note";
   note.textContent =
     "Preview with your login – visitors see this exhibition as: " +
-    ({ locked: "locked", link: "locked with link", public: "public" }[exhibition.visibility] || "locked") +
+    ({ locked: "locked", link: "locked with link", public: "public" }[exhibition.visibility] ||
+      "locked") +
     (exhibition.release === "planning" ? ", planning (not visible at all)" : "") +
     ".";
   document.querySelector("main")?.prepend(note);

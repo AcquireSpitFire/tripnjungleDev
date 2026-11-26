@@ -50,7 +50,11 @@ export const QrCodeField: UIFieldClientComponent = ({ path }) => {
   }
 
   async function copyImage() {
-    flash((await copyImageFromUrl(pngUrl)) ? 'QR image copied ✓' : 'Copying images is not supported here – use “Download PDF”.')
+    flash(
+      (await copyImageFromUrl(pngUrl))
+        ? 'QR image copied ✓'
+        : 'Copying images is not supported here – use “Download PDF”.',
+    )
   }
 
   async function copyLink() {
@@ -82,13 +86,28 @@ export const QrCodeField: UIFieldClientComponent = ({ path }) => {
             style={{ width: '100%', maxWidth: 320 }}
           />
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-            <button type="button" className="btn btn--style-secondary btn--size-small" style={{ margin: 0 }} onClick={copyImage}>
+            <button
+              type="button"
+              className="btn btn--style-secondary btn--size-small"
+              style={{ margin: 0 }}
+              onClick={copyImage}
+            >
               Copy QR image
             </button>
-            <button type="button" className="btn btn--style-secondary btn--size-small" style={{ margin: 0 }} onClick={copyLink}>
+            <button
+              type="button"
+              className="btn btn--style-secondary btn--size-small"
+              style={{ margin: 0 }}
+              onClick={copyLink}
+            >
               Copy link
             </button>
-            <a className="btn btn--style-secondary btn--size-small" style={{ margin: 0 }} href={pdfUrl} download>
+            <a
+              className="btn btn--style-secondary btn--size-small"
+              style={{ margin: 0 }}
+              href={pdfUrl}
+              download
+            >
               Download PDF
             </a>
           </div>
@@ -100,7 +119,11 @@ export const QrCodeField: UIFieldClientComponent = ({ path }) => {
         </div>
       </div>
       {warnings.map((warning) => (
-        <p key={warning} className="field-description" style={{ margin: '0.5rem 0 0', color: 'var(--theme-warning-500)' }}>
+        <p
+          key={warning}
+          className="field-description"
+          style={{ margin: '0.5rem 0 0', color: 'var(--theme-warning-500)' }}
+        >
           {warning}
         </p>
       ))}

@@ -63,7 +63,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   }
 
   // Prefer the exhibition that actually shows the photo: public, then "with link"
-  const rank = (visibility?: string | null) => (visibility === 'public' ? 0 : visibility === 'link' ? 1 : 2)
+  const rank = (visibility?: string | null) =>
+    visibility === 'public' ? 0 : visibility === 'link' ? 1 : 2
   const [target] = [...docs].sort((a, b) => rank(a.visibility) - rank(b.visibility))
 
   return new Response(null, {

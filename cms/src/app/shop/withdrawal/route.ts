@@ -17,14 +17,16 @@ const NOT_FOUND =
   'We could not find an order with this number and e-mail address. Please check both, or send your withdrawal by e-mail (see the instructions below).'
 
 export const POST = shopPost(async (body) => {
-
   const orderNumber = cleanText(body.orderNumber, 40).toUpperCase()
   const email = cleanText(body.email, 254).toLowerCase()
   const name = cleanText(body.name, 120)
   const statement = cleanText(body.statement, 2000)
 
   if (!name || !/^TJ-\d{4}-\d{5,}$/.test(orderNumber) || !isEmail(email)) {
-    return errorJson('Please enter your name, the order number (e.g. TJ-2026-00012) and your e-mail address.', 400)
+    return errorJson(
+      'Please enter your name, the order number (e.g. TJ-2026-00012) and your e-mail address.',
+      400,
+    )
   }
 
   const payload = await getPayload({ config: configPromise })
@@ -64,7 +66,13 @@ export const POST = shopPost(async (body) => {
   })
 
   try {
-    await sendWithdrawalEmails(payload, { orderNumber, name, customerEmail: order.customerEmail, statement, receivedAt })
+    await sendWithdrawalEmails(payload, {
+      orderNumber,
+      name,
+      customerEmail: order.customerEmail,
+      statement,
+      receivedAt,
+    })
   } catch (error) {
     payload.logger.error({ err: error, msg: `Withdrawal e-mail for ${orderNumber} failed` })
 

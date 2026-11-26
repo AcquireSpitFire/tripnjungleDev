@@ -13,19 +13,36 @@ export async function checkContributorTerms(t: Context): Promise<void> {
   const termsEndpoint = (path: string) =>
     (UsersCollection.endpoints as AnyDoc[]).find((endpoint) => endpoint.path === path)
   const getTerms = async (user: AnyDoc) =>
-    (await (await termsEndpoint('/contributor-terms').handler(await createLocalReq({ user }, payload))).json()) as AnyDoc
+    (await (
+      await termsEndpoint('/contributor-terms').handler(await createLocalReq({ user }, payload))
+    ).json()) as AnyDoc
   const acceptTerms = async (user: AnyDoc, version?: string) => {
     const current = version ?? (await getTerms(user)).version
-    const req = await createLocalReq({ user, req: { data: { version: current } } as AnyDoc }, payload)
+    const req = await createLocalReq(
+      { user, req: { data: { version: current } } as AnyDoc },
+      payload,
+    )
 
     return termsEndpoint('/contributor-terms/accept').handler(req) as Promise<Response>
   }
-  const uploadAs = (user: AnyDoc) => payload.create({ collection: 'media', data: { alt: 'T', rightsConfirmed: true }, file: file(), ...as(user) })
+  const uploadAs = (user: AnyDoc) =>
+    payload.create({
+      collection: 'media',
+      data: { alt: 'T', rightsConfirmed: true },
+      file: file(),
+      ...as(user),
+    })
 
   const editorTerms = await getTerms(editor)
 
-  check('editors have to accept the contributor terms', editorTerms.required === true && editorTerms.accepted === false)
-  check('the standard terms make uploaders responsible', String(editorTerms.text).includes('indemnify the operator'))
+  check(
+    'editors have to accept the contributor terms',
+    editorTerms.required === true && editorTerms.accepted === false,
+  )
+  check(
+    'the standard terms make uploaders responsible',
+    String(editorTerms.text).includes('indemnify the operator'),
+  )
   check('admins do not have to accept them', (await getTerms(admin)).required === false)
 
   let termsError = ''
@@ -36,13 +53,27 @@ export async function checkContributorTerms(t: Context): Promise<void> {
     termsError = error instanceof Error ? error.message : String(error)
   }
 
-  check('without accepting, an editor cannot upload', termsError.includes('contributor terms'), termsError)
+  check(
+    'without accepting, an editor cannot upload',
+    termsError.includes('contributor terms'),
+    termsError,
+  )
   await fails('without accepting, a manager cannot create exhibitions', () =>
-    payload.create({ collection: 'exhibitions', data: { slug: 'terms-x', title: 'X' }, ...as(manager) }),
+    payload.create({
+      collection: 'exhibitions',
+      data: { slug: 'terms-x', title: 'X' },
+      ...as(manager),
+    }),
   )
   check('admins upload without accepting', Boolean(await uploadAs(admin)))
-  check('an outdated version cannot be accepted', (await acceptTerms(editor, '000000000000')).status === 409)
-  check('admins cannot accept (for themselves or anybody else)', (await acceptTerms(admin)).status === 400)
+  check(
+    'an outdated version cannot be accepted',
+    (await acceptTerms(editor, '000000000000')).status === 409,
+  )
+  check(
+    'admins cannot accept (for themselves or anybody else)',
+    (await acceptTerms(admin)).status === 400,
+  )
 
   const forgedTerms: AnyDoc = await payload.update({
     collection: 'users',
@@ -51,10 +82,18 @@ export async function checkContributorTerms(t: Context): Promise<void> {
     ...as(editor),
   })
 
-  check('the acceptance cannot be set through the API', !forgedTerms.termsAcceptedVersion, forgedTerms.termsAcceptedVersion)
+  check(
+    'the acceptance cannot be set through the API',
+    !forgedTerms.termsAcceptedVersion,
+    forgedTerms.termsAcceptedVersion,
+  )
   check('an editor accepts on their own account', (await acceptTerms(editor)).status === 200)
 
-  const editorAccepted: AnyDoc = await payload.findByID({ collection: 'users', id: editor.id, overrideAccess: true })
+  const editorAccepted: AnyDoc = await payload.findByID({
+    collection: 'users',
+    id: editor.id,
+    overrideAccess: true,
+  })
 
   check(
     'date, version and a copy of the text are stored',
@@ -68,15 +107,31 @@ export async function checkContributorTerms(t: Context): Promise<void> {
   let rightsError = ''
 
   try {
-    await payload.create({ collection: 'media', data: { alt: 'No confirmation' }, file: file(), ...as(editor) })
+    await payload.create({
+      collection: 'media',
+      data: { alt: 'No confirmation' },
+      file: file(),
+      ...as(editor),
+    })
   } catch (error) {
     rightsError = JSON.stringify((error as AnyDoc)?.data ?? (error as Error).message)
   }
 
-  check('an upload without the rights confirmation is refused', rightsError.includes('rightsConfirmed'), rightsError)
+  check(
+    'an upload without the rights confirmation is refused',
+    rightsError.includes('rightsConfirmed'),
+    rightsError,
+  )
   check(
     'admins upload without the rights confirmation',
-    Boolean(await payload.create({ collection: 'media', data: { alt: 'Admin' }, file: file(), ...as(admin) })),
+    Boolean(
+      await payload.create({
+        collection: 'media',
+        data: { alt: 'Admin' },
+        file: file(),
+        ...as(admin),
+      }),
+    ),
   )
 
   const confirmedUpload: AnyDoc = await uploadAs(editor)
@@ -98,7 +153,8 @@ export async function checkContributorTerms(t: Context): Promise<void> {
 
   check(
     'the confirmation cannot be changed afterwards',
-    unconfirmed.rightsConfirmed === true && unconfirmed.rightsConfirmedBy === confirmedUpload.rightsConfirmedBy,
+    unconfirmed.rightsConfirmed === true &&
+      unconfirmed.rightsConfirmedBy === confirmedUpload.rightsConfirmedBy,
     [unconfirmed.rightsConfirmed, unconfirmed.rightsConfirmedBy],
   )
 

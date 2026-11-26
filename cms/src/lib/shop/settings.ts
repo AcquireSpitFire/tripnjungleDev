@@ -83,7 +83,8 @@ export function toShopSettings(site: Site): ShopSettings {
     shopEmail: site.shopEmail?.trim() || site.operatorEmail?.trim() || '',
     vatMode,
     vatRate,
-    vatNote: vatMode === 'included' ? `incl. ${formatRate(vatRate)} % VAT` : smallBusinessNote(site),
+    vatNote:
+      vatMode === 'included' ? `incl. ${formatRate(vatRate)} % VAT` : smallBusinessNote(site),
     zones,
     shopNote: site.shopNote?.trim() || '',
     site,
@@ -100,7 +101,13 @@ export type ShopStatusItem = { label: string; ok: boolean; required: boolean; hi
 
 export function shopStatus(site: Site): { open: boolean; items: ShopStatusItem[] } {
   const settings = toShopSettings(site)
-  const legalNotice = [site.operatorName, site.operatorStreet, site.operatorCity, site.operatorCountry, site.operatorEmail]
+  const legalNotice = [
+    site.operatorName,
+    site.operatorStreet,
+    site.operatorCity,
+    site.operatorCountry,
+    site.operatorEmail,
+  ]
 
   const items: ShopStatusItem[] = [
     {

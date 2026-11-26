@@ -8,7 +8,11 @@
 import { addDataAndFileToRequest, type Endpoint } from 'payload'
 
 import { getRole, getUserId } from '../access/roles'
-import { currentContributorTerms, hasAcceptedCurrentTerms, mustAcceptTerms } from '../lib/contributor-terms'
+import {
+  currentContributorTerms,
+  hasAcceptedCurrentTerms,
+  mustAcceptTerms,
+} from '../lib/contributor-terms'
 import { errorJson, json } from '../lib/http'
 
 export const contributorTermsEndpoint: Endpoint = {
@@ -46,7 +50,10 @@ export const acceptContributorTermsEndpoint: Endpoint = {
 
     // The text may have changed while the page was open: then the new one has to be read first
     if ((req.data as { version?: unknown } | undefined)?.version !== version) {
-      return errorJson('The terms have changed in the meantime. Please reload the page and read them again.', 409)
+      return errorJson(
+        'The terms have changed in the meantime. Please reload the page and read them again.',
+        409,
+      )
     }
 
     const acceptedAt = new Date().toISOString()

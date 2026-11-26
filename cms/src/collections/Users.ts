@@ -6,7 +6,10 @@ import {
   type PayloadRequest,
 } from 'payload'
 
-import { acceptContributorTermsEndpoint, contributorTermsEndpoint } from '../endpoints/contributor-terms'
+import {
+  acceptContributorTermsEndpoint,
+  contributorTermsEndpoint,
+} from '../endpoints/contributor-terms'
 import { serverOnly } from '../fields/server-only'
 import { serverUrl } from '../lib/site-identity'
 
@@ -44,7 +47,8 @@ async function countOtherAdmins(req: PayloadRequest, excludeId: number | string)
   return totalDocs
 }
 
-const lastAdminMessage = 'At least one admin account has to remain. Make another account admin first.'
+const lastAdminMessage =
+  'At least one admin account has to remain. Make another account admin first.'
 
 export const Users: CollectionConfig = {
   slug: 'users',
@@ -117,10 +121,19 @@ export const Users: CollectionConfig = {
 
         const password = (args as { data?: { password?: unknown } }).data?.password
 
-        if (typeof password === 'string' && password.length > 0 && password.length < MIN_PASSWORD_LENGTH) {
+        if (
+          typeof password === 'string' &&
+          password.length > 0 &&
+          password.length < MIN_PASSWORD_LENGTH
+        ) {
           throw new ValidationError({
             collection: 'users',
-            errors: [{ path: 'password', message: `The password needs at least ${MIN_PASSWORD_LENGTH} characters.` }],
+            errors: [
+              {
+                path: 'password',
+                message: `The password needs at least ${MIN_PASSWORD_LENGTH} characters.`,
+              },
+            ],
           })
         }
 
@@ -130,7 +143,11 @@ export const Users: CollectionConfig = {
     beforeChange: [
       async ({ data, operation, originalDoc, req }) => {
         if (operation === 'create') {
-          const { totalDocs } = await req.payload.count({ collection: 'users', overrideAccess: true, req })
+          const { totalDocs } = await req.payload.count({
+            collection: 'users',
+            overrideAccess: true,
+            req,
+          })
 
           // First account: always admin (whoever opens /admin first after the deploy)
           if (totalDocs === 0) {
@@ -155,7 +172,13 @@ export const Users: CollectionConfig = {
     ],
     beforeDelete: [
       async ({ id, req }) => {
-        const user = await req.payload.findByID({ collection: 'users', id, depth: 0, overrideAccess: true, req })
+        const user = await req.payload.findByID({
+          collection: 'users',
+          id,
+          depth: 0,
+          overrideAccess: true,
+          req,
+        })
 
         if (user?.role === 'admin' && (await countOtherAdmins(req, id)) === 0) {
           throw new APIError(lastAdminMessage, 400, null, true)

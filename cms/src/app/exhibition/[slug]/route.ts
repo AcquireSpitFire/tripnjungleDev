@@ -70,8 +70,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
   const ogImage =
     (!linkOnly && absolute(base, imageUrl(poster) || imageUrl(frontPage))) || ogImageDefault
   const description = summarize(
-    exhibition.description ||
-      [exhibition.theme, SITE_DESCRIPTION].filter(Boolean).join(' – '),
+    exhibition.description || [exhibition.theme, SITE_DESCRIPTION].filter(Boolean).join(' – '),
   )
 
   const graph: Record<string, unknown>[] = []

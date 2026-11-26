@@ -37,7 +37,11 @@ export function addressGroup(address: string): string {
   const blocks =
     tail === undefined
       ? headBlocks
-      : [...headBlocks, ...Array(Math.max(0, 8 - headBlocks.length - tailBlocks.length)).fill('0'), ...tailBlocks]
+      : [
+          ...headBlocks,
+          ...Array(Math.max(0, 8 - headBlocks.length - tailBlocks.length)).fill('0'),
+          ...tailBlocks,
+        ]
 
   return (
     blocks

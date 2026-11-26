@@ -16,16 +16,31 @@ import {
   type CollectionBeforeChangeHook,
 } from 'payload'
 
-import { canManageExhibitions, clearAccessCache, getArtistProfileId, isArtist } from '../../access/roles'
+import {
+  canManageExhibitions,
+  clearAccessCache,
+  getArtistProfileId,
+  isArtist,
+} from '../../access/roles'
 import { assertMediaMayBeAdded, mediaIdsOf, syncMediaLocks } from '../../lib/media-lock'
 import { getRelease, getVisibility, toId, type Ref } from '../../lib/visibility'
 
-type GalleryRow = { id?: string | null; file?: Ref; name?: string | null; alt?: string | null; prints?: unknown[] | null }
+type GalleryRow = {
+  id?: string | null
+  file?: Ref
+  name?: string | null
+  alt?: string | null
+  prints?: unknown[] | null
+}
 
 // A print belongs to its photo. Artists and editors cannot change prints, but by putting another
 // file into a row that has prints they could sell them with a different photo: only managers may
 // replace the file of such a row (a new photo can always be added as a new row).
-export const keepPrintsWithTheirPhoto: CollectionBeforeChangeHook = ({ data, originalDoc, req }) => {
+export const keepPrintsWithTheirPhoto: CollectionBeforeChangeHook = ({
+  data,
+  originalDoc,
+  req,
+}) => {
   if (canManageExhibitions(req.user) || !Array.isArray(data.gallery) || !originalDoc?.gallery) {
     return data
   }
@@ -43,7 +58,8 @@ export const keepPrintsWithTheirPhoto: CollectionBeforeChangeHook = ({ data, ori
       errors: [
         {
           path: 'gallery',
-          message: 'This item has prints: only a manager can replace its photo. Add the new photo as a new item instead.',
+          message:
+            'This item has prints: only a manager can replace its photo. Add the new photo as a new item instead.',
         },
       ],
     })
@@ -79,7 +95,9 @@ export const deriveVisibility: CollectionBeforeChangeHook = ({ data, originalDoc
 
 // Bulk upload: append the files as new rows to "gallery", then empty the field
 export const appendBulkUploads: CollectionBeforeChangeHook = async ({ data, originalDoc, req }) => {
-  const bulk = ((data.bulkMedia as Ref[] | undefined) || []).map(toId).filter((id): id is number | string => id !== null)
+  const bulk = ((data.bulkMedia as Ref[] | undefined) || [])
+    .map(toId)
+    .filter((id): id is number | string => id !== null)
 
   if (bulk.length) {
     const rows: GalleryRow[] = [...(data.gallery ?? originalDoc?.gallery ?? [])]
@@ -88,7 +106,9 @@ export const appendBulkUploads: CollectionBeforeChangeHook = async ({ data, orig
     for (const id of bulk) {
       if (!present.has(String(id))) {
         // Copy the alt text entered in the upload dialog into the row
-        const media = await req.payload.findByID({ collection: 'media', id, depth: 0, req, overrideAccess: true }).catch(() => null)
+        const media = await req.payload
+          .findByID({ collection: 'media', id, depth: 0, req, overrideAccess: true })
+          .catch(() => null)
 
         rows.push({ file: id, name: '', alt: media?.alt || '' })
         present.add(String(id))
@@ -113,7 +133,12 @@ export const checkAddedMedia: CollectionBeforeChangeHook = async ({ data, origin
     gallery: data.gallery ?? originalDoc?.gallery,
   }
 
-  await assertMediaMayBeAdded(req, mediaIdsOf({ posters }), mediaIdsOf({ posters: originalDoc?.posters }), 'exhibitions')
+  await assertMediaMayBeAdded(
+    req,
+    mediaIdsOf({ posters }),
+    mediaIdsOf({ posters: originalDoc?.posters }),
+    'exhibitions',
+  )
   await assertMediaMayBeAdded(
     req,
     mediaIdsOf(content),
@@ -133,7 +158,11 @@ export const withDerivedValues: CollectionAfterReadHook = ({ doc }) => {
 }
 
 // Media used now and media removed by this change: both may change their lock state
-export const syncMediaAfterChange: CollectionAfterChangeHook = async ({ doc, previousDoc, req }) => {
+export const syncMediaAfterChange: CollectionAfterChangeHook = async ({
+  doc,
+  previousDoc,
+  req,
+}) => {
   clearAccessCache(req)
   await syncMediaLocks(req, [...mediaIdsOf(doc), ...mediaIdsOf(previousDoc)])
 

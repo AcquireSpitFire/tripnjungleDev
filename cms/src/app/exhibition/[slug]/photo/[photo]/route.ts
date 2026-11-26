@@ -14,7 +14,10 @@ import { isSlug } from '@/lib/slug'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(_request: Request, { params }: { params: Promise<{ slug: string; photo: string }> }) {
+export async function GET(
+  _request: Request,
+  { params }: { params: Promise<{ slug: string; photo: string }> },
+) {
   const { slug, photo } = await params
   const payload = await getPayload({ config: configPromise })
   const base = serverUrl()
@@ -58,7 +61,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
   const linkOnly = exhibition.visibility === 'link'
   const exhibitionUrl = `/exhibition/${encodeURIComponent(exhibition.slug)}`
   // Visitors only get the gallery when the content is open (public or with link)
-  const row = (exhibition.gallery || []).find((entry) => String(asMedia(entry.file)?.id ?? entry.file) === photo)
+  const row = (exhibition.gallery || []).find(
+    (entry) => String(asMedia(entry.file)?.id ?? entry.file) === photo,
+  )
 
   if ((!locked || linkOnly) && !row) {
     return missing()
@@ -69,7 +74,11 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
   const artists = row?.artist ? [row.artist] : exhibition.artists
   const image = !locked && media ? absolute(base, imageUrl(media, 'large')) : null
   const description = summarize(
-    [name, row?.alt || media?.alt, exhibition.title + (exhibition.theme ? ' – ' + exhibition.theme : '')]
+    [
+      name,
+      row?.alt || media?.alt,
+      exhibition.title + (exhibition.theme ? ' – ' + exhibition.theme : ''),
+    ]
       .filter(Boolean)
       .join(' · ') || SITE_DESCRIPTION,
   )

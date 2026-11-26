@@ -68,8 +68,7 @@ async function startExhibitions() {
     return;
   }
 
-  const open = exhibitions
-    .filter((exhibition) => !isLocked(exhibition));
+  const open = exhibitions.filter((exhibition) => !isLocked(exhibition));
 
   if (open.length === 0) {
     listElement.textContent = "No exhibitions available yet.";

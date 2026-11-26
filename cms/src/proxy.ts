@@ -50,7 +50,10 @@ const LIMITED_PATHS = new Map<string, Limit[]>([
       { bucket: 'login', per: 'account', max: 50, windowMs: 60 * MINUTE },
     ],
   ],
-  ['/api/users/forgot-password', [passwordLimit, { bucket: 'forgot', per: 'account', max: 3, windowMs: 60 * MINUTE }]],
+  [
+    '/api/users/forgot-password',
+    [passwordLimit, { bucket: 'forgot', per: 'account', max: 3, windowMs: 60 * MINUTE }],
+  ],
   ['/api/users/reset-password', [passwordLimit]],
   ['/api/users/first-register', [passwordLimit]],
   ['/api/users/unlock', [passwordLimit]],
@@ -58,7 +61,10 @@ const LIMITED_PATHS = new Map<string, Limit[]>([
   // limited edition with endless unpaid checkouts
   ['/shop/checkout', [{ bucket: 'checkout', per: 'address', max: 10, windowMs: 15 * MINUTE }]],
   // Needs a token from the Stripe cancel link; limited anyway
-  ['/shop/checkout/release', [{ bucket: 'release', per: 'address', max: 20, windowMs: 15 * MINUTE }]],
+  [
+    '/shop/checkout/release',
+    [{ bucket: 'release', per: 'address', max: 20, windowMs: 15 * MINUTE }],
+  ],
   // Each request e-mails the shop
   ['/shop/request', [{ bucket: 'request', per: 'address', max: 5, windowMs: 15 * MINUTE }]],
   // Order number + e-mail must match: few tries, no guessing
@@ -145,7 +151,9 @@ async function accountOf(request: NextRequest): Promise<string> {
     if (type.toLowerCase().startsWith('application/json')) {
       data = JSON.parse(new TextDecoder().decode(body))
     } else {
-      const form = await new Response(body as BodyInit, { headers: { 'content-type': type } }).formData()
+      const form = await new Response(body as BodyInit, {
+        headers: { 'content-type': type },
+      }).formData()
       const payload = form.get('_payload')
 
       data = typeof payload === 'string' ? JSON.parse(payload) : { email: form.get('email') }
@@ -188,12 +196,21 @@ function tooMany(retryAfterMs: number) {
   // "errors" for the admin (Payload format), "error" for the shop pages
   return NextResponse.json(
     { error: message, errors: [{ message }] },
-    { status: 429, headers: { 'Retry-After': String(Math.ceil(retryAfterMs / 1000)), 'Cache-Control': 'no-store' } },
+    {
+      status: 429,
+      headers: {
+        'Retry-After': String(Math.ceil(retryAfterMs / 1000)),
+        'Cache-Control': 'no-store',
+      },
+    },
   )
 }
 
 export async function proxy(request: NextRequest) {
-  const limits = request.method === 'POST' ? LIMITED_PATHS.get(normalizePath(request.nextUrl.pathname)) : undefined
+  const limits =
+    request.method === 'POST'
+      ? LIMITED_PATHS.get(normalizePath(request.nextUrl.pathname))
+      : undefined
 
   if (!limits) {
     return NextResponse.next()
@@ -204,7 +221,11 @@ export async function proxy(request: NextRequest) {
   const account = limits.some((limit) => limit.per !== 'address') ? await accountOf(request) : ''
   const keyOf = (limit: Limit) =>
     `${limit.bucket}:${limit.per}:` +
-    (limit.per === 'address' ? address : limit.per === 'account' ? account : `${address} ${account}`)
+    (limit.per === 'address'
+      ? address
+      : limit.per === 'account'
+        ? account
+        : `${address} ${account}`)
 
   // First check every limit, then count: a blocked request does not count anywhere
   for (const limit of limits) {

@@ -8,7 +8,11 @@ import { useEffect, useState } from 'react'
 //   variant "dashboard"  – box above the dashboard
 // Shows nothing for admins and for accounts that have accepted the current version.
 
-export function ContributorTermsNotice({ variant = 'action' }: { variant?: 'action' | 'dashboard' }) {
+export function ContributorTermsNotice({
+  variant = 'action',
+}: {
+  variant?: 'action' | 'dashboard'
+}) {
   const {
     config: {
       routes: { admin, api },
@@ -24,7 +28,9 @@ export function ContributorTermsNotice({ variant = 'action' }: { variant?: 'acti
 
     fetch(`${api}/users/contributor-terms`, { credentials: 'same-origin', cache: 'no-store' })
       .then((response) => (response.ok ? response.json() : null))
-      .then((terms: { required?: boolean; accepted?: boolean } | null) => setNeeded(Boolean(terms?.required && !terms.accepted)))
+      .then((terms: { required?: boolean; accepted?: boolean } | null) =>
+        setNeeded(Boolean(terms?.required && !terms.accepted)),
+      )
       .catch(() => setNeeded(false))
   }, [api, user])
 
@@ -36,7 +42,10 @@ export function ContributorTermsNotice({ variant = 'action' }: { variant?: 'acti
 
   if (variant === 'action') {
     return (
-      <a href={link} style={{ marginRight: 'var(--base)', color: 'var(--theme-error-500)', fontWeight: 600 }}>
+      <a
+        href={link}
+        style={{ marginRight: 'var(--base)', color: 'var(--theme-error-500)', fontWeight: 600 }}
+      >
         Accept the contributor terms
       </a>
     )
@@ -51,7 +60,9 @@ export function ContributorTermsNotice({ variant = 'action' }: { variant?: 'acti
         borderRadius: 'var(--style-radius-m)',
       }}
     >
-      <p style={{ margin: '0 0 calc(var(--base) / 2)', fontWeight: 600 }}>Please accept the contributor terms first</p>
+      <p style={{ margin: '0 0 calc(var(--base) / 2)', fontWeight: 600 }}>
+        Please accept the contributor terms first
+      </p>
       <p style={{ margin: 0 }}>
         Before you can upload photos or change exhibitions, read and accept the terms on your{' '}
         <a href={link}>account page</a>. They make you responsible for what you upload.

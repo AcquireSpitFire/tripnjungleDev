@@ -16,7 +16,6 @@ import { isSlug } from '@/lib/slug'
 export const dynamic = 'force-dynamic'
 
 export const POST = shopPost(async (body) => {
-
   // Honeypot filled: pretend success, store nothing
   if (cleanText(body.website, 200)) {
     return json({ ok: true })

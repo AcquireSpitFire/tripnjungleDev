@@ -6,5 +6,7 @@ export function photoShortUrl(base: string, mediaId: number | string): string {
 
 // QR codes printed with such an address would stop working after the move to the real domain
 export function isTemporaryAddress(base: string): boolean {
-  return /^https?:\/\/(localhost|127\.|\[::1\])|\.up\.railway\.app(\/|$)|\.railway\.app(\/|$)/i.test(base)
+  return /^https?:\/\/(localhost|127\.|\[::1\])|\.up\.railway\.app(\/|$)|\.railway\.app(\/|$)/i.test(
+    base,
+  )
 }

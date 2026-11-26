@@ -15,7 +15,8 @@ const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tj-access-'))
 
 process.env.DATABASE_URI = 'file:' + path.join(tempDir, 'test.db').replace(/\\/g, '/')
 process.env.MEDIA_DIR = path.join(tempDir, 'media')
-process.env.PAYLOAD_SECRET = process.env.PAYLOAD_SECRET || 'access-test-secret-only-for-the-temporary-db'
+process.env.PAYLOAD_SECRET =
+  process.env.PAYLOAD_SECRET || 'access-test-secret-only-for-the-temporary-db'
 
 export type AnyDoc = any
 
@@ -48,7 +49,9 @@ export async function createContext() {
   const sharp = (await import('sharp')).default
   const payload = await getPayload({ config })
 
-  const png = await sharp({ create: { width: 40, height: 30, channels: 3, background: '#c33' } }).png().toBuffer()
+  const png = await sharp({ create: { width: 40, height: 30, channels: 3, background: '#c33' } })
+    .png()
+    .toBuffer()
   let counter = 0
   const nextNumber = () => ++counter
 
@@ -58,7 +61,12 @@ export async function createContext() {
     check,
     fails,
     nextNumber,
-    file: () => ({ data: png, mimetype: 'image/png', name: `test-${nextNumber()}.png`, size: png.length }),
+    file: () => ({
+      data: png,
+      mimetype: 'image/png',
+      name: `test-${nextNumber()}.png`,
+      size: png.length,
+    }),
     as: (user: AnyDoc) => ({ user, overrideAccess: false as const }),
     f: {} as Record<string, AnyDoc> & { sentMails: SentMail[] },
   }

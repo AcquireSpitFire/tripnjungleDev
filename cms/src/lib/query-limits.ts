@@ -10,7 +10,12 @@ import { canManageExhibitions } from '../access/roles'
 
 const MAX_PUBLIC_LIMIT = 100
 
-export const limitPublicQueries: CollectionBeforeOperationHook = ({ args, operation, overrideAccess, req }) => {
+export const limitPublicQueries: CollectionBeforeOperationHook = ({
+  args,
+  operation,
+  overrideAccess,
+  req,
+}) => {
   if (operation !== 'read' || overrideAccess || canManageExhibitions(req.user)) {
     return args
   }
@@ -25,7 +30,8 @@ export const limitPublicQueries: CollectionBeforeOperationHook = ({ args, operat
   if (queryArgs.limit !== undefined) {
     const limit = Number(queryArgs.limit)
 
-    queryArgs.limit = Number.isFinite(limit) && limit > 0 ? Math.min(limit, MAX_PUBLIC_LIMIT) : MAX_PUBLIC_LIMIT
+    queryArgs.limit =
+      Number.isFinite(limit) && limit > 0 ? Math.min(limit, MAX_PUBLIC_LIMIT) : MAX_PUBLIC_LIMIT
   }
 
   return args

@@ -21,7 +21,8 @@ import { normalizeNewlines } from './text'
 const VERSION_KEY = 'tj:contributorTermsVersion'
 
 function defaultContributorTermsText(site: Pick<Site, 'operatorName' | 'jurisdiction'>): string {
-  const operator = site.operatorName?.trim() || `the operator of ${SITE_NAME} (see the legal notice)`
+  const operator =
+    site.operatorName?.trim() || `the operator of ${SITE_NAME} (see the legal notice)`
   const austria = site.jurisdiction === 'at'
   const personRights = austria ? '§ 78 UrhG' : '§ 22 KUG'
 
@@ -65,7 +66,9 @@ If these terms change, you have to accept the new version before you can upload 
 ${austria ? 'Austrian' : 'German'} law applies. Mandatory consumer protection rules of the country of your habitual residence remain unaffected.`
 }
 
-export function contributorTermsText(site: Pick<Site, 'contributorTermsText' | 'operatorName' | 'jurisdiction'>): string {
+export function contributorTermsText(
+  site: Pick<Site, 'contributorTermsText' | 'operatorName' | 'jurisdiction'>,
+): string {
   return site.contributorTermsText?.trim() || defaultContributorTermsText(site)
 }
 
@@ -80,7 +83,9 @@ export function mustAcceptTerms(user: Parameters<typeof getRole>[0]): boolean {
   return role !== null && role !== 'admin'
 }
 
-export async function currentContributorTerms(req: PayloadRequest): Promise<{ text: string; version: string }> {
+export async function currentContributorTerms(
+  req: PayloadRequest,
+): Promise<{ text: string; version: string }> {
   const cached = req.context[VERSION_KEY] as { text: string; version: string } | undefined
 
   if (cached) {
@@ -103,7 +108,13 @@ export async function hasAcceptedCurrentTerms(req: PayloadRequest): Promise<bool
 
   // Read from the database: the account may have accepted after this session was loaded
   const account = (await req.payload
-    .findByID({ collection: 'users', id: (req.user as User).id, depth: 0, overrideAccess: true, req })
+    .findByID({
+      collection: 'users',
+      id: (req.user as User).id,
+      depth: 0,
+      overrideAccess: true,
+      req,
+    })
     .catch(() => null)) as User | null
   const { version } = await currentContributorTerms(req)
 

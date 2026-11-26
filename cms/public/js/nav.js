@@ -102,7 +102,10 @@ async function addAccountItems(list) {
   let user = null;
 
   try {
-    const response = await fetch("/api/users/me", { credentials: "same-origin", cache: "no-store" });
+    const response = await fetch("/api/users/me", {
+      credentials: "same-origin",
+      cache: "no-store",
+    });
 
     if (response.ok) {
       user = (await response.json()).user || null;
@@ -134,7 +137,10 @@ async function addAccountItems(list) {
     logoutButton.disabled = true;
 
     try {
-      const response = await fetch("/api/users/logout", { method: "POST", credentials: "same-origin" });
+      const response = await fetch("/api/users/logout", {
+        method: "POST",
+        credentials: "same-origin",
+      });
 
       if (!response.ok) {
         throw new Error(String(response.status));

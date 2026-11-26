@@ -97,7 +97,13 @@ async function buildQuote(
 
     const { exhibitionId, copies, ...visible } = offer
 
-    return { ...visible, quantity: item.quantity, left, lineTotal: roundMoney((offer.price ?? 0) * item.quantity), problem }
+    return {
+      ...visible,
+      quantity: item.quantity,
+      left,
+      lineTotal: roundMoney((offer.price ?? 0) * item.quantity),
+      problem,
+    }
   })
 
   const subtotal = roundMoney(lines.reduce((sum, line) => sum + line.lineTotal, 0))
@@ -273,7 +279,12 @@ export async function createCheckout(
             product_data: {
               name: `${line.photoName} – ${line.label}`.slice(0, 250),
               description:
-                [line.size, line.material, line.artistName ? 'by ' + line.artistName : '', line.details]
+                [
+                  line.size,
+                  line.material,
+                  line.artistName ? 'by ' + line.artistName : '',
+                  line.details,
+                ]
                   .filter(Boolean)
                   .join(' · ')
                   .slice(0, 500) || undefined,
@@ -288,7 +299,11 @@ export async function createCheckout(
           {
             shipping_rate_data: {
               type: 'fixed_amount',
-              display_name: `Shipping ${quote.countryName}${quote.deliveryTime ? ' (' + quote.deliveryTime + ')' : ''}`.slice(0, 100),
+              display_name:
+                `Shipping ${quote.countryName}${quote.deliveryTime ? ' (' + quote.deliveryTime + ')' : ''}`.slice(
+                  0,
+                  100,
+                ),
               fixed_amount: { amount: toCents(quote.shipping ?? 0), currency: CURRENCY },
             },
           },
@@ -299,10 +314,11 @@ export async function createCheckout(
         expires_at: Math.floor(Date.now() / 1000) + CHECKOUT_MINUTES * 60 + 30,
         custom_text: {
           submit: {
-            message: `By clicking “Pay” you place a binding order with ${seller} under our terms (${base}/terms). Right of withdrawal: ${base}/withdrawal. ${quote.vatNote}.`.slice(
-              0,
-              1200,
-            ),
+            message:
+              `By clicking “Pay” you place a binding order with ${seller} under our terms (${base}/terms). Right of withdrawal: ${base}/withdrawal. ${quote.vatNote}.`.slice(
+                0,
+                1200,
+              ),
           },
         },
         success_url: `${base}/order/thanks?session_id={CHECKOUT_SESSION_ID}`,

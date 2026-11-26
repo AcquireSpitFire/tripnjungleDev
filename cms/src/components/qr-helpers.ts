@@ -10,12 +10,20 @@ export function refId(ref: unknown): string | null {
   return id === null ? null : String(id)
 }
 
-export function qrEndpoint(api: string, exhibitionId: number | string, params: Record<string, string>) {
+export function qrEndpoint(
+  api: string,
+  exhibitionId: number | string,
+  params: Record<string, string>,
+) {
   return `${api}/exhibitions/${encodeURIComponent(String(exhibitionId))}/qr?${new URLSearchParams(params)}`
 }
 
 // Hints shown next to the QR buttons
-export function qrWarnings(options: { visibility?: unknown; release?: unknown; serverURL: string }): string[] {
+export function qrWarnings(options: {
+  visibility?: unknown
+  release?: unknown
+  serverURL: string
+}): string[] {
   const warnings: string[] = []
 
   if (options.release === 'planning' || (options.visibility || 'locked') === 'locked') {

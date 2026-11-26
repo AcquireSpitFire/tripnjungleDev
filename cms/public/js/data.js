@@ -80,7 +80,10 @@ function getYouTubeId(value) {
     return text;
   }
 
-  const match = /(?:youtube(?:-nocookie)?\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([\w-]{11})/.exec(text);
+  const match =
+    /(?:youtube(?:-nocookie)?\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([\w-]{11})/.exec(
+      text,
+    );
 
   return match ? match[1] : null;
 }
@@ -154,7 +157,9 @@ function formatExhibitionDate(exhibition) {
 
   const date = parseDate(exhibition);
 
-  return date ? date.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) : "";
+  return date
+    ? date.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })
+    : "";
 }
 
 // ---------- Loading ----------
@@ -165,7 +170,10 @@ function isValidId(id) {
 }
 
 async function fetchJson(path) {
-  const response = await fetch(path, PREVIEW ? { credentials: "same-origin", cache: "no-store" } : { credentials: "omit" });
+  const response = await fetch(
+    path,
+    PREVIEW ? { credentials: "same-origin", cache: "no-store" } : { credentials: "omit" },
+  );
 
   if (!response.ok) {
     throw new Error("HTTP " + response.status);
@@ -235,7 +243,9 @@ function mapExhibition(doc) {
     video: doc.video || "",
     posters: (doc.posters || []).map((poster) => mapMedia(poster)).filter(Boolean),
     frontPage: mapMedia(doc.frontPage),
-    gallery: (doc.gallery || []).map((row) => mapMedia(row.file, row.name, row.alt, row.artist)).filter(Boolean),
+    gallery: (doc.gallery || [])
+      .map((row) => mapMedia(row.file, row.name, row.alt, row.artist))
+      .filter(Boolean),
     artists: (doc.artists || []).map(mapArtist).filter(Boolean),
   };
 }
@@ -267,7 +277,10 @@ function cacheExhibition(exhibition) {
   }
 
   try {
-    sessionStorage.setItem(STORAGE_KEYS.exhibitionCache + exhibition.id, JSON.stringify({ time: Date.now(), data: exhibition }));
+    sessionStorage.setItem(
+      STORAGE_KEYS.exhibitionCache + exhibition.id,
+      JSON.stringify({ time: Date.now(), data: exhibition }),
+    );
   } catch (error) {
     // full or not available – ignore
   }
@@ -285,7 +298,9 @@ async function loadExhibition(id) {
     return cached;
   }
 
-  const result = await fetchJson(API_PATH + "?where[slug][equals]=" + encodeURIComponent(id) + "&depth=1&limit=1");
+  const result = await fetchJson(
+    API_PATH + "?where[slug][equals]=" + encodeURIComponent(id) + "&depth=1&limit=1",
+  );
 
   if (!result.docs?.length) {
     throw new Error("Not found: " + id);

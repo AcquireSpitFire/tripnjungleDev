@@ -72,7 +72,9 @@ export async function assertMediaMayBeAdded(
   })
 
   const blocked = docs.filter(
-    (medium) => medium.locked !== false && (userId === null || String(toId(medium.createdBy)) !== String(userId)),
+    (medium) =>
+      medium.locked !== false &&
+      (userId === null || String(toId(medium.createdBy)) !== String(userId)),
   )
 
   if (blocked.length || docs.length < added.length) {
@@ -121,7 +123,10 @@ export async function syncMediaLocks(req: PayloadRequest, mediaIds: Iterable<Id>
     }
 
     if (contentIsOpen(exhibition)) {
-      for (const ref of [exhibition.frontPage, ...(exhibition.gallery || []).map((row) => row.file)]) {
+      for (const ref of [
+        exhibition.frontPage,
+        ...(exhibition.gallery || []).map((row) => row.file),
+      ]) {
         const id = toId(ref)
 
         if (id !== null) {
@@ -164,7 +169,11 @@ export async function syncMediaLocks(req: PayloadRequest, mediaIds: Iterable<Id>
     const forSale = sale.forSale.has(String(medium.id)) && isSellableMedia(medium)
     const watermarkKey = forSale ? sale.keyFor(medium) : ''
 
-    if (medium.locked !== locked || Boolean(medium.forSale) !== forSale || (medium.watermarkKey || '') !== watermarkKey) {
+    if (
+      medium.locked !== locked ||
+      Boolean(medium.forSale) !== forSale ||
+      (medium.watermarkKey || '') !== watermarkKey
+    ) {
       await req.payload.update({
         collection: 'media',
         id: medium.id,
@@ -201,7 +210,9 @@ async function saleState(
 
   const site = await req.payload.findGlobal({ slug: 'site', depth: 0, overrideAccess: true, req })
   const settings = watermarkSettings(site)
-  const sourceOf = new Map([...forSale].map((id) => [id, watermarkSourceId(id, exhibitions, site.watermarkImage)]))
+  const sourceOf = new Map(
+    [...forSale].map((id) => [id, watermarkSourceId(id, exhibitions, site.watermarkImage)]),
+  )
   const sourceIds = [...new Set([...sourceOf.values()].filter((id) => id !== null).map(String))]
   const { docs: sources } = sourceIds.length
     ? await req.payload.find({
@@ -219,7 +230,10 @@ async function saleState(
     forSale,
     keyFor: (medium) => {
       const sourceId = sourceOf.get(String(medium.id))
-      const source = sourceId === null || sourceId === undefined ? null : sourceById.get(String(sourceId)) || null
+      const source =
+        sourceId === null || sourceId === undefined
+          ? null
+          : sourceById.get(String(sourceId)) || null
 
       return watermarkKey(medium, source, settings)
     },

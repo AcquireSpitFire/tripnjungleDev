@@ -99,10 +99,15 @@ function createLine(line) {
     line.label,
     [line.size, line.material].filter(Boolean).join(" · "),
     line.details,
-    [line.artistName ? "by " + line.artistName : "", line.exhibitionTitle ? "Exhibition: " + line.exhibitionTitle : ""]
+    [
+      line.artistName ? "by " + line.artistName : "",
+      line.exhibitionTitle ? "Exhibition: " + line.exhibitionTitle : "",
+    ]
       .filter(Boolean)
       .join(" · "),
-    line.left !== null && !line.problem ? line.left + (line.left === 1 ? " copy" : " copies") + " left" : "",
+    line.left !== null && !line.problem
+      ? line.left + (line.left === 1 ? " copy" : " copies") + " left"
+      : "",
   ]
     .filter(Boolean)
     .forEach((value) => text.appendChild(createParagraph("", value)));
@@ -171,10 +176,17 @@ function render(quote) {
     : "Some items are no longer available and have been removed from your cart.";
 
   document.getElementById("cart_subtotal").textContent = formatPrice(quote.subtotal);
-  document.getElementById("cart_zone").textContent = quote.zone ? "(" + quote.countryName + ")" : "";
+  document.getElementById("cart_zone").textContent = quote.zone
+    ? "(" + quote.countryName + ")"
+    : "";
   document.getElementById("cart_shipping").textContent =
-    quote.shipping === null ? (quote.country ? "–" : "choose the country") : formatPrice(quote.shipping);
-  document.getElementById("cart_total").textContent = quote.total === null ? "–" : formatPrice(quote.total);
+    quote.shipping === null
+      ? quote.country
+        ? "–"
+        : "choose the country"
+      : formatPrice(quote.shipping);
+  document.getElementById("cart_total").textContent =
+    quote.total === null ? "–" : formatPrice(quote.total);
   document.getElementById("cart_vat").textContent =
     quote.vatNote + (quote.vatAmount ? " (" + formatPrice(quote.vatAmount) + ")" : "");
   document.getElementById("cart_delivery").textContent = quote.deliveryTime
@@ -206,7 +218,11 @@ async function refresh() {
 
     // Drop items that no longer exist (removed, locked, "No price" …)
     if (quote.missing.length) {
-      writeCart(items.filter((item) => !quote.missing.includes(item.exhibition + "/" + item.photo + "/" + item.print)));
+      writeCart(
+        items.filter(
+          (item) => !quote.missing.includes(item.exhibition + "/" + item.photo + "/" + item.print),
+        ),
+      );
     }
 
     render(quote);
@@ -226,7 +242,10 @@ checkoutButton.addEventListener("click", async () => {
   showMessage("");
 
   try {
-    const result = await shopRequest("/shop/checkout", { items: readCart(), country: countrySelect.value });
+    const result = await shopRequest("/shop/checkout", {
+      items: readCart(),
+      country: countrySelect.value,
+    });
 
     window.location.href = result.url;
   } catch (error) {

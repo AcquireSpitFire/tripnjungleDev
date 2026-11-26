@@ -13,17 +13,30 @@ export async function checkAccounts(t: Context): Promise<void> {
   check('the first account always becomes admin', admin.role === 'admin', admin.role)
 
   await fails('passwords shorter than 12 characters are rejected', () =>
-    payload.create({ collection: 'users', data: { email: 'short@test.local', password: 'short', role: 'editor' } }),
+    payload.create({
+      collection: 'users',
+      data: { email: 'short@test.local', password: 'short', role: 'editor' },
+    }),
   )
 
   const manager: AnyDoc = await payload.create({
     collection: 'users',
-    data: { email: 'manager@test.local', password: 'manager-password-1', role: 'manager', sections: ['exhibitions'] },
+    data: {
+      email: 'manager@test.local',
+      password: 'manager-password-1',
+      role: 'manager',
+      sections: ['exhibitions'],
+    },
     ...as(admin),
   })
   const managerWithoutSection: AnyDoc = await payload.create({
     collection: 'users',
-    data: { email: 'nosection@test.local', password: 'manager-password-2', role: 'manager', sections: [] },
+    data: {
+      email: 'nosection@test.local',
+      password: 'manager-password-2',
+      role: 'manager',
+      sections: [],
+    },
     ...as(admin),
   })
   const editor: AnyDoc = await payload.create({
@@ -57,7 +70,12 @@ export async function checkAccounts(t: Context): Promise<void> {
   check('an editor can change their own name', selfPromoted.name === 'Eddie', selfPromoted.name)
 
   await fails('an editor cannot change another account', () =>
-    payload.update({ collection: 'users', id: manager.id, data: { name: 'hacked' }, ...as(editor) }),
+    payload.update({
+      collection: 'users',
+      id: manager.id,
+      data: { name: 'hacked' },
+      ...as(editor),
+    }),
   )
   await fails('the last admin cannot be demoted', () =>
     payload.update({ collection: 'users', id: admin.id, data: { role: 'editor' }, ...as(admin) }),
@@ -67,9 +85,15 @@ export async function checkAccounts(t: Context): Promise<void> {
   )
 
   const editorReadsUsers = await payload.find({ collection: 'users', ...as(editor) })
-  check('an editor only sees their own account', editorReadsUsers.docs.length === 1, editorReadsUsers.docs.length)
+  check(
+    'an editor only sees their own account',
+    editorReadsUsers.docs.length === 1,
+    editorReadsUsers.docs.length,
+  )
 
-  await fails('a manager cannot read the site settings', () => payload.findGlobal({ slug: 'site', ...as(manager) }))
+  await fails('a manager cannot read the site settings', () =>
+    payload.findGlobal({ slug: 'site', ...as(manager) }),
+  )
   await fails('a manager cannot change the site settings', () =>
     payload.updateGlobal({ slug: 'site', data: { aboutText: 'hacked' }, ...as(manager) }),
   )

@@ -2,7 +2,13 @@
 import { renderStaticPage } from '@/lib/static-page'
 import { SITE_NAME } from '@/lib/site-identity'
 import { escapeHtml } from '@/lib/render-template'
-import { formatLongDate, htmlMailLink, htmlParagraphs, htmlRequired, htmlUrlLink } from '@/lib/site-settings'
+import {
+  formatLongDate,
+  htmlMailLink,
+  htmlParagraphs,
+  htmlRequired,
+  htmlUrlLink,
+} from '@/lib/site-settings'
 
 export const dynamic = 'force-dynamic'
 
@@ -38,7 +44,12 @@ export async function GET() {
           : 'In Germany the authority of the federal state in which the controller is based is responsible; a list is available at <a href="https://www.bfdi.bund.de" rel="noopener">bfdi.bund.de</a>.',
         retentionNote: austria ? '7 years, § 132 BAO' : 'up to 10 years, § 147 AO and § 257 HGB',
         mailProvider: settings.mailProviderName?.trim()
-          ? escapeHtml([settings.mailProviderName, settings.mailProviderAddress].map((part) => part?.trim()).filter(Boolean).join(', '))
+          ? escapeHtml(
+              [settings.mailProviderName, settings.mailProviderAddress]
+                .map((part) => part?.trim())
+                .filter(Boolean)
+                .join(', '),
+            )
           : htmlRequired('', 'E-mail provider, tab Shop'),
         privacyExtra: htmlParagraphs(settings.privacyExtra),
       }

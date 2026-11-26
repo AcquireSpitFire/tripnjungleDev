@@ -43,7 +43,9 @@ const smtpPort = Number(process.env.SMTP_PORT || 587)
 const emailFrom = process.env.EMAIL_FROM || process.env.SMTP_USER || ''
 
 if (process.env.SMTP_HOST && !emailFrom) {
-  throw new Error('EMAIL_FROM is missing: set the sender address of the e-mails (e.g. shop@your-domain.com).')
+  throw new Error(
+    'EMAIL_FROM is missing: set the sender address of the e-mails (e.g. shop@your-domain.com).',
+  )
 }
 
 const email = process.env.SMTP_HOST
@@ -58,7 +60,9 @@ const email = process.env.SMTP_HOST
         // 465 = TLS from the start, otherwise STARTTLS is required (never plain text)
         secure: smtpPort === 465,
         requireTLS: smtpPort !== 465,
-        auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS || '' } : undefined,
+        auth: process.env.SMTP_USER
+          ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS || '' }
+          : undefined,
       },
     })
   : undefined
@@ -75,11 +79,17 @@ export default buildConfig({
       // Top right on every admin page: reminder to accept the contributor terms (only if needed),
       // then the visible "Log out" button with the logged-in account
       actions: [
-        { path: '/components/ContributorTermsNotice#ContributorTermsNotice', clientProps: { variant: 'action' } },
+        {
+          path: '/components/ContributorTermsNotice#ContributorTermsNotice',
+          clientProps: { variant: 'action' },
+        },
         '/components/LogoutAction#LogoutAction',
       ],
       beforeDashboard: [
-        { path: '/components/ContributorTermsNotice#ContributorTermsNotice', clientProps: { variant: 'dashboard' } },
+        {
+          path: '/components/ContributorTermsNotice#ContributorTermsNotice',
+          clientProps: { variant: 'dashboard' },
+        },
       ],
     },
     importMap: {

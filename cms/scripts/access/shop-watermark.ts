@@ -6,12 +6,25 @@ import type { AnyDoc, Context } from './context'
 
 export async function checkShopWatermark(t: Context): Promise<void> {
   const { payload, sharp, file, as, check, fails } = t
-  const { Media, createLocalReq, editor, holdExhibition, manager, plainImage, shopImage, uploadAs } = t.f
+  const {
+    Media,
+    createLocalReq,
+    editor,
+    holdExhibition,
+    manager,
+    plainImage,
+    shopImage,
+    uploadAs,
+  } = t.f
 
   // ---------- Shop: watermark on photos for sale ----------
   console.log('Shop – watermark')
 
-  const bigJpeg = await sharp({ create: { width: 1400, height: 1000, channels: 3, background: '#357' } }).jpeg().toBuffer()
+  const bigJpeg = await sharp({
+    create: { width: 1400, height: 1000, channels: 3, background: '#357' },
+  })
+    .jpeg()
+    .toBuffer()
   const wmPhoto: AnyDoc = await payload.create({
     collection: 'media',
     data: { alt: 'For sale', rightsConfirmed: true },
@@ -28,17 +41,35 @@ export async function checkShopWatermark(t: Context): Promise<void> {
     },
     ...as(manager),
   })
-  const reloadMedia = (id: number | string): Promise<AnyDoc> => payload.findByID({ collection: 'media', id, overrideAccess: true })
+  const reloadMedia = (id: number | string): Promise<AnyDoc> =>
+    payload.findByID({ collection: 'media', id, overrideAccess: true })
   const visitorGallery = async (slug: string) =>
-    ((await payload.find({ collection: 'exhibitions', where: { slug: { equals: slug } }, overrideAccess: false })).docs[0] as AnyDoc)
-      ?.gallery
+    (
+      (
+        await payload.find({
+          collection: 'exhibitions',
+          where: { slug: { equals: slug } },
+          overrideAccess: false,
+        })
+      ).docs[0] as AnyDoc
+    )?.gallery
 
   const wmPhotoNow = await reloadMedia(wmPhoto.id)
   const firstKey: string = wmPhotoNow.watermarkKey
 
-  check('a photo with a fixed price is for sale', wmPhotoNow.forSale === true && /^[a-f0-9]{12}$/.test(firstKey || ''), wmPhotoNow.forSale)
-  check('"price on request" also makes a photo for sale', (await reloadMedia(shopImage.id)).forSale === true)
-  check('a photo with only "No price" is not for sale', (await reloadMedia(plainImage.id)).forSale === false)
+  check(
+    'a photo with a fixed price is for sale',
+    wmPhotoNow.forSale === true && /^[a-f0-9]{12}$/.test(firstKey || ''),
+    wmPhotoNow.forSale,
+  )
+  check(
+    '"price on request" also makes a photo for sale',
+    (await reloadMedia(shopImage.id)).forSale === true,
+  )
+  check(
+    'a photo with only "No price" is not for sale',
+    (await reloadMedia(plainImage.id)).forSale === false,
+  )
 
   const wmGallery = await visitorGallery('wm-one')
   const shopGallery = await visitorGallery('shop-one')
@@ -46,7 +77,9 @@ export async function checkShopWatermark(t: Context): Promise<void> {
   check(
     'visitors get watermarked URLs for photos for sale',
     String(wmGallery?.[0]?.file?.url).includes('/media-wm/') &&
-      String(wmGallery?.[0]?.file?.sizes?.medium?.url).endsWith(`/media-wm/${wmPhoto.id}-${firstKey}-medium.webp`),
+      String(wmGallery?.[0]?.file?.sizes?.medium?.url).endsWith(
+        `/media-wm/${wmPhoto.id}-${firstKey}-medium.webp`,
+      ),
     wmGallery?.[0]?.file?.sizes?.medium?.url,
   )
   check(
@@ -55,9 +88,17 @@ export async function checkShopWatermark(t: Context): Promise<void> {
     shopGallery?.[1]?.file?.url,
   )
 
-  const managerView: AnyDoc = await payload.findByID({ collection: 'media', id: wmPhoto.id, ...as(manager) })
+  const managerView: AnyDoc = await payload.findByID({
+    collection: 'media',
+    id: wmPhoto.id,
+    ...as(manager),
+  })
 
-  check('logged-in accounts see the plain files', String(managerView.url).includes('/api/media/file/'), managerView.url)
+  check(
+    'logged-in accounts see the plain files',
+    String(managerView.url).includes('/api/media/file/'),
+    managerView.url,
+  )
 
   const { Media: MediaCollection } = await import('../../src/collections/Media')
   const fileHandler = (MediaCollection.upload as AnyDoc).handlers[0]
@@ -71,15 +112,27 @@ export async function checkShopWatermark(t: Context): Promise<void> {
     return req
   }
   const plainFile = wmPhotoNow.sizes.medium.filename
-  const visitorPlain = await fileHandler(await handlerRequest(null), { doc: wmPhotoNow, params: { filename: plainFile } })
-  const managerPlain = await fileHandler(await handlerRequest(manager), { doc: wmPhotoNow, params: { filename: plainFile } })
+  const visitorPlain = await fileHandler(await handlerRequest(null), {
+    doc: wmPhotoNow,
+    params: { filename: plainFile },
+  })
+  const managerPlain = await fileHandler(await handlerRequest(manager), {
+    doc: wmPhotoNow,
+    params: { filename: plainFile },
+  })
 
-  check('visitors cannot load the plain files of a photo for sale', visitorPlain?.status === 404, visitorPlain?.status)
+  check(
+    'visitors cannot load the plain files of a photo for sale',
+    visitorPlain?.status === 404,
+    visitorPlain?.status,
+  )
   check('managers can still load the plain files', managerPlain === undefined, managerPlain?.status)
 
   const { GET: watermarkRoute } = await import('../../src/app/media-wm/[file]/route')
   const getWatermarked = (file: string) =>
-    watermarkRoute(new Request('http://localhost:3000/media-wm/' + file), { params: Promise.resolve({ file }) })
+    watermarkRoute(new Request('http://localhost:3000/media-wm/' + file), {
+      params: Promise.resolve({ file }),
+    })
   const wmResponse = await getWatermarked(`${wmPhoto.id}-${firstKey}-medium.webp`)
   const wmBytes = Buffer.from(await wmResponse.arrayBuffer())
   const wmMeta = wmResponse.status === 200 ? await sharp(wmBytes).metadata() : null
@@ -95,15 +148,29 @@ export async function checkShopWatermark(t: Context): Promise<void> {
 
   check(
     'the watermark changes the photo',
-    Boolean(markedStats) && Math.abs(markedStats!.channels[0].max - plainStats.channels[0].max) > 20,
+    Boolean(markedStats) &&
+      Math.abs(markedStats!.channels[0].max - plainStats.channels[0].max) > 20,
     [plainStats.channels[0].max, markedStats?.channels[0].max],
   )
   check('a watermarked copy has no EXIF data', !wmMeta?.exif)
-  check('a wrong key gives 404', (await getWatermarked(`${wmPhoto.id}-000000000000-medium.webp`)).status === 404)
-  check('a photo not for sale gives 404', (await getWatermarked(`${plainImage.id}-${firstKey}-medium.webp`)).status === 404)
+  check(
+    'a wrong key gives 404',
+    (await getWatermarked(`${wmPhoto.id}-000000000000-medium.webp`)).status === 404,
+  )
+  check(
+    'a photo not for sale gives 404',
+    (await getWatermarked(`${plainImage.id}-${firstKey}-medium.webp`)).status === 404,
+  )
   check('invalid names give 404', (await getWatermarked('../../tripnjungle.db')).status === 404)
 
-  const logoPng = await sharp({ create: { width: 300, height: 100, channels: 4, background: { r: 255, g: 255, b: 255, alpha: 0.8 } } })
+  const logoPng = await sharp({
+    create: {
+      width: 300,
+      height: 100,
+      channels: 4,
+      background: { r: 255, g: 255, b: 255, alpha: 0.8 },
+    },
+  })
     .png()
     .toBuffer()
   const logo: AnyDoc = await payload.create({
@@ -113,11 +180,20 @@ export async function checkShopWatermark(t: Context): Promise<void> {
     ...as(manager),
   })
 
-  await payload.update({ collection: 'exhibitions', id: wmExhibition.id, data: { watermark: logo.id }, ...as(manager) })
+  await payload.update({
+    collection: 'exhibitions',
+    id: wmExhibition.id,
+    data: { watermark: logo.id },
+    ...as(manager),
+  })
 
   const overrideKey: string = (await reloadMedia(wmPhoto.id)).watermarkKey
 
-  check('an exhibition watermark gives a new key', overrideKey !== firstKey && /^[a-f0-9]{12}$/.test(overrideKey), overrideKey)
+  check(
+    'an exhibition watermark gives a new key',
+    overrideKey !== firstKey && /^[a-f0-9]{12}$/.test(overrideKey),
+    overrideKey,
+  )
   check('the watermark image itself stays locked', (await reloadMedia(logo.id)).locked === true)
   check(
     'the copy with the exhibition watermark is made',
@@ -156,22 +232,50 @@ export async function checkShopWatermark(t: Context): Promise<void> {
 
   check(
     'an editor can change an own locked upload that is not a watermark',
-    Boolean(await payload.update({ collection: 'media', id: editorLogo.id, data: { alt: 'Mine' }, ...as(editor) })),
+    Boolean(
+      await payload.update({
+        collection: 'media',
+        id: editorLogo.id,
+        data: { alt: 'Mine' },
+        ...as(editor),
+      }),
+    ),
   )
 
-  await payload.update({ collection: 'exhibitions', id: holdExhibition.id, data: { watermark: editorLogo.id }, ...as(manager) })
+  await payload.update({
+    collection: 'exhibitions',
+    id: holdExhibition.id,
+    data: { watermark: editorLogo.id },
+    ...as(manager),
+  })
   await fails('an editor cannot change an upload once it is used as a watermark', () =>
-    payload.update({ collection: 'media', id: editorLogo.id, data: { alt: 'Changed' }, ...as(editor) }),
+    payload.update({
+      collection: 'media',
+      id: editorLogo.id,
+      data: { alt: 'Changed' },
+      ...as(editor),
+    }),
   )
   await fails('an editor cannot delete an upload used as a watermark', () =>
     payload.delete({ collection: 'media', id: editorLogo.id, ...as(editor) }),
   )
   check(
     'a manager can still change a watermark image',
-    Boolean(await payload.update({ collection: 'media', id: editorLogo.id, data: { alt: 'Logo E' }, ...as(manager) })),
+    Boolean(
+      await payload.update({
+        collection: 'media',
+        id: editorLogo.id,
+        data: { alt: 'Logo E' },
+        ...as(manager),
+      }),
+    ),
   )
 
-  await payload.updateGlobal({ slug: 'site', data: { watermarkOpacity: 30, watermarkPosition: 'tiled' }, overrideAccess: true })
+  await payload.updateGlobal({
+    slug: 'site',
+    data: { watermarkOpacity: 30, watermarkPosition: 'tiled' },
+    overrideAccess: true,
+  })
 
   const siteKey: string = (await reloadMedia(wmPhoto.id)).watermarkKey
 
@@ -179,17 +283,38 @@ export async function checkShopWatermark(t: Context): Promise<void> {
   check(
     'old watermarked files are removed when new ones are made',
     (await getWatermarked(`${wmPhoto.id}-${siteKey}-thumb.webp`)).status === 200 &&
-      !fs.existsSync(path.join(process.env.MEDIA_DIR as string, 'watermarked', `${wmPhoto.id}-${overrideKey}-thumb.webp`)),
+      !fs.existsSync(
+        path.join(
+          process.env.MEDIA_DIR as string,
+          'watermarked',
+          `${wmPhoto.id}-${overrideKey}-thumb.webp`,
+        ),
+      ),
   )
 
-  const wmRows: AnyDoc = (await payload.findByID({ collection: 'exhibitions', id: wmExhibition.id, depth: 0, overrideAccess: true })).gallery
+  const wmRows: AnyDoc = (
+    await payload.findByID({
+      collection: 'exhibitions',
+      id: wmExhibition.id,
+      depth: 0,
+      overrideAccess: true,
+    })
+  ).gallery
 
   wmRows[0].prints[0].pricing = 'none'
-  await payload.update({ collection: 'exhibitions', id: wmExhibition.id, data: { gallery: wmRows }, ...as(manager) })
+  await payload.update({
+    collection: 'exhibitions',
+    id: wmExhibition.id,
+    data: { gallery: wmRows },
+    ...as(manager),
+  })
 
   const backToPlain = await reloadMedia(wmPhoto.id)
 
-  check('back to "No price" removes the watermark', backToPlain.forSale === false && !backToPlain.watermarkKey)
+  check(
+    'back to "No price" removes the watermark',
+    backToPlain.forSale === false && !backToPlain.watermarkKey,
+  )
   check(
     'and visitors get the plain URLs again',
     String((await visitorGallery('wm-one'))?.[0]?.file?.url).includes('/api/media/file/'),

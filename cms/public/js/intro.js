@@ -167,7 +167,7 @@
               box.appendChild(createPlayerTarget());
               startPlayer(exhibition, videoId);
             },
-          })
+          }),
         );
       }
 
@@ -334,7 +334,13 @@
   // added to the DOM later
   document.addEventListener("click", (event) => {
     // Still allow new tabs via Ctrl/Cmd/middle click
-    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey) {
+    if (
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey
+    ) {
       return;
     }
 
@@ -364,7 +370,7 @@
           loadYouTubeApi();
         }
       },
-      { capture: true, passive: true }
+      { capture: true, passive: true },
     );
   });
 

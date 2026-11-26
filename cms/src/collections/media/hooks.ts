@@ -19,7 +19,12 @@ import sharp, { type Sharp } from 'sharp'
 import { assertTermsAccepted, mustAcceptTerms } from '../../lib/contributor-terms'
 import { syncMediaLocks } from '../../lib/media-lock'
 import { serverUrl } from '../../lib/site-identity'
-import { WATERMARK_SIZES, removeWatermarkedFiles, watermarkFileName, type WatermarkSize } from '../../lib/watermark'
+import {
+  WATERMARK_SIZES,
+  removeWatermarkedFiles,
+  watermarkFileName,
+  type WatermarkSize,
+} from '../../lib/watermark'
 import { watermarkImageIds } from './access'
 
 // Width of the smallest generated size ("thumb"), longest side of the next one ("medium")
@@ -38,7 +43,10 @@ const REENCODE: Record<string, (image: Sharp) => Sharp> = {
 // Those originals are saved again without metadata (EXIF: GPS position, time, camera serial),
 // turned upright first. Larger originals stay untouched (print quality) and only reach
 // logged-in accounts (hideFilesFromVisitors). GIFs are kept (animation).
-export const stripMetadataOfSmallImages: CollectionBeforeOperationHook = async ({ args, operation }) => {
+export const stripMetadataOfSmallImages: CollectionBeforeOperationHook = async ({
+  args,
+  operation,
+}) => {
   const file = (args as { req?: PayloadRequest }).req?.file
   const reencode = file ? REENCODE[file.mimetype] : undefined
 
@@ -65,7 +73,12 @@ export const stripMetadataOfSmallImages: CollectionBeforeOperationHook = async (
 // Uploading a new file (also replacing one) only after accepting the contributor terms and with
 // the rights confirmed for this file (not needed for admins). Updates without a file (alt text,
 // the lock sync) are not affected, and the confirmation cannot be changed afterwards.
-export const requireRightsConfirmation: CollectionBeforeChangeHook = async ({ data, operation, originalDoc, req }) => {
+export const requireRightsConfirmation: CollectionBeforeChangeHook = async ({
+  data,
+  operation,
+  originalDoc,
+  req,
+}) => {
   if (operation !== 'create' && !req.file) {
     data.rightsConfirmed = originalDoc?.rightsConfirmed ?? false
     return data
@@ -105,8 +118,12 @@ export const watermarkedUrlsForVisitors: CollectionAfterReadHook = ({ doc, req }
   }
 
   const base = serverUrl()
-  const url = (size: WatermarkSize) => `${base}/media-wm/${watermarkFileName(doc.id, doc.watermarkKey, size)}`
-  const sizes = { ...(doc.sizes || {}) } as Record<string, { url?: string | null; filename?: string | null } | null>
+  const url = (size: WatermarkSize) =>
+    `${base}/media-wm/${watermarkFileName(doc.id, doc.watermarkKey, size)}`
+  const sizes = { ...(doc.sizes || {}) } as Record<
+    string,
+    { url?: string | null; filename?: string | null } | null
+  >
   let largest: WatermarkSize = 'large'
 
   for (const size of WATERMARK_SIZES) {
@@ -121,8 +138,16 @@ export const watermarkedUrlsForVisitors: CollectionAfterReadHook = ({ doc, req }
 
 // A new file (re-upload): a new watermark key for this photo – and for all photos for sale if it
 // is used as a watermark
-export const resyncAfterReupload: CollectionAfterChangeHook = async ({ doc, previousDoc, operation, req }) => {
-  if (operation !== 'update' || (doc.filename === previousDoc?.filename && doc.filesize === previousDoc?.filesize)) {
+export const resyncAfterReupload: CollectionAfterChangeHook = async ({
+  doc,
+  previousDoc,
+  operation,
+  req,
+}) => {
+  if (
+    operation !== 'update' ||
+    (doc.filename === previousDoc?.filename && doc.filesize === previousDoc?.filesize)
+  ) {
     return doc
   }
 

@@ -54,7 +54,12 @@ export function mailtoHref(email: string): string {
     return 'mailto:' + encodeURIComponent(email)
   }
 
-  return 'mailto:' + encodeURIComponent(email.slice(0, at)) + '@' + encodeURIComponent(email.slice(at + 1))
+  return (
+    'mailto:' +
+    encodeURIComponent(email.slice(0, at)) +
+    '@' +
+    encodeURIComponent(email.slice(at + 1))
+  )
 }
 
 export function htmlMailLink(value: string | null | undefined, label: string): string {

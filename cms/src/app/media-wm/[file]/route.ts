@@ -7,7 +7,12 @@ import fs from 'fs'
 import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 
-import { ensureWatermarked, parseWatermarkFileName, watermarkSettings, watermarkSourceId } from '@/lib/watermark'
+import {
+  ensureWatermarked,
+  parseWatermarkFileName,
+  watermarkSettings,
+  watermarkSourceId,
+} from '@/lib/watermark'
 import type { Media } from '@/payload-types'
 
 export const dynamic = 'force-dynamic'
@@ -46,7 +51,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ fil
   const source: Media | null =
     sourceId === null
       ? null
-      : await payload.findByID({ collection: 'media', id: sourceId, depth: 0, overrideAccess: true }).catch(() => null)
+      : await payload
+          .findByID({ collection: 'media', id: sourceId, depth: 0, overrideAccess: true })
+          .catch(() => null)
 
   let file: string
 

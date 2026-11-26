@@ -30,7 +30,9 @@ export async function GET(request: Request) {
 
   const payload = await getPayload({ config: configPromise })
   const settings = await getShopSettings(payload)
-  const { user } = url.searchParams.has('preview') ? await payload.auth({ headers: request.headers }) : { user: null }
+  const { user } = url.searchParams.has('preview')
+    ? await payload.auth({ headers: request.headers })
+    : { user: null }
   const preview = Boolean(getRole(user))
 
   let offers: Offer[]

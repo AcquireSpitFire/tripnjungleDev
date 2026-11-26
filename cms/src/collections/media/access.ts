@@ -100,12 +100,18 @@ function isProtectedOriginal(doc: MediaFileDoc, filename: string): boolean {
 }
 
 const notFound = () =>
-  Response.json({ errors: [{ message: 'Not found.' }] }, { status: 404, headers: { 'Cache-Control': 'no-store' } })
+  Response.json(
+    { errors: [{ message: 'Not found.' }] },
+    { status: 404, headers: { 'Cache-Control': 'no-store' } },
+  )
 
 // Upload handler of the file route /api/media/file/<name>, after its read access check (locked
 // media are 403 already). Visitors never get the files of a photo for sale (they get the
 // watermarked copies, /media-wm/…) nor an original photo (EXIF/GPS); they get the generated sizes.
-export function hideFilesFromVisitors(req: PayloadRequest, { doc, params }: { doc: unknown; params: { filename: string } }) {
+export function hideFilesFromVisitors(
+  req: PayloadRequest,
+  { doc, params }: { doc: unknown; params: { filename: string } },
+) {
   if (req.user) {
     return undefined
   }

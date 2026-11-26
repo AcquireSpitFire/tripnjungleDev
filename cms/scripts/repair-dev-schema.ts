@@ -31,7 +31,9 @@ type Adapter = {
   drizzle: unknown
   tablesFilter?: string[]
   requireDrizzleKit: () => {
-    pushSchema: (...args: unknown[]) => Promise<{ statementsToExecute: string[]; hasDataLoss: boolean; warnings: string[] }>
+    pushSchema: (
+      ...args: unknown[]
+    ) => Promise<{ statementsToExecute: string[]; hasDataLoss: boolean; warnings: string[] }>
   }
   execute: (args: { drizzle: unknown; raw: string }) => Promise<{ rows: Record<string, unknown>[] }>
 }
@@ -44,14 +46,19 @@ function databaseFile(): string | null {
 
 async function run() {
   if (process.env.NODE_ENV === 'production') {
-    console.error('Only for local development databases. Production uses the migrations (npm start).')
+    console.error(
+      'Only for local development databases. Production uses the migrations (npm start).',
+    )
     process.exit(1)
   }
 
   const file = databaseFile()
 
   if (!file || !fs.existsSync(file)) {
-    console.error('Only for a local SQLite file (DATABASE_URI=file:…), not found: ' + (file ?? process.env.DATABASE_URI))
+    console.error(
+      'Only for a local SQLite file (DATABASE_URI=file:…), not found: ' +
+        (file ?? process.env.DATABASE_URI),
+    )
     process.exit(1)
   }
 
@@ -99,13 +106,18 @@ async function run() {
   }
 
   if (hasDataLoss || warnings.length) {
-    console.error('\nThe push reports possible data loss – not repairing automatically:\n' + warnings.join('\n'))
+    console.error(
+      '\nThe push reports possible data loss – not repairing automatically:\n' +
+        warnings.join('\n'),
+    )
     process.exit(1)
   }
 
   requireConfirmation('\nRepair the schema of the local database')
 
-  const backup = file.replace(/\.db$/, '') + `.before-repair-${new Date().toISOString().replace(/[:.]/g, '-')}.db`
+  const backup =
+    file.replace(/\.db$/, '') +
+    `.before-repair-${new Date().toISOString().replace(/[:.]/g, '-')}.db`
   const tables = async () =>
     (
       await adapter.execute({
@@ -117,7 +129,10 @@ async function run() {
     const result = new Map<string, number>()
 
     for (const name of names) {
-      const { rows } = await adapter.execute({ drizzle: adapter.drizzle, raw: `SELECT count(*) AS n FROM \`${name}\`` })
+      const { rows } = await adapter.execute({
+        drizzle: adapter.drizzle,
+        raw: `SELECT count(*) AS n FROM \`${name}\``,
+      })
 
       result.set(name, Number(rows[0]?.n ?? 0))
     }
@@ -143,9 +158,10 @@ async function run() {
     try {
       for (const statement of statements) {
         const rebuilt = /^CREATE TABLE `(__new_[a-z0-9_]+)`/i.exec(statement)
-        const copy = /^INSERT INTO `(__new_[a-z0-9_]+)`\s*\(([^)]*)\)\s*SELECT\s+(.+?)\s+FROM\s+`([a-z0-9_]+)`;?$/is.exec(
-          statement,
-        )
+        const copy =
+          /^INSERT INTO `(__new_[a-z0-9_]+)`\s*\(([^)]*)\)\s*SELECT\s+(.+?)\s+FROM\s+`([a-z0-9_]+)`;?$/is.exec(
+            statement,
+          )
 
         if (rebuilt) {
           // Left over from an aborted push: never holds data of its own

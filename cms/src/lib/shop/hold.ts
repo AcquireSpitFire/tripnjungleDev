@@ -40,13 +40,17 @@ export function parseReleaseValue(secret: string, value: unknown): number | null
   const expected = Buffer.from(releaseValue(secret, match[1]))
   const given = Buffer.from(value as string)
 
-  return expected.length === given.length && crypto.timingSafeEqual(expected, given) ? Number(match[1]) : null
+  return expected.length === given.length && crypto.timingSafeEqual(expected, given)
+    ? Number(match[1])
+    : null
 }
 
 // Ends a running checkout: the Stripe page is closed first (so it can no longer be paid), then
 // the order is cancelled. If the buyer paid in the meantime, nothing happens – the webhook wins.
 export async function releaseCheckout(payload: Payload, orderId: number): Promise<boolean> {
-  const order = await payload.findByID({ collection: 'orders', id: orderId, depth: 0, overrideAccess: true }).catch(() => null)
+  const order = await payload
+    .findByID({ collection: 'orders', id: orderId, depth: 0, overrideAccess: true })
+    .catch(() => null)
 
   if (!order || order.status !== 'pending') {
     return false
@@ -71,7 +75,13 @@ export async function releaseCheckout(payload: Payload, orderId: number): Promis
     collection: 'orders',
     id: order.id,
     overrideAccess: true,
-    data: { status: 'cancelled', internalNote: withNote(order, 'The buyer went back from the payment page (copies free again).') },
+    data: {
+      status: 'cancelled',
+      internalNote: withNote(
+        order,
+        'The buyer went back from the payment page (copies free again).',
+      ),
+    },
   })
 
   return true

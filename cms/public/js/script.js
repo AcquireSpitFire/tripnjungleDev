@@ -79,7 +79,7 @@ function showPoster(exhibition) {
       size: "large",
       sizes: "(max-width: 600px) 100vw, min(100vw, 70vh)",
       priority: true,
-    })
+    }),
   );
   posterContainer.hidden = false;
   document.documentElement.classList.replace("fit", "has_poster");

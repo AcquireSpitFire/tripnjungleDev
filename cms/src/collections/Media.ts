@@ -175,7 +175,11 @@ export const Media: CollectionConfig = {
       type: 'text',
       // Contains an e-mail address: only for logged-in accounts
       access: { ...serverOnly, read: loggedInField },
-      admin: { position: 'sidebar', readOnly: true, condition: (data) => Boolean(data?.rightsConfirmedBy) },
+      admin: {
+        position: 'sidebar',
+        readOnly: true,
+        condition: (data) => Boolean(data?.rightsConfirmedBy),
+      },
     },
     {
       name: 'locked',

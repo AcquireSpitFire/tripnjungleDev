@@ -146,5 +146,7 @@ export function legalTextToHtml(text: string): string {
 
 // Text format → plain text for e-mails ("## Heading" → "HEADING")
 export function legalTextToPlain(text: string): string {
-  return normalizeNewlines(text).replace(/^## (.*)$/gm, (_, heading: string) => heading.toUpperCase())
+  return normalizeNewlines(text).replace(/^## (.*)$/gm, (_, heading: string) =>
+    heading.toUpperCase(),
+  )
 }

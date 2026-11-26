@@ -23,7 +23,12 @@ export const qrTab: Tab = {
       fields: [
         { name: 'qrShowTitle', type: 'checkbox', label: 'Show photo name', defaultValue: true },
         { name: 'qrShowArtist', type: 'checkbox', label: 'Show artist', defaultValue: true },
-        { name: 'qrShowExhibition', type: 'checkbox', label: 'Show exhibition', defaultValue: true },
+        {
+          name: 'qrShowExhibition',
+          type: 'checkbox',
+          label: 'Show exhibition',
+          defaultValue: true,
+        },
       ],
     },
     {

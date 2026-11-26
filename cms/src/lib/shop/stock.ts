@@ -11,13 +11,21 @@ function holdingNow(): Where {
   return {
     or: [
       { status: { in: [...HOLDING_STATUSES] } },
-      { and: [{ status: { equals: 'pending' } }, { expiresAt: { greater_than: new Date().toISOString() } }] },
+      {
+        and: [
+          { status: { equals: 'pending' } },
+          { expiresAt: { greater_than: new Date().toISOString() } },
+        ],
+      },
     ],
   }
 }
 
 // Copies held per print id
-export async function countTaken(payload: Payload, printIds: string[]): Promise<Map<string, number>> {
+export async function countTaken(
+  payload: Payload,
+  printIds: string[],
+): Promise<Map<string, number>> {
   const taken = new Map<string, number>()
   const wanted = new Set(printIds)
 
@@ -46,7 +54,10 @@ export async function countTaken(payload: Payload, printIds: string[]): Promise<
 }
 
 // null = no limit
-export function copiesLeft(offer: Pick<Offer, 'copies' | 'printId'>, taken: Map<string, number>): number | null {
+export function copiesLeft(
+  offer: Pick<Offer, 'copies' | 'printId'>,
+  taken: Map<string, number>,
+): number | null {
   return offer.copies === null ? null : Math.max(0, offer.copies - (taken.get(offer.printId) ?? 0))
 }
 

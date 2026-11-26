@@ -64,7 +64,10 @@ function linksHtml(artist: Artist): string {
   }
 
   return `<ul class="artist_links">${links
-    .map(([label, url]) => `<li><a href="${escapeHtml(url)}" rel="noopener noreferrer" target="_blank">${label} ↗</a></li>`)
+    .map(
+      ([label, url]) =>
+        `<li><a href="${escapeHtml(url)}" rel="noopener noreferrer" target="_blank">${label} ↗</a></li>`,
+    )
     .join('')}</ul>`
 }
 
@@ -84,7 +87,9 @@ function contactHtml(artist: Artist, siteContact: string | null | undefined): st
     }
 
     if (phone) {
-      parts.push(`<a href="tel:${escapeHtml(phone.replace(/[^\d+]/g, ''))}">${escapeHtml(phone)}</a>`)
+      parts.push(
+        `<a href="tel:${escapeHtml(phone.replace(/[^\d+]/g, ''))}">${escapeHtml(phone)}</a>`,
+      )
     }
 
     return parts.length ? `<h2>Contact</h2><p>${parts.join('<br>')}</p>` : ''
@@ -154,19 +159,22 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
 
   const settings = await getSiteSettings(payload)
   const portrait = asMedia(artist.portrait)
-  const exhibitions = (await findPublicExhibitions(payload, { artists: { in: [artist.id] } })).filter(
-    (exhibition) => exhibition.locked === false,
-  )
+  const exhibitions = (
+    await findPublicExhibitions(payload, { artists: { in: [artist.id] } })
+  ).filter((exhibition) => exhibition.locked === false)
   const canonical = base + '/artist/' + encodeURIComponent(artist.slug)
   const description =
-    summarize(artist.shortText) || `${artist.name} – artist on ${SITE_NAME}: photo and video exhibitions.`
+    summarize(artist.shortText) ||
+    `${artist.name} – artist on ${SITE_NAME}: photo and video exhibitions.`
 
   const exhibitionsHtml = exhibitions.length
     ? `<h2>Exhibitions</h2><ul class="artist_exhibitions">${exhibitions
         .map(
           (exhibition) =>
             `<li><a href="/exhibition/${encodeURIComponent(exhibition.slug)}">${escapeHtml(exhibition.title)}</a>` +
-            (exhibition.theme ? ` <span class="artist_exhibition_theme">${escapeHtml(exhibition.theme)}</span>` : '') +
+            (exhibition.theme
+              ? ` <span class="artist_exhibition_theme">${escapeHtml(exhibition.theme)}</span>`
+              : '') +
             '</li>',
         )
         .join('')}</ul>`

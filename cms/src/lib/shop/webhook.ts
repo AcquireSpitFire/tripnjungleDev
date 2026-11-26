@@ -41,7 +41,9 @@ async function findOrder(payload: Payload, session: Session): Promise<Order | nu
     return null
   }
 
-  return payload.findByID({ collection: 'orders', id, depth: 0, overrideAccess: true }).catch(() => null)
+  return payload
+    .findByID({ collection: 'orders', id, depth: 0, overrideAccess: true })
+    .catch(() => null)
 }
 
 function address(source: Stripe.Address | null | undefined, name: string | null | undefined) {
@@ -68,7 +70,9 @@ function customerData(session: Session) {
     billingAddress: address(customer?.address, customer?.name),
     stripeSessionId: session.id,
     stripePaymentIntent:
-      typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id || '',
+      typeof session.payment_intent === 'string'
+        ? session.payment_intent
+        : session.payment_intent?.id || '',
   }
 }
 
@@ -87,7 +91,10 @@ async function sendMails(payload: Payload, order: Order): Promise<void> {
     payload.logger.error({ err: error, msg: `Order confirmation for ${order.orderNumber} failed` })
     await update(payload, order, {
       confirmationSent: false,
-      internalNote: withNote(order, 'The order confirmation e-mail could not be sent – send it by hand.'),
+      internalNote: withNote(
+        order,
+        'The order confirmation e-mail could not be sent – send it by hand.',
+      ),
     })
   }
 
@@ -108,14 +115,27 @@ async function markPaid(payload: Payload, order: Order, session: Session): Promi
   const warnings: string[] = []
 
   if (order.status === 'cancelled') {
-    warnings.push('Payment arrived for an order that was already cancelled/expired – check the copies left before shipping.')
-  } else if (order.status === 'pending' && order.expiresAt && new Date(order.expiresAt).getTime() < Date.now()) {
+    warnings.push(
+      'Payment arrived for an order that was already cancelled/expired – check the copies left before shipping.',
+    )
+  } else if (
+    order.status === 'pending' &&
+    order.expiresAt &&
+    new Date(order.expiresAt).getTime() < Date.now()
+  ) {
     // The copies were no longer held: somebody else may have bought the last one meanwhile
-    warnings.push('Paid after the copies were no longer held – check the copies left before shipping.')
+    warnings.push(
+      'Paid after the copies were no longer held – check the copies left before shipping.',
+    )
   }
 
-  if (typeof session.amount_total === 'number' && session.amount_total !== toCents(order.total ?? 0)) {
-    warnings.push(`Amount paid (${session.amount_total / 100} EUR) differs from the order total (${order.total} EUR).`)
+  if (
+    typeof session.amount_total === 'number' &&
+    session.amount_total !== toCents(order.total ?? 0)
+  ) {
+    warnings.push(
+      `Amount paid (${session.amount_total / 100} EUR) differs from the order total (${order.total} EUR).`,
+    )
   }
 
   const paid = await update(payload, order, {
@@ -158,7 +178,10 @@ export async function handleStripeEvent(payload: Payload, event: Stripe.Event): 
 
     case 'checkout.session.async_payment_failed':
       if (order.status === 'awaitingPayment' || order.status === 'pending') {
-        await update(payload, order, { status: 'cancelled', internalNote: withNote(order, 'Payment failed (Stripe).') })
+        await update(payload, order, {
+          status: 'cancelled',
+          internalNote: withNote(order, 'Payment failed (Stripe).'),
+        })
       }
       break
 

@@ -12,7 +12,11 @@ export function json(data: unknown, status = 200): Response {
   })
 }
 
-export function errorJson(message: string, status = 400, extra: Record<string, unknown> = {}): Response {
+export function errorJson(
+  message: string,
+  status = 400,
+  extra: Record<string, unknown> = {},
+): Response {
   return json({ error: message, ...extra }, status)
 }
 
@@ -73,5 +77,8 @@ export function cleanText(value: unknown, max: number): string {
 }
 
 export function isEmail(value: string): boolean {
-  return value.length <= 254 && /^[^\s@<>()[\]\\,;:"]+@[^\s@<>()[\]\\,;:"]+\.[^\s@<>()[\]\\,;:"]{2,}$/.test(value)
+  return (
+    value.length <= 254 &&
+    /^[^\s@<>()[\]\\,;:"]+@[^\s@<>()[\]\\,;:"]+\.[^\s@<>()[\]\\,;:"]{2,}$/.test(value)
+  )
 }

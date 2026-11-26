@@ -43,11 +43,18 @@ function watermarkDir(): string {
 }
 
 function clamp(value: unknown, min: number, max: number, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? Math.min(max, Math.max(min, value)) : fallback
+  return typeof value === 'number' && Number.isFinite(value)
+    ? Math.min(max, Math.max(min, value))
+    : fallback
 }
 
-export function watermarkSettings(site: Pick<Site, 'watermarkOpacity' | 'watermarkSize' | 'watermarkPosition'>): WatermarkSettings {
-  const position = site.watermarkPosition === 'bottomRight' || site.watermarkPosition === 'tiled' ? site.watermarkPosition : 'center'
+export function watermarkSettings(
+  site: Pick<Site, 'watermarkOpacity' | 'watermarkSize' | 'watermarkPosition'>,
+): WatermarkSettings {
+  const position =
+    site.watermarkPosition === 'bottomRight' || site.watermarkPosition === 'tiled'
+      ? site.watermarkPosition
+      : 'center'
 
   return {
     opacity: clamp(site.watermarkOpacity, 5, 60, 18),
@@ -87,7 +94,11 @@ export function watermarkSourceId(
 }
 
 // Short hash of everything that changes the watermarked file
-export function watermarkKey(medium: FileInfo, source: FileInfo | null, settings: WatermarkSettings): string {
+export function watermarkKey(
+  medium: FileInfo,
+  source: FileInfo | null,
+  settings: WatermarkSettings,
+): string {
   const parts = [
     medium.filename,
     medium.filesize,
@@ -107,7 +118,9 @@ export function watermarkFileName(id: number | string, key: string, size: Waterm
 }
 
 // "/media-wm/<file>" → its parts (null if it is not a valid name)
-export function parseWatermarkFileName(name: string): { id: number; key: string; size: WatermarkSize } | null {
+export function parseWatermarkFileName(
+  name: string,
+): { id: number; key: string; size: WatermarkSize } | null {
   const match = /^(\d{1,10})-([a-f0-9]{12})-(thumb|medium|large)\.webp$/.exec(name)
 
   return match ? { id: Number(match[1]), key: match[2], size: match[3] as WatermarkSize } : null
@@ -118,7 +131,11 @@ export function parseWatermarkFileName(name: string): { id: number; key: string;
 function sourceFile(medium: Media, size: WatermarkSize): string | null {
   const sizes = (medium.sizes || {}) as Record<string, { filename?: string | null } | undefined>
   const order: WatermarkSize[] =
-    size === 'thumb' ? ['thumb', 'medium', 'large'] : size === 'medium' ? ['medium', 'large', 'thumb'] : ['large', 'medium', 'thumb']
+    size === 'thumb'
+      ? ['thumb', 'medium', 'large']
+      : size === 'medium'
+        ? ['medium', 'large', 'thumb']
+        : ['large', 'medium', 'thumb']
   const name = order.map((candidate) => sizes[candidate]?.filename).find(Boolean) || medium.filename
 
   if (!name) {
@@ -143,7 +160,12 @@ function watermarkImageFile(source: Media | null): string {
 }
 
 // The watermark as a PNG of the given width with the opacity applied
-async function watermarkOverlay(file: string, width: number, maxHeight: number, opacity: number): Promise<Buffer> {
+async function watermarkOverlay(
+  file: string,
+  width: number,
+  maxHeight: number,
+  opacity: number,
+): Promise<Buffer> {
   const resized = await sharp(file, { density: 300 })
     .resize({ width, height: maxHeight, fit: 'inside' })
     .ensureAlpha()
@@ -164,7 +186,13 @@ async function watermarkOverlay(file: string, width: number, maxHeight: number, 
     .toBuffer()
 }
 
-async function render(medium: Media, source: Media | null, settings: WatermarkSettings, size: WatermarkSize, target: string) {
+async function render(
+  medium: Media,
+  source: Media | null,
+  settings: WatermarkSettings,
+  size: WatermarkSize,
+  target: string,
+) {
   const input = sourceFile(medium, size)
 
   if (!input) {

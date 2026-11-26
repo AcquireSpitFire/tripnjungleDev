@@ -14,14 +14,24 @@ export function asMedia(ref: MediaRef): Media | null {
 // Best public image URL of a medium: the requested size, then the other generated sizes.
 // The original only as a last resort (videos, GIFs, images without generated sizes):
 // visitors cannot load original photos (EXIF/GPS, see src/collections/Media.ts).
-export function imageUrl(media: Media | null, size: 'large' | 'medium' | 'thumb' = 'large'): string | null {
+export function imageUrl(
+  media: Media | null,
+  size: 'large' | 'medium' | 'thumb' = 'large',
+): string | null {
   if (!media) {
     return null
   }
 
   const sizes = (media.sizes || {}) as Record<string, { url?: string | null } | undefined>
 
-  return sizes[size]?.url || sizes.large?.url || sizes.medium?.url || sizes.thumb?.url || media.url || null
+  return (
+    sizes[size]?.url ||
+    sizes.large?.url ||
+    sizes.medium?.url ||
+    sizes.thumb?.url ||
+    media.url ||
+    null
+  )
 }
 
 // JSON-LD "Person" entries for the credited artists (only populated profiles)

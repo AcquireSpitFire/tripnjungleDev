@@ -28,7 +28,12 @@ function getPhotoIds() {
 }
 
 function photoLink(exhibition, item) {
-  return getExhibitionLink(exhibition) + "/photo/" + encodeURIComponent(item.id) + (PREVIEW ? "?preview" : "");
+  return (
+    getExhibitionLink(exhibition) +
+    "/photo/" +
+    encodeURIComponent(item.id) +
+    (PREVIEW ? "?preview" : "")
+  );
 }
 
 function showPhotoNote(message) {

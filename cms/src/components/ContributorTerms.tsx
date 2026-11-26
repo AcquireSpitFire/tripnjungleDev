@@ -7,7 +7,13 @@ import { useCallback, useEffect, useState } from 'react'
 // account; for other accounts the fields below show whether and when they accepted.
 // Data: GET /api/users/contributor-terms, accepting: POST …/accept (src/collections/Users.ts).
 
-type Terms = { required: boolean; accepted: boolean; acceptedAt: string | null; text: string; version: string }
+type Terms = {
+  required: boolean
+  accepted: boolean
+  acceptedAt: string | null
+  text: string
+  version: string
+}
 
 export function ContributorTerms() {
   const {
@@ -23,7 +29,10 @@ export function ContributorTerms() {
   const ownAccount = Boolean(user && id !== undefined && String(user.id) === String(id))
 
   const load = useCallback(async () => {
-    const response = await fetch(`${api}/users/contributor-terms`, { credentials: 'same-origin', cache: 'no-store' })
+    const response = await fetch(`${api}/users/contributor-terms`, {
+      credentials: 'same-origin',
+      cache: 'no-store',
+    })
 
     if (response.ok) {
       setTerms((await response.json()) as Terms)
@@ -74,8 +83,8 @@ export function ContributorTerms() {
       <p style={{ margin: '0 0 calc(var(--base) / 2)', fontWeight: 600 }}>Contributor terms</p>
       {terms.accepted ? (
         <p style={{ margin: 0 }}>
-          Accepted on {terms.acceptedAt ? new Date(terms.acceptedAt).toLocaleString('en-GB') : '–'}. You are responsible
-          for what you upload and change (see the copy below).
+          Accepted on {terms.acceptedAt ? new Date(terms.acceptedAt).toLocaleString('en-GB') : '–'}.
+          You are responsible for what you upload and change (see the copy below).
         </p>
       ) : (
         <>

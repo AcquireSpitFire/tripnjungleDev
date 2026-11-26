@@ -42,7 +42,9 @@ type RoleUser = {
 }
 
 function asRoleUser(user: MaybeUser): RoleUser | null {
-  return user && typeof user === 'object' && user.collection === 'users' ? (user as unknown as RoleUser) : null
+  return user && typeof user === 'object' && user.collection === 'users'
+    ? (user as unknown as RoleUser)
+    : null
 }
 
 export function getRole(user: MaybeUser): Role | null {
@@ -119,7 +121,9 @@ function ownExhibitionsWhere(user: MaybeUser): Where[] {
 
 // Ids of the exhibitions a logged-in artist/editor may see and edit.
 // Cached per request in req.context (cleared by the exhibitions afterChange hook).
-export async function getAccessibleExhibitionIds(req: PayloadRequest): Promise<(number | string)[]> {
+export async function getAccessibleExhibitionIds(
+  req: PayloadRequest,
+): Promise<(number | string)[]> {
   const cached = req.context?.[EXHIBITION_IDS_KEY] as (number | string)[] | undefined
 
   if (cached) {
@@ -170,7 +174,11 @@ export async function getAccessibleMediaIds(req: PayloadRequest): Promise<(numbe
     })
 
     for (const doc of result.docs) {
-      for (const ref of [...(doc.posters || []), doc.frontPage, ...(doc.gallery || []).map((row) => row.file)]) {
+      for (const ref of [
+        ...(doc.posters || []),
+        doc.frontPage,
+        ...(doc.gallery || []).map((row) => row.file),
+      ]) {
         const id = ref && typeof ref === 'object' ? ref.id : ref
 
         if (id !== null && id !== undefined) {

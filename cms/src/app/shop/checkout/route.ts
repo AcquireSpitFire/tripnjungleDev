@@ -38,5 +38,7 @@ export const POST = shopPost(async (body, request) => {
   const holdKey = holdKeyFor(payload.secret, clientAddress(request.headers))
   const result = await createCheckout(payload, settings, items, body.country, serverUrl(), holdKey)
 
-  return 'url' in result ? json({ url: result.url }) : errorJson(result.error, 409, { quote: result.quote })
+  return 'url' in result
+    ? json({ url: result.url })
+    : errorJson(result.error, 409, { quote: result.quote })
 })

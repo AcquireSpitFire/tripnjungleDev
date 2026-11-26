@@ -213,7 +213,10 @@ export const shopTab: Tab = {
           name: 'mailProviderName',
           type: 'text',
           label: 'E-mail provider (for the privacy policy)',
-          admin: { width: '50%', description: 'Who sends the shop e-mails (SMTP), e.g. your mail host.' },
+          admin: {
+            width: '50%',
+            description: 'Who sends the shop e-mails (SMTP), e.g. your mail host.',
+          },
         },
         {
           name: 'mailProviderAddress',

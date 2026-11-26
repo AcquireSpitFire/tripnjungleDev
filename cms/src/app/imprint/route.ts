@@ -2,7 +2,13 @@
 import { renderStaticPage } from '@/lib/static-page'
 import { SITE_NAME } from '@/lib/site-identity'
 import { escapeHtml } from '@/lib/render-template'
-import { htmlList, htmlMailLink, htmlOptional, htmlParagraphs, htmlRequired } from '@/lib/site-settings'
+import {
+  htmlList,
+  htmlMailLink,
+  htmlOptional,
+  htmlParagraphs,
+  htmlRequired,
+} from '@/lib/site-settings'
 
 export const dynamic = 'force-dynamic'
 
@@ -37,7 +43,9 @@ export async function GET() {
         responsibleBlock: austria
           ? ''
           : `<h2>Responsible for content pursuant to § 18 Abs. 2 MStV</h2><p>${
-              settings.responsiblePerson?.trim() ? escapeHtml(settings.responsiblePerson.trim()) : name
+              settings.responsiblePerson?.trim()
+                ? escapeHtml(settings.responsiblePerson.trim())
+                : name
             }<br>Address as above.</p>`,
         imprintExtra: htmlParagraphs(settings.imprintExtra),
       }

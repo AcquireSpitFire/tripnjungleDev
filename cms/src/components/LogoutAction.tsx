@@ -37,7 +37,11 @@ export function LogoutAction() {
         {name}
         {role ? ` · ${role}` : ''}
       </span>
-      <a className="btn btn--style-secondary btn--size-small" href={`${admin}${logout}`} style={{ margin: 0 }}>
+      <a
+        className="btn btn--style-secondary btn--size-small"
+        href={`${admin}${logout}`}
+        style={{ margin: 0 }}
+      >
         Log out
       </a>
     </div>

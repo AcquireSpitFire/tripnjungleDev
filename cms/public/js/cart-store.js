@@ -14,7 +14,9 @@ function readCart() {
   try {
     const items = JSON.parse(localStorage.getItem(STORAGE_KEYS.cart) || "[]");
 
-    return Array.isArray(items) ? items.filter((item) => item && item.exhibition && item.photo && item.print) : [];
+    return Array.isArray(items)
+      ? items.filter((item) => item && item.exhibition && item.photo && item.print)
+      : [];
   } catch (error) {
     return [];
   }
@@ -39,7 +41,9 @@ function cartCount(items = readCart()) {
 }
 
 function sameItem(a, b) {
-  return a.exhibition === b.exhibition && String(a.photo) === String(b.photo) && a.print === b.print;
+  return (
+    a.exhibition === b.exhibition && String(a.photo) === String(b.photo) && a.print === b.print
+  );
 }
 
 // Adds one copy; false if the limit (copies left, at most 10) is reached
@@ -55,7 +59,12 @@ function addToCart(entry, limit) {
   if (existing) {
     existing.quantity += 1;
   } else {
-    items.push({ exhibition: entry.exhibition, photo: String(entry.photo), print: entry.print, quantity: 1 });
+    items.push({
+      exhibition: entry.exhibition,
+      photo: String(entry.photo),
+      print: entry.print,
+      quantity: 1,
+    });
   }
 
   writeCart(items);

@@ -22,7 +22,10 @@ export function ShopStatus() {
 
   const load = useCallback(async () => {
     try {
-      const response = await fetch(`${api}/globals/site/shop-status`, { credentials: 'same-origin', cache: 'no-store' })
+      const response = await fetch(`${api}/globals/site/shop-status`, {
+        credentials: 'same-origin',
+        cache: 'no-store',
+      })
 
       if (!response.ok) {
         throw new Error(String(response.status))
@@ -72,7 +75,15 @@ export function ShopStatus() {
             {item.label}
             {item.ok ? '' : item.required ? ' – required' : ' – recommended'}
             {!item.ok && (
-              <span style={{ display: 'block', paddingLeft: '1.5em', color: 'var(--theme-elevation-500)' }}>{item.hint}</span>
+              <span
+                style={{
+                  display: 'block',
+                  paddingLeft: '1.5em',
+                  color: 'var(--theme-elevation-500)',
+                }}
+              >
+                {item.hint}
+              </span>
             )}
           </li>
         ))}

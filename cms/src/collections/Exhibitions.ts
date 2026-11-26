@@ -85,8 +85,6 @@ const onlyWhenUnlocked: FieldAccess = ({ req, doc }) => {
 // make it public through their own exhibition).
 const readableMediaOnly = () => true as const
 
-
-
 export const Exhibitions: CollectionConfig = {
   slug: 'exhibitions',
   labels: {
@@ -113,7 +111,8 @@ export const Exhibitions: CollectionConfig = {
       return publicWhere
     },
     create: ({ req }) =>
-      canManageExhibitions(req.user) || (isArtist(req.user) && getArtistProfileId(req.user) !== null),
+      canManageExhibitions(req.user) ||
+      (isArtist(req.user) && getArtistProfileId(req.user) !== null),
     update: async ({ req }) => {
       if (canManageExhibitions(req.user)) {
         return true
@@ -155,7 +154,8 @@ export const Exhibitions: CollectionConfig = {
       // Set when creating; changing it later breaks links and printed QR codes
       access: { update: exhibitionManagersOnlyField },
       admin: {
-        description: 'Lowercase letters, numbers and hyphens only, e.g. exhibition-3. Used in the URL.',
+        description:
+          'Lowercase letters, numbers and hyphens only, e.g. exhibition-3. Used in the URL.',
       },
       validate: (value: unknown) => (isSlug(value) ? true : SLUG_RULE),
     },
@@ -342,7 +342,8 @@ export const Exhibitions: CollectionConfig = {
       hasMany: true,
       maxRows: 10,
       admin: {
-        description: 'Posters for the home page, Events and Archive. Public, except in the release “Planning”.',
+        description:
+          'Posters for the home page, Events and Archive. Public, except in the release “Planning”.',
       },
     },
     {

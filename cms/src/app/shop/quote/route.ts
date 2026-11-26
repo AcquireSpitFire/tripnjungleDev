@@ -23,5 +23,7 @@ export const POST = shopPost(async (body) => {
   const payload = await getPayload({ config: configPromise })
   const settings = await getShopSettings(payload)
 
-  return json(await quoteCart(payload, settings, items, isCountryCode(body.country) ? body.country : null))
+  return json(
+    await quoteCart(payload, settings, items, isCountryCode(body.country) ? body.country : null),
+  )
 })

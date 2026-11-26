@@ -37,7 +37,8 @@ const httpsUrl = (value: unknown) =>
 const contactRead: FieldAccess = ({ req, doc }) =>
   Boolean(req.user) || (doc?.contactVia === 'artist' && doc?.contactConsent === true)
 
-const isProfile = (data: Record<string, unknown> | undefined) => (data?.pageType || 'profile') === 'profile'
+const isProfile = (data: Record<string, unknown> | undefined) =>
+  (data?.pageType || 'profile') === 'profile'
 const contactViaArtist = (data: Record<string, unknown> | undefined) =>
   isProfile(data) && data?.contactVia === 'artist'
 
@@ -50,7 +51,8 @@ export const Artists: CollectionConfig = {
   admin: {
     useAsTitle: 'name',
     defaultColumns: ['name', 'slug', 'pageType', 'updatedAt'],
-    description: 'People who make the photos and exhibitions. Each artist has a page at /artist/<slug>.',
+    description:
+      'People who make the photos and exhibitions. Each artist has a page at /artist/<slug>.',
   },
   access: {
     // Names and profiles are public credits
@@ -91,7 +93,10 @@ export const Artists: CollectionConfig = {
     afterChange: [
       async ({ doc, previousDoc, req }) => {
         // The portrait is public as long as a profile uses it
-        await syncMediaLocks(req, [toId(doc.portrait), toId(previousDoc?.portrait)].filter((id) => id !== null))
+        await syncMediaLocks(
+          req,
+          [toId(doc.portrait), toId(previousDoc?.portrait)].filter((id) => id !== null),
+        )
         return doc
       },
     ],

@@ -33,7 +33,8 @@ function setupWithdrawalForm() {
             " was received on " +
             received +
             ". " +
-            (result.note || "You will receive an acknowledgement by e-mail. Please send the goods back within 14 days."),
+            (result.note ||
+              "You will receive an acknowledgement by e-mail. Please send the goods back within 14 days."),
         ),
       );
     } catch (error) {

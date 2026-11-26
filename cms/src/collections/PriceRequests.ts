@@ -48,8 +48,21 @@ export const PriceRequests: CollectionConfig = {
       admin: { position: 'sidebar' },
     },
     readOnlyText('name', 'Name'),
-    { name: 'email', label: 'E-mail', type: 'email', required: true, access: serverOnly, admin: { readOnly: true } },
-    { name: 'message', label: 'Message', type: 'textarea', access: serverOnly, admin: { readOnly: true } },
+    {
+      name: 'email',
+      label: 'E-mail',
+      type: 'email',
+      required: true,
+      access: serverOnly,
+      admin: { readOnly: true },
+    },
+    {
+      name: 'message',
+      label: 'Message',
+      type: 'textarea',
+      access: serverOnly,
+      admin: { readOnly: true },
+    },
     {
       type: 'row',
       fields: [

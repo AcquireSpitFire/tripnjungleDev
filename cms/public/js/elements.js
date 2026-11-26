@@ -35,7 +35,9 @@ function setImageSources(image, media, options = {}) {
 
   image.src = getImageUrl(media, size);
 
-  const candidates = SIZE_ORDER.map((name) => media.sizes?.[name]).filter((entry) => entry?.url && entry.width);
+  const candidates = SIZE_ORDER.map((name) => media.sizes?.[name]).filter(
+    (entry) => entry?.url && entry.width,
+  );
 
   if (candidates.length > 1) {
     image.srcset = candidates.map((entry) => entry.url + " " + entry.width + "w").join(", ");

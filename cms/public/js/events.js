@@ -126,7 +126,10 @@ async function startEvents() {
 
   const today = getToday();
   const selected = isArchive
-    ? exhibitions.filter((exhibition) => isPast(exhibition, today)).sort(compareByDate).reverse()
+    ? exhibitions
+        .filter((exhibition) => isPast(exhibition, today))
+        .sort(compareByDate)
+        .reverse()
     : exhibitions.filter((exhibition) => isUpcoming(exhibition, today)).sort(compareByDate);
 
   if (selected.length === 0) {

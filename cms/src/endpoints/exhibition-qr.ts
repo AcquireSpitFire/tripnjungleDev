@@ -20,14 +20,18 @@ const MAX_LABELS = 300
 // "Ana & Ben" from populated artist profiles
 function artistNames(artists: unknown): string {
   return (Array.isArray(artists) ? artists : [])
-    .map((artist) => (artist && typeof artist === 'object' && 'name' in artist ? String(artist.name) : ''))
+    .map((artist) =>
+      artist && typeof artist === 'object' && 'name' in artist ? String(artist.name) : '',
+    )
     .filter(Boolean)
     .join(' & ')
 }
 
 async function loadSettings(req: PayloadRequest): Promise<QrPdfSettings> {
   const site = await req.payload.findGlobal({ slug: 'site', depth: 0, overrideAccess: true, req })
-  const format = FORMATS.includes(site.qrFormat as QrLabelFormat) ? (site.qrFormat as QrLabelFormat) : 'a6'
+  const format = FORMATS.includes(site.qrFormat as QrLabelFormat)
+    ? (site.qrFormat as QrLabelFormat)
+    : 'a6'
 
   return {
     format,
@@ -50,7 +54,11 @@ export const exhibitionQrEndpoint: Endpoint = {
     const format = req.searchParams.get('format') || 'pdf'
     const media = req.searchParams.get('media')
 
-    if (!/^\d+$/.test(id) || (media !== null && !/^\d+$/.test(media)) || !['png', 'pdf'].includes(format)) {
+    if (
+      !/^\d+$/.test(id) ||
+      (media !== null && !/^\d+$/.test(media)) ||
+      !['png', 'pdf'].includes(format)
+    ) {
       return errorJson('Invalid request.', 400)
     }
 
@@ -61,7 +69,13 @@ export const exhibitionQrEndpoint: Endpoint = {
     let exhibition
 
     try {
-      exhibition = await req.payload.findByID({ collection: 'exhibitions', id, depth: 1, overrideAccess: false, req })
+      exhibition = await req.payload.findByID({
+        collection: 'exhibitions',
+        id,
+        depth: 1,
+        overrideAccess: false,
+        req,
+      })
     } catch {
       return errorJson('Exhibition not found.', 404)
     }
@@ -79,10 +93,18 @@ export const exhibitionQrEndpoint: Endpoint = {
       seen.add(String(id))
       return true
     })
-    const selected = (media ? rows.filter((row) => String(toId(row.file)) === media) : rows).slice(0, MAX_LABELS)
+    const selected = (media ? rows.filter((row) => String(toId(row.file)) === media) : rows).slice(
+      0,
+      MAX_LABELS,
+    )
 
     if (!selected.length) {
-      return errorJson(media ? 'This photo is not part of the saved exhibition.' : 'The exhibition has no photos yet.', 404)
+      return errorJson(
+        media
+          ? 'This photo is not part of the saved exhibition.'
+          : 'The exhibition has no photos yet.',
+        404,
+      )
     }
 
     const base = serverUrl()

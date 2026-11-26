@@ -125,7 +125,13 @@ async function send(payload: Payload, message: Message): Promise<void> {
     replyTo: message.replyTo,
     subject: message.subject,
     text: message.lines.join('\n'),
-    html: layout(message.html ?? blocks.filter((block) => block.length).map(htmlLines).join('\n')),
+    html: layout(
+      message.html ??
+        blocks
+          .filter((block) => block.length)
+          .map(htmlLines)
+          .join('\n'),
+    ),
   })
 }
 
@@ -223,7 +229,8 @@ export async function sendShippedEmail(payload: Payload, order: OrderMailDoc): P
   }
 
   const settings = await getShopSettings(payload)
-  const trackingUrl = order.trackingUrl && /^https:\/\/\S+$/.test(order.trackingUrl) ? order.trackingUrl : ''
+  const trackingUrl =
+    order.trackingUrl && /^https:\/\/\S+$/.test(order.trackingUrl) ? order.trackingUrl : ''
 
   await send(payload, {
     to: order.customerEmail,
@@ -232,7 +239,9 @@ export async function sendShippedEmail(payload: Payload, order: OrderMailDoc): P
     lines: [
       `Good news${order.customerName ? ', ' + order.customerName : ''}: your order ${order.orderNumber} is on its way.`,
       '',
-      ...(order.items || []).map((item) => `${item.quantity ?? 1} × ${item.photoName || 'Photo'} – ${item.printLabel || ''}`),
+      ...(order.items || []).map(
+        (item) => `${item.quantity ?? 1} × ${item.photoName || 'Photo'} – ${item.printLabel || ''}`,
+      ),
       '',
       ...(order.trackingNumber ? ['Tracking number: ' + order.trackingNumber] : []),
       ...(trackingUrl ? ['Track your parcel: ' + trackingUrl] : []),
@@ -284,10 +293,17 @@ export async function sendPriceRequestEmail(
 // the buyer (only to the address stored with the order) and a note to the shop
 export async function sendWithdrawalEmails(
   payload: Payload,
-  withdrawal: { orderNumber: string; name: string; customerEmail: string; statement: string; receivedAt: Date },
+  withdrawal: {
+    orderNumber: string
+    name: string
+    customerEmail: string
+    statement: string
+    receivedAt: Date
+  },
 ): Promise<void> {
   const settings = await getShopSettings(payload)
-  const when = withdrawal.receivedAt.toLocaleString('en-GB', { timeZone: 'Europe/Vienna' }) + ' (Vienna time)'
+  const when =
+    withdrawal.receivedAt.toLocaleString('en-GB', { timeZone: 'Europe/Vienna' }) + ' (Vienna time)'
   const details = [
     'Received on: ' + when,
     'Name: ' + withdrawal.name,
@@ -315,7 +331,12 @@ export async function sendWithdrawalEmails(
       to: settings.shopEmail,
       replyTo: withdrawal.customerEmail,
       subject: `Withdrawal: order ${withdrawal.orderNumber}`,
-      lines: [`Withdrawal from order ${withdrawal.orderNumber}.`, '', ...details, 'E-mail: ' + withdrawal.customerEmail],
+      lines: [
+        `Withdrawal from order ${withdrawal.orderNumber}.`,
+        '',
+        ...details,
+        'E-mail: ' + withdrawal.customerEmail,
+      ],
     })
   }
 }

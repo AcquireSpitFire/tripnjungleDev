@@ -10,7 +10,9 @@ import { serverUrl } from '../site-identity'
 import { isSlug } from '../slug'
 import { contentIsOpen, toId } from '../visibility'
 
-type PrintRow = NonNullable<NonNullable<NonNullable<Exhibition['gallery']>[number]['prints']>[number]>
+type PrintRow = NonNullable<
+  NonNullable<NonNullable<Exhibition['gallery']>[number]['prints']>[number]
+>
 
 export type CartItemInput = {
   exhibition: string
@@ -131,7 +133,11 @@ function artistNames(exhibition: Exhibition, rowArtist: unknown): string {
 
 // All offers of an exhibition: only when visitors may see its content, or in the preview of a
 // logged-in account (the exhibition was then loaded with the rights of that account)
-export function offersOf(exhibition: Exhibition, base: string, options: { preview?: boolean } = {}): Offer[] {
+export function offersOf(
+  exhibition: Exhibition,
+  base: string,
+  options: { preview?: boolean } = {},
+): Offer[] {
   if (!options.preview && !contentIsOpen(exhibition)) {
     return []
   }
@@ -160,7 +166,12 @@ export function offersOf(exhibition: Exhibition, base: string, options: { previe
         exhibitionSlug: exhibition.slug,
         exhibitionTitle: exhibition.title,
         mediaId,
-        photoName: row.name?.trim() || media.name?.trim() || row.alt?.trim() || media.alt?.trim() || 'Untitled',
+        photoName:
+          row.name?.trim() ||
+          media.name?.trim() ||
+          row.alt?.trim() ||
+          media.alt?.trim() ||
+          'Untitled',
         artistName: artistNames(exhibition, row.artist),
         printId: print.id,
         label: print.label,
@@ -169,7 +180,8 @@ export function offersOf(exhibition: Exhibition, base: string, options: { previe
         details: print.details?.trim() || '',
         pricing,
         price: pricing === 'fixed' ? (print.price as number) : null,
-        copies: typeof print.copies === 'number' && print.copies >= 0 ? Math.floor(print.copies) : null,
+        copies:
+          typeof print.copies === 'number' && print.copies >= 0 ? Math.floor(print.copies) : null,
         thumbUrl: absolute(base, imageUrl(media, 'thumb')) || '',
         photoUrl: `${base}/exhibition/${encodeURIComponent(exhibition.slug)}/photo/${encodeURIComponent(mediaId)}`,
       })

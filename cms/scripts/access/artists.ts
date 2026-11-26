@@ -7,7 +7,12 @@ export async function checkArtists(t: Context): Promise<void> {
 
   console.log('Artists')
 
-  const portrait: AnyDoc = await payload.create({ collection: 'media', data: { alt: 'Portrait', rightsConfirmed: true }, file: file(), ...as(manager) })
+  const portrait: AnyDoc = await payload.create({
+    collection: 'media',
+    data: { alt: 'Portrait', rightsConfirmed: true },
+    file: file(),
+    ...as(manager),
+  })
   const profile: AnyDoc = await payload.create({
     collection: 'artists',
     data: {
@@ -29,7 +34,11 @@ export async function checkArtists(t: Context): Promise<void> {
 
   check('a portrait is public once a profile uses it', (await reload(portrait.id)).locked === false)
   await fails('an editor cannot create artist profiles', () =>
-    payload.create({ collection: 'artists', data: { name: 'X', slug: 'x', pageType: 'profile' }, ...as(editor) }),
+    payload.create({
+      collection: 'artists',
+      data: { name: 'X', slug: 'x', pageType: 'profile' },
+      ...as(editor),
+    }),
   )
   await fails('external pages need an https address', () =>
     payload.create({
@@ -39,19 +48,45 @@ export async function checkArtists(t: Context): Promise<void> {
     }),
   )
 
-  const hidden: AnyDoc = await payload.findByID({ collection: 'artists', id: profile.id, overrideAccess: false })
+  const hidden: AnyDoc = await payload.findByID({
+    collection: 'artists',
+    id: profile.id,
+    overrideAccess: false,
+  })
 
-  check('without consent visitors do not get the contact e-mail', !hidden.contactEmail, hidden.contactEmail)
+  check(
+    'without consent visitors do not get the contact e-mail',
+    !hidden.contactEmail,
+    hidden.contactEmail,
+  )
 
-  await payload.update({ collection: 'artists', id: profile.id, data: { contactConsent: true }, ...as(manager) })
+  await payload.update({
+    collection: 'artists',
+    id: profile.id,
+    data: { contactConsent: true },
+    ...as(manager),
+  })
 
-  const shown: AnyDoc = await payload.findByID({ collection: 'artists', id: profile.id, overrideAccess: false })
+  const shown: AnyDoc = await payload.findByID({
+    collection: 'artists',
+    id: profile.id,
+    overrideAccess: false,
+  })
 
-  check('with consent visitors get the contact e-mail', shown.contactEmail === 'ana@test.local', shown.contactEmail)
+  check(
+    'with consent visitors get the contact e-mail',
+    shown.contactEmail === 'ana@test.local',
+    shown.contactEmail,
+  )
 
   const artistUser: AnyDoc = await payload.create({
     collection: 'users',
-    data: { email: 'ana@test.local', password: 'artist-password-1', role: 'artist', artist: profile.id },
+    data: {
+      email: 'ana@test.local',
+      password: 'artist-password-1',
+      role: 'artist',
+      artist: profile.id,
+    },
     ...as(admin),
   })
 
@@ -89,7 +124,8 @@ export async function checkArtists(t: Context): Promise<void> {
   check('an artist exhibition always starts locked', own.visibility === 'locked', own.visibility)
   check(
     'an artist exhibition is credited to their own profile only',
-    own.artists?.length === 1 && String(own.artists[0]?.id ?? own.artists[0]) === String(profile.id),
+    own.artists?.length === 1 &&
+      String(own.artists[0]?.id ?? own.artists[0]) === String(profile.id),
     own.artists,
   )
 
@@ -100,11 +136,16 @@ export async function checkArtists(t: Context): Promise<void> {
     ...as(artistUser),
   })
 
-  check('an artist can change the content of their exhibition', published.title === 'Ana show 2', published.title)
-  check('an artist cannot publish', published.visibility === 'locked' && published.release === 'planning', [
-    published.visibility,
-    published.release,
-  ])
+  check(
+    'an artist can change the content of their exhibition',
+    published.title === 'Ana show 2',
+    published.title,
+  )
+  check(
+    'an artist cannot publish',
+    published.visibility === 'locked' && published.release === 'planning',
+    [published.visibility, published.release],
+  )
 
   const renamed: AnyDoc = await payload.update({
     collection: 'exhibitions',
@@ -113,7 +154,11 @@ export async function checkArtists(t: Context): Promise<void> {
     ...as(artistUser),
   })
 
-  check('an artist cannot change the ID of an exhibition', renamed.slug === 'ana-show', renamed.slug)
+  check(
+    'an artist cannot change the ID of an exhibition',
+    renamed.slug === 'ana-show',
+    renamed.slug,
+  )
   await fails('an artist cannot delete their exhibition', () =>
     payload.delete({ collection: 'exhibitions', id: own.id, ...as(artistUser) }),
   )
@@ -126,7 +171,12 @@ export async function checkArtists(t: Context): Promise<void> {
     artistSees.docs.map((doc: AnyDoc) => doc.slug),
   )
   await fails('an artist cannot change exhibitions of others', () =>
-    payload.update({ collection: 'exhibitions', id: locked.id, data: { title: 'hacked' }, ...as(artistUser) }),
+    payload.update({
+      collection: 'exhibitions',
+      id: locked.id,
+      data: { title: 'hacked' },
+      ...as(artistUser),
+    }),
   )
 
   const ownProfile: AnyDoc = await payload.update({
@@ -136,10 +186,23 @@ export async function checkArtists(t: Context): Promise<void> {
     ...as(artistUser),
   })
 
-  check('an artist can edit their own profile', ownProfile.shortText === 'Hello', ownProfile.shortText)
-  check('an artist cannot change the ID of their profile', ownProfile.slug === 'ana', ownProfile.slug)
+  check(
+    'an artist can edit their own profile',
+    ownProfile.shortText === 'Hello',
+    ownProfile.shortText,
+  )
+  check(
+    'an artist cannot change the ID of their profile',
+    ownProfile.slug === 'ana',
+    ownProfile.slug,
+  )
   await fails('an artist cannot edit other profiles', () =>
-    payload.update({ collection: 'artists', id: otherProfile.id, data: { name: 'hacked' }, ...as(artistUser) }),
+    payload.update({
+      collection: 'artists',
+      id: otherProfile.id,
+      data: { name: 'hacked' },
+      ...as(artistUser),
+    }),
   )
 
   const relinked: AnyDoc = await payload.update({
