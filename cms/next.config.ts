@@ -9,12 +9,11 @@ const dirname = path.dirname(__filename)
 const nextConfig: NextConfig = {
   // No "X-Powered-By: Next.js" (tells attackers what to try)
   poweredByHeader: false,
+  // No image optimizer (/_next/image): the site does not use next/image (the media sizes are
+  // generated on upload), and an optimizer would keep its own copies of files whose delivery
+  // depends on the login (locked media, originals).
   images: {
-    localPatterns: [
-      {
-        pathname: '/api/media/file/**',
-      },
-    ],
+    unoptimized: true,
   },
   // The pages live as templates in src/templates and are served with meta data by
   // route handlers (src/app/**/route.ts); public/ only contains CSS, JS and images.

@@ -216,8 +216,12 @@ quantity, address), so a print lab API can be added as a step after “paid” w
 - **Startup**: the server refuses to start with a `PAYLOAD_SECRET` shorter than 32 characters
   (`openssl rand -hex 32` gives 64) and warns in production without `PAYLOAD_PUBLIC_SERVER_URL`.
 - **Photos**: visitors only get the generated WebP sizes. Original photos (with camera data such as
-  GPS position and time) are only delivered to logged-in accounts. Locked media are never delivered
-  to visitors; `/api/media` itself is not public (the site gets media through exhibitions/artists).
+  GPS position and time) are only delivered to logged-in accounts. Images too small for a generated
+  size (at most 600 px wide) are delivered as uploaded, so they are saved without metadata on upload.
+  Locked media are never delivered to visitors; `/api/media` itself is not public (the site gets media
+  through exhibitions/artists). Who confirmed the rights of an upload (e-mail) is only visible in the
+  admin area. Next's image optimizer (`/_next/image`) is switched off: it would keep copies of files
+  whose delivery depends on the login.
 - **Caching**: media files are only cached by the browser (`private`, one week), never by shared
   caches, because what may be delivered depends on the login. Pages are cached publicly and never
   contain anything account-specific.
@@ -225,7 +229,11 @@ quantity, address), so a print lab API can be added as a step after “paid” w
   details); the content only comes with a lookup of exactly that ID.
 - **API limits**: visitors, artists and editors get at most 100 results per request; `depth` is at most 2.
 - **Uploads**: only JPEG, PNG, WebP, AVIF, GIF, MP4, WebM and QuickTime (checked from the file content,
-  no SVG); files are served with a sandbox CSP.
+  no SVG); files are served with a sandbox CSP. Files only come from the own computer (“paste URL” is
+  off, so the server never fetches addresses for an account). Payload's preview image endpoint
+  (`/api/og`) is off.
+- **Rate limits** (`src/proxy.ts`): the path is normalized first (`/api/users/l%6Fgin` counts as
+  `/api/users/login`); IPv6 addresses count per /64 network, which one connection usually owns.
 - **Shop**: prices, names and copies left always come from the server (the browser only sends which
   print and how many); prints of locked or planned exhibitions cannot be bought. Card data never reaches
   this server (Stripe Checkout). Webhooks are only accepted with a valid Stripe signature and are

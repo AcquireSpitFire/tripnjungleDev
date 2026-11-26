@@ -67,6 +67,9 @@ export default buildConfig({
   email,
   admin: {
     user: Users.slug,
+    // No generated preview images (/api/og): unused, and a public endpoint that renders
+    // arbitrary text costs CPU for every request
+    meta: { defaultOGImageType: 'off' },
     components: {
       // Top right on every admin page: reminder to accept the contributor terms (only if needed),
       // then the visible "Log out" button with the logged-in account

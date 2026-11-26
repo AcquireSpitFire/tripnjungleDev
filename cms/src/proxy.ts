@@ -1,5 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 
+import { clientAddress } from './lib/client-address'
+
 // Rate limits per IP address for the login and password endpoints and the shop forms.
 //
 // Payload locks an ACCOUNT after 5 wrong passwords (15 minutes, see src/collections/Users.ts).
@@ -8,11 +10,15 @@ import { NextResponse, type NextRequest } from 'next/server'
 // checkout holds copies, and price requests and withdrawals send e-mails. Every address gets at
 // most the given number of POST requests per WINDOW_MS and bucket, otherwise "429 Too Many Requests".
 //
+// The path is normalized before it is looked up: "/api/users/l%6Fgin", "/API/users/login/" or
+// "/shop//checkout" reach the same handler and must count the same.
+//
 // The counters live in the memory of this server process. That is enough for one Railway
 // instance; with several instances each one counts on its own (the limit then multiplies).
 
 const WINDOW_MS = 15 * 60 * 1000
-const MAX_TRACKED_ADDRESSES = 10_000
+// Hard upper bound for the memory: beyond it the oldest counters are dropped
+const MAX_COUNTERS = 50_000
 
 // Path → [bucket, requests per WINDOW_MS]. Paths of one bucket share a counter.
 const LIMITED_PATHS = new Map<string, [string, number]>([
@@ -36,26 +42,50 @@ type Counter = { count: number; resetAt: number }
 
 const counters = new Map<string, Counter>()
 
-// Railway's proxy appends the real client address as the LAST entry of X-Forwarded-For;
-// earlier entries can be set freely by the client and are not trusted
-function clientAddress(request: NextRequest): string {
-  const forwarded = request.headers.get('x-forwarded-for')
-  const last = forwarded?.split(',').pop()?.trim()
+// The form of a path the router also uses: decoded, lower case, no double or trailing slashes
+export function normalizePath(pathname: string): string {
+  let path = pathname
 
-  return last || request.headers.get('x-real-ip') || 'local'
+  try {
+    path = decodeURIComponent(path)
+  } catch {
+    // Malformed escapes: keep the raw path (the router cannot decode it either)
+  }
+
+  return (
+    path
+      .toLowerCase()
+      .replace(/\/{2,}/g, '/')
+      .replace(/\/\.(?=\/|$)/g, '')
+      .replace(/\/+$/, '') || '/'
+  )
 }
 
-function cleanUp(now: number): void {
-  for (const [key, counter] of counters) {
-    if (counter.resetAt <= now) {
-      counters.delete(key)
+function remember(key: string, counter: Counter, now: number): void {
+  counters.set(key, counter)
+
+  if (counters.size <= MAX_COUNTERS) {
+    return
+  }
+
+  for (const [oldKey, oldCounter] of counters) {
+    if (oldCounter.resetAt <= now) {
+      counters.delete(oldKey)
     }
+  }
+
+  // Still too many (e.g. a flood from many addresses): drop the oldest ones
+  for (const oldKey of counters.keys()) {
+    if (counters.size <= MAX_COUNTERS) {
+      break
+    }
+
+    counters.delete(oldKey)
   }
 }
 
 export function proxy(request: NextRequest) {
-  const limit =
-    request.method === 'POST' ? LIMITED_PATHS.get(request.nextUrl.pathname.replace(/\/$/, '')) : undefined
+  const limit = request.method === 'POST' ? LIMITED_PATHS.get(normalizePath(request.nextUrl.pathname)) : undefined
 
   if (!limit) {
     return NextResponse.next()
@@ -63,16 +93,11 @@ export function proxy(request: NextRequest) {
 
   const [bucket, maxAttempts] = limit
   const now = Date.now()
-
-  if (counters.size > MAX_TRACKED_ADDRESSES) {
-    cleanUp(now)
-  }
-
-  const key = bucket + ':' + clientAddress(request)
+  const key = bucket + ':' + clientAddress(request.headers)
   const counter = counters.get(key)
 
   if (!counter || counter.resetAt <= now) {
-    counters.set(key, { count: 1, resetAt: now + WINDOW_MS })
+    remember(key, { count: 1, resetAt: now + WINDOW_MS }, now)
     return NextResponse.next()
   }
 
@@ -93,5 +118,7 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/api/users/:path*', '/shop/:path*'],
+  // Every path except the static files: an encoded variant of a limited path ("/api/us%65rs/login")
+  // must not slip past a narrower matcher. Requests other than POST return immediately.
+  matcher: ['/((?!_next/static|_next/image|css/|js/|favicon).*)'],
 }

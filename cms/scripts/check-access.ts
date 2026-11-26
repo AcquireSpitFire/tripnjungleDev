@@ -844,6 +844,80 @@ async function run() {
   check('the 11th attempt is blocked (429)', statuses[10] === 429, statuses[10])
   check('other addresses are not affected', attempt('203.0.113.8').status !== 429)
 
+  // Encoded or otherwise changed paths reach the same handler and count the same
+  const variantStatus = (path: string, address: string) =>
+    proxy(new NextRequest('http://localhost:3000' + path, { method: 'POST', headers: { 'x-forwarded-for': address } })).status
+  const variants = ['/api/users/login', '/api/users/l%6Fgin', '/API/Users/Login/', '/api//users/login', '/api/users/./login']
+  const variantStatuses = Array.from({ length: 11 }, (_, index) => variantStatus(variants[index % variants.length], '203.0.113.9'))
+
+  check(
+    'encoded, upper-case or doubled-slash login paths share one limit',
+    variantStatuses.slice(0, 10).every((status) => status !== 429) && variantStatuses[10] === 429,
+    variantStatuses,
+  )
+  check(
+    'an encoded checkout path is limited too',
+    Array.from({ length: 11 }, () => variantStatus('/shop/check%6Fut', '203.0.113.10'))[10] === 429,
+  )
+
+  const { addressGroup } = await import('../src/lib/client-address')
+
+  check(
+    'IPv6 addresses of one /64 network share a counter',
+    addressGroup('2001:db8:1:2::5') === addressGroup('2001:0db8:0001:0002:ffff:0:0:1') &&
+      addressGroup('2001:db8:1:2::5') !== addressGroup('2001:db8:1:3::5') &&
+      addressGroup('[2001:db8:1:2::1]:443') === addressGroup('2001:db8:1:2::9'),
+    [addressGroup('2001:db8:1:2::5'), addressGroup('2001:0db8:0001:0002:ffff:0:0:1'), addressGroup('[2001:db8:1:2::1]:443')],
+  )
+  check(
+    'IPv4 addresses (also IPv4-mapped) stay single addresses',
+    addressGroup('::ffff:203.0.113.5') === '203.0.113.5' && addressGroup('203.0.113.5') === '203.0.113.5',
+  )
+
+  // Endpoints that are not needed are off
+  check('uploads from a URL are disabled (no server-side fetching)', payload.collections.media.config.upload.pasteURL === false)
+  check('the Open Graph image endpoint (/api/og) is off', payload.config.admin.meta?.defaultOGImageType === 'off')
+
+  // The upload confirmation (with the uploader's e-mail) is not public
+  const publicConfirmed: AnyDoc = await payload.findByID({ collection: 'media', id: publicElsewhere.id, overrideAccess: false })
+  const managerConfirmed: AnyDoc = await payload.findByID({ collection: 'media', id: publicElsewhere.id, ...as(manager) })
+
+  check(
+    'visitors do not see who confirmed the rights of a public photo',
+    publicConfirmed.locked === false &&
+      publicConfirmed.rightsConfirmedBy === undefined &&
+      publicConfirmed.rightsConfirmedAt === undefined &&
+      publicConfirmed.rightsConfirmed === undefined,
+    [publicConfirmed.rightsConfirmedBy, publicConfirmed.rightsConfirmedAt],
+  )
+  check('logged-in accounts still see the confirmation', String(managerConfirmed.rightsConfirmedBy).startsWith('manager@test.local'))
+
+  // Small images are saved without camera metadata; large originals stay untouched (prints)
+  const exifJpeg = (width: number, height: number, orientation = 1) =>
+    sharp({ create: { width, height, channels: 3, background: '#357' } })
+      .jpeg()
+      .withMetadata({ orientation, exif: { IFD0: { Copyright: 'tj-exif-probe' } } })
+      .toBuffer()
+  const uploadJpeg = async (data: Buffer) =>
+    (await payload.create({
+      collection: 'media',
+      data: { alt: 'EXIF', rightsConfirmed: true },
+      file: { data, mimetype: 'image/jpeg', name: `exif-${++fileCounter}.jpg`, size: data.length },
+      ...as(manager),
+    })) as AnyDoc
+  const storedMetadata = (doc: AnyDoc) => sharp(path.join(process.env.MEDIA_DIR as string, doc.filename)).metadata()
+  const smallJpeg = await uploadJpeg(await exifJpeg(300, 200, 6))
+  const smallMeta = await storedMetadata(smallJpeg)
+  const largeJpeg = await uploadJpeg(await exifJpeg(1600, 1000))
+  const largeMeta = await storedMetadata(largeJpeg)
+
+  check(
+    'a small image is stored without EXIF data, turned upright',
+    !smallMeta.exif && smallMeta.width === 200 && smallMeta.height === 300 && (smallMeta.orientation ?? 1) === 1,
+    [Boolean(smallMeta.exif), smallMeta.width, smallMeta.height, smallMeta.orientation],
+  )
+  check('a large original keeps its data (only logged-in accounts get it)', Boolean(largeMeta.exif) && largeMeta.width === 1600)
+
   // ---------- Shop (release 3.0): model and access ----------
   console.log('Shop – model')
 

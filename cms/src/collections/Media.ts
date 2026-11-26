@@ -1,10 +1,19 @@
-import { ValidationError, type AccessResult, type CollectionConfig, type PayloadRequest, type Where } from 'payload'
+import {
+  ValidationError,
+  type AccessResult,
+  type CollectionBeforeOperationHook,
+  type CollectionConfig,
+  type PayloadRequest,
+  type Where,
+} from 'payload'
+import sharp, { type Sharp } from 'sharp'
 
 import {
   canManageExhibitions,
   getAccessibleMediaIds,
   getRole,
   getUserId,
+  loggedInField,
 } from '../access/roles'
 import { auditFields, auditHook } from '../lib/audit'
 import { assertTermsAccepted, mustAcceptTerms } from '../lib/contributor-terms'
@@ -37,7 +46,10 @@ import { WATERMARK_SIZES, removeWatermarkedFiles, watermarkFileName, type Waterm
 //   - Original photos are only delivered to logged-in accounts: they still carry the
 //     camera metadata (EXIF: GPS position, time, camera serial). Visitors get the
 //     generated WebP sizes, which never contain metadata. Videos, GIFs and images
-//     without generated sizes (very small files) keep their original.
+//     without generated sizes (very small files) keep their original; those small images are
+//     saved without metadata on upload (stripMetadataOfSmallImages).
+//   - The upload confirmation ("Rights confirmed …", with the uploader's e-mail) is only
+//     readable for logged-in accounts.
 //   - /api/media itself (list and single documents) is not public: the site only gets media
 //     embedded in exhibitions and artists, so nobody can browse all public files at once.
 function ownLockedUploadsOrManager(user: Parameters<typeof getRole>[0]): boolean | Where {
@@ -66,6 +78,46 @@ function isProtectedOriginal(doc: MediaFileDoc, filename: string): boolean {
   }
 
   return Object.values(doc.sizes || {}).some((size) => Boolean(size?.filename))
+}
+
+// Width of the smallest generated size ("thumb" below)
+const THUMB_WIDTH = 600
+const LARGEST_UNRESIZED_SIDE = 1280
+
+// Same format as uploaded; sharp writes no metadata unless asked to
+const REENCODE: Record<string, (image: Sharp) => Sharp> = {
+  'image/jpeg': (image) => image.jpeg({ quality: 90 }),
+  'image/png': (image) => image.png(),
+  'image/webp': (image) => image.webp({ quality: 90 }),
+  'image/avif': (image) => image.avif({ quality: 90 }),
+}
+
+// Images too small for any generated size are delivered to visitors as the original file.
+// Those originals are saved again without metadata (EXIF: GPS position, time, camera serial),
+// turned upright first. Larger originals stay untouched (print quality) and only reach
+// logged-in accounts (isProtectedOriginal). GIFs are kept (animation).
+const stripMetadataOfSmallImages: CollectionBeforeOperationHook = async ({ args, operation }) => {
+  const file = (args as { req?: PayloadRequest }).req?.file
+  const reencode = file ? REENCODE[file.mimetype] : undefined
+
+  if ((operation !== 'create' && operation !== 'update') || !file?.data?.length || !reencode) {
+    return args
+  }
+
+  const { width = 0, height = 0, orientation = 1 } = await sharp(file.data).metadata()
+  // Orientations 5–8 are turned by 90°: width and height swap
+  const uprightWidth = orientation >= 5 ? height : width
+
+  if (uprightWidth > THUMB_WIDTH || Math.max(width, height) > LARGEST_UNRESIZED_SIDE) {
+    return args
+  }
+
+  const data = await reencode(sharp(file.data).rotate()).toBuffer()
+
+  file.data = data
+  file.size = data.length
+
+  return args
 }
 
 // GET /api/media or /api/media/<id> (not the file route /api/media/file/…)
@@ -113,7 +165,7 @@ export const Media: CollectionConfig = {
   },
   hooks: {
     // Page size for visitors/artists/editors at most 100 (src/lib/query-limits.ts)
-    beforeOperation: [limitPublicQueries],
+    beforeOperation: [limitPublicQueries, stripMetadataOfSmallImages],
     beforeChange: [
       // Uploading a new file (also replacing one) only after accepting the contributor terms and
       // with the rights confirmed for this file. Updates without a file (alt text, the lock sync)
@@ -220,6 +272,9 @@ export const Media: CollectionConfig = {
   upload: {
     // Where the files are stored; when hosting, point it at a persistent volume (MEDIA_DIR)
     staticDir: process.env.MEDIA_DIR || 'media',
+    // Files only from the own computer, no "paste URL": the server would otherwise fetch
+    // addresses on behalf of the account
+    pasteURL: false,
     // Runs after the read access check of the file route (locked media are 403 already)
     handlers: [
       (req, { doc, params }) => {
@@ -306,6 +361,8 @@ export const Media: CollectionConfig = {
       label: 'Rights confirmed',
       type: 'checkbox',
       defaultValue: false,
+      // The proof is for the admin area only, never part of the public API
+      access: { read: loggedInField },
       admin: {
         description:
           'By ticking I confirm: I hold all rights to this file (copyright, consent of the people shown), it is not illegal, and I am responsible for it under the contributor terms. Required for every upload except by admins. Several files at once: “Edit all” → “Rights confirmed” → tick it once for all files.',
@@ -315,7 +372,7 @@ export const Media: CollectionConfig = {
       name: 'rightsConfirmedAt',
       label: 'Rights confirmed on',
       type: 'date',
-      access: { create: () => false, update: () => false },
+      access: { read: loggedInField, create: () => false, update: () => false },
       admin: {
         position: 'sidebar',
         readOnly: true,
@@ -328,7 +385,8 @@ export const Media: CollectionConfig = {
       name: 'rightsConfirmedBy',
       label: 'Rights confirmed by',
       type: 'text',
-      access: { create: () => false, update: () => false },
+      // Contains an e-mail address: only for logged-in accounts
+      access: { read: loggedInField, create: () => false, update: () => false },
       admin: { position: 'sidebar', readOnly: true, condition: (data) => Boolean(data?.rightsConfirmedBy) },
     },
     {
