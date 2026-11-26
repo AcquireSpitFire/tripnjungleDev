@@ -421,5 +421,6 @@ QR codes, the security rules above) against a temporary database. Run it after e
 - `scripts/regenerate-sizes.ts` – regenerate image sizes for existing media (`npm run media:regenerate -- --yes`; without `--yes` it only shows which database and folder it would change)
 - `scripts/set-locked.ts` – lock/unlock an exhibition from the command line (for testing; needs `--yes`)
 - `scripts/write-schema-snapshot.ts` – schema snapshot for hand-written migrations (see above)
-- `scripts/check-access.ts` – permission checks (`npm run test:access`)
+- `scripts/check-access.ts` – all checks (`npm run test:access`): one file per area in `scripts/access/`
+  (accounts, contributor terms, exhibitions, media lock, artists, editors, QR, security, shop …)
 - `tripnjungle.db`, `media/`, `.env` – local, not in git
