@@ -26,8 +26,9 @@ import {
 //   - The very first account always becomes admin; afterwards only admins create accounts.
 //   - Only admins change roles and sections, also not on their own account.
 //   - The last admin can neither be deleted nor demoted.
-//   - 5 failed logins lock the account for 15 minutes; sessions are stored on the
-//     server, so logging out or locking takes effect immediately.
+//   - Accounts are never locked after wrong passwords (anybody could otherwise lock the admin
+//     out); the login is limited per address and account instead (src/proxy.ts).
+//   - Sessions are stored on the server, so logging out takes effect immediately.
 //   - Passwords need at least 12 characters.
 
 const MIN_PASSWORD_LENGTH = 12
@@ -65,8 +66,8 @@ export const Users: CollectionConfig = {
     hidden: ({ user }) => !isAdmin(user),
   },
   auth: {
-    maxLoginAttempts: 5,
-    lockTime: 15 * 60 * 1000,
+    // No account lock: see the comment at the top and src/proxy.ts
+    maxLoginAttempts: 0,
     tokenExpiration: 2 * 60 * 60,
     useSessions: true,
     cookies: {

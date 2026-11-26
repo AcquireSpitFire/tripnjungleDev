@@ -50,7 +50,9 @@ In the admin under **Exhibitions**:
 Accounts are managed by admins under **Accounts**. Everybody changes their own name and password via
 the avatar (top right). An admin sets the first password and tells the person; they change it after
 logging in. “Forgot password” on the login page sends a reset link once e-mail is set up (`SMTP_HOST`,
-`SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM`; without them e-mails only appear in the log). Passwords need at least 12 characters; 5 wrong attempts lock the account for 15 minutes.
+`SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM`; without them e-mails only appear in the log). Passwords need at least 12 characters. Too many wrong
+tries from one address pause the login there for 15 minutes; the account itself is never locked, so
+logging in from another network still works.
 
 **Log out**: in the admin with the “Log out” button (top right, next to the account name and role);
 on the website, logged-in accounts find “Admin” and “Log out” at the end of the menu. Logging out
@@ -209,8 +211,10 @@ quantity, address), so a print lab API can be added as a step after “paid” w
 
 ## Security notes
 
-- **Login**: at most 10 login/password requests per IP address in 15 minutes (`src/proxy.ts`, then
-  “429 Too Many Requests”), plus Payload's lock of 15 minutes after 5 wrong passwords per account.
+- **Login** (`src/proxy.ts`, then “429 Too Many Requests”): 5 tries per address and account and
+  20 per address in 15 minutes, 50 per account and hour from all addresses together; “Forgot password”
+  3 times per account and hour. Accounts are **not locked** after wrong passwords: a lock would let
+  anybody keep the admin out with a few tries – an address that is blocked only blocks itself.
   Sessions are stored on the server (logging out ends them), cookies are `httpOnly`, `SameSite=Strict`
   and `secure` on https.
 - **Startup**: the server refuses to start with a `PAYLOAD_SECRET` shorter than 32 characters
@@ -323,7 +327,9 @@ runs the database migrations (`src/migrations`) and then starts the server.
 **Updating to release 3.0** (shop): download a backup of `tripnjungle.db` first. The migration adds the
 tables for prints, orders, price requests, the watermark and the shop settings; nothing existing changes.
 The shop stays closed until it is set up (see Shop above). Watermarked copies are stored in
-`MEDIA_DIR/watermarked/` (made on demand, can be deleted at any time).
+`MEDIA_DIR/watermarked/` (made on demand, can be deleted at any time). Accounts are no longer locked
+after wrong passwords (the columns `login_attempts`/`lock_until` are removed); locally, the next
+`npm run dev` asks once whether to accept dropping them – answer **y**.
 
 **Updating to release 2.0** (accounts, artists, QR codes): download a backup of `tripnjungle.db` first.
 The migrations run on the next start: field names become English (data is kept), all existing accounts

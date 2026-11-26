@@ -824,40 +824,104 @@ async function run() {
 
   check('mail links cannot add hidden recipients', !mailtoHref('a?bcc=x@evil.example').includes('?'), mailtoHref('a?bcc=x@evil.example'))
 
-  // Login rate limit (src/proxy.ts)
+  // Login rate limit (src/proxy.ts): per address + account, per address, per account – no lock
   const { proxy } = await import('../src/proxy')
   const { NextRequest } = await import('next/server')
-  const attempt = (address: string) =>
-    proxy(
-      new NextRequest('http://localhost:3000/api/users/login', {
-        method: 'POST',
-        headers: { 'x-forwarded-for': `1.2.3.4, ${address}` },
-      }),
-    )
-  const statuses: number[] = []
+  const post = async (path: string, address: string, body?: string | FormData, type = 'application/json') =>
+    (
+      await proxy(
+        new NextRequest('http://localhost:3000' + path, {
+          method: 'POST',
+          headers: {
+            'x-forwarded-for': `1.2.3.4, ${address}`,
+            ...(typeof body === 'string' ? { 'content-type': type } : {}),
+          },
+          body,
+        }),
+      )
+    ).status
+  const login = (address: string, email: string) =>
+    post('/api/users/login', address, JSON.stringify({ email, password: 'wrong-password-1' }))
+  const repeat = async (times: number, action: (index: number) => Promise<number>) => {
+    const statuses: number[] = []
 
-  for (let index = 0; index < 11; index += 1) {
-    statuses.push(attempt('203.0.113.7').status)
+    for (let index = 0; index < times; index += 1) {
+      statuses.push(await action(index))
+    }
+
+    return statuses
   }
+  const blockedAt = (statuses: number[]) => statuses.findIndex((status) => status === 429)
+  const attempt = (address: string) => login(address, 'someone@test.local')
 
-  check('10 login attempts per address are allowed', statuses.slice(0, 10).every((status) => status !== 429), statuses)
-  check('the 11th attempt is blocked (429)', statuses[10] === 429, statuses[10])
-  check('other addresses are not affected', attempt('203.0.113.8').status !== 429)
+  const pairStatuses = await repeat(6, () => login('203.0.113.7', 'admin@test.local'))
 
-  // Encoded or otherwise changed paths reach the same handler and count the same
-  const variantStatus = (path: string, address: string) =>
-    proxy(new NextRequest('http://localhost:3000' + path, { method: 'POST', headers: { 'x-forwarded-for': address } })).status
-  const variants = ['/api/users/login', '/api/users/l%6Fgin', '/API/Users/Login/', '/api//users/login', '/api/users/./login']
-  const variantStatuses = Array.from({ length: 11 }, (_, index) => variantStatus(variants[index % variants.length], '203.0.113.9'))
-
+  check('5 login attempts per address and account, the 6th is blocked (429)', blockedAt(pairStatuses) === 5, pairStatuses)
+  check('the same address can still log in to another account', (await login('203.0.113.7', 'manager@test.local')) !== 429)
   check(
-    'encoded, upper-case or doubled-slash login paths share one limit',
-    variantStatuses.slice(0, 10).every((status) => status !== 429) && variantStatuses[10] === 429,
-    variantStatuses,
+    'another address can still log in to that account (nobody can lock out an account)',
+    (await login('203.0.113.8', 'admin@test.local')) !== 429,
   )
   check(
+    'upper case and spaces in the e-mail count as the same account',
+    (await login('203.0.113.7', '  ADMIN@test.local ')) === 429,
+  )
+
+  const addressStatuses = await repeat(21, (index) => login('203.0.113.11', `account-${index}@test.local`))
+
+  check('20 login attempts per address, the 21st is blocked', blockedAt(addressStatuses) === 20, addressStatuses)
+
+  // Account limit: one address alone never reaches it; blocked tries do not count
+  await repeat(25, () => login('203.0.113.12', 'target@test.local'))
+
+  const spreadStatuses = await repeat(46, (index) => login(`198.51.100.${index + 1}`, 'target@test.local'))
+
+  check(
+    '50 attempts per account and hour from all addresses; blocked tries do not count',
+    blockedAt(spreadStatuses) === 45,
+    blockedAt(spreadStatuses),
+  )
+
+  const formStatuses = await repeat(3, () => login('203.0.113.13', 'form@test.local'))
+
+  formStatuses.push(
+    ...(await repeat(3, () => {
+      const form = new FormData()
+
+      form.set('_payload', JSON.stringify({ email: 'Form@test.local', password: 'wrong-password-1' }))
+      return post('/api/users/login', '203.0.113.13', form)
+    })),
+  )
+  check('the admin login form (_payload) counts for the same account', blockedAt(formStatuses) === 5, formStatuses)
+
+  const forgotStatuses = await repeat(4, (index) =>
+    post('/api/users/forgot-password', `192.0.2.${index + 1}`, JSON.stringify({ email: 'admin@test.local' })),
+  )
+
+  check('"Forgot password" at most 3 times per account and hour', blockedAt(forgotStatuses) === 3, forgotStatuses)
+
+  // Payload itself does not lock accounts any more
+  for (let index = 0; index < 6; index += 1) {
+    await payload.login({ collection: 'users', data: { email: 'manager@test.local', password: 'wrong-password-1' } }).catch(() => null)
+  }
+
+  const afterWrong = await payload
+    .login({ collection: 'users', data: { email: 'manager@test.local', password: 'manager-password-1' } })
+    .then((result) => Boolean(result.token))
+    .catch((error: Error) => error.message)
+
+  check('6 wrong passwords do not lock the account', afterWrong === true, afterWrong)
+
+  // Encoded or otherwise changed paths reach the same handler and count the same
+  const variants = ['/api/users/login', '/api/users/l%6Fgin', '/API/Users/Login/', '/api//users/login', '/api/users/./login', '/api/users/login']
+  const variantStatuses = await repeat(6, (index) =>
+    post(variants[index], '203.0.113.9', JSON.stringify({ email: 'variant@test.local', password: 'x' })),
+  )
+
+  check('encoded, upper-case or doubled-slash login paths share one limit', blockedAt(variantStatuses) === 5, variantStatuses)
+  check(
     'an encoded checkout path is limited too',
-    Array.from({ length: 11 }, () => variantStatus('/shop/check%6Fut', '203.0.113.10'))[10] === 429,
+    blockedAt(await repeat(11, () => post('/shop/check%6Fut', '203.0.113.10'))) === 10,
   )
 
   const { addressGroup } = await import('../src/lib/client-address')
@@ -1311,14 +1375,12 @@ async function run() {
   )
   check('the offers route is never cached', (offersResponse.headers.get('cache-control') || '').includes('no-store'))
 
-  const shopPost = (path: string, address: string) =>
-    proxy(new NextRequest('http://localhost:3000' + path, { method: 'POST', headers: { 'x-forwarded-for': address } })).status
-  const requestStatuses = Array.from({ length: 6 }, () => shopPost('/shop/request', '203.0.113.20'))
-  const checkoutStatuses = Array.from({ length: 11 }, () => shopPost('/shop/checkout', '203.0.113.21'))
+  const requestStatuses = await repeat(6, () => post('/shop/request', '203.0.113.20'))
+  const checkoutStatuses = await repeat(11, () => post('/shop/checkout', '203.0.113.21'))
 
   check('the 6th price request per address is blocked (429)', requestStatuses[5] === 429 && requestStatuses[4] !== 429, requestStatuses)
   check('the 11th checkout per address is blocked (429)', checkoutStatuses[10] === 429 && checkoutStatuses[9] !== 429, checkoutStatuses)
-  check('the shop limits do not block the login', attempt('203.0.113.21').status !== 429)
+  check('the shop limits do not block the login', (await attempt('203.0.113.21')) !== 429)
 
   // ---------- Shop: watermark on photos for sale ----------
   console.log('Shop – watermark')

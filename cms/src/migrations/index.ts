@@ -10,6 +10,7 @@ import * as migration_20261122_235813_qr_settings from './20261122_235813_qr_set
 import * as migration_20261125_183903_shop from './20261125_183903_shop';
 import * as migration_20261125_202413_contributor_terms from './20261125_202413_contributor_terms';
 import * as migration_20261125_202951_rights_confirmation from './20261125_202951_rights_confirmation';
+import * as migration_20261126_190945_login_without_lock from './20261126_190945_login_without_lock';
 
 export const migrations = [
   {
@@ -70,6 +71,11 @@ export const migrations = [
   {
     up: migration_20261125_202951_rights_confirmation.up,
     down: migration_20261125_202951_rights_confirmation.down,
-    name: '20261125_202951_rights_confirmation'
+    name: '20261125_202951_rights_confirmation',
+  },
+  {
+    up: migration_20261126_190945_login_without_lock.up,
+    down: migration_20261126_190945_login_without_lock.down,
+    name: '20261126_190945_login_without_lock'
   },
 ];
