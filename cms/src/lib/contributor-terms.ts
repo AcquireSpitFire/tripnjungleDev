@@ -15,17 +15,19 @@ import { APIError, type CollectionBeforeChangeHook, type PayloadRequest } from '
 
 import { getRole } from '../access/roles'
 import type { Site, User } from '../payload-types'
+import { SITE_NAME } from './site-identity'
+import { normalizeNewlines } from './text'
 
 const VERSION_KEY = 'tj:contributorTermsVersion'
 
 export function defaultContributorTermsText(site: Pick<Site, 'operatorName' | 'jurisdiction'>): string {
-  const operator = site.operatorName?.trim() || 'the operator of Tripnjungle (see the legal notice)'
+  const operator = site.operatorName?.trim() || `the operator of ${SITE_NAME} (see the legal notice)`
   const austria = site.jurisdiction === 'at'
   const personRights = austria ? '§ 78 UrhG' : '§ 22 KUG'
 
   return `## 1. Scope
 
-These terms apply to every account of the Tripnjungle administration area that is not an admin account (artists, editors, managers), and to everything uploaded, written or changed with it (“your content”). The operator is ${operator}.
+These terms apply to every account of the ${SITE_NAME} administration area that is not an admin account (artists, editors, managers), and to everything uploaded, written or changed with it (“your content”). The operator is ${operator}.
 
 ## 2. Your content
 
@@ -68,7 +70,7 @@ export function contributorTermsText(site: Pick<Site, 'contributorTermsText' | '
 }
 
 export function contributorTermsVersion(text: string): string {
-  return crypto.createHash('sha256').update(text.replace(/\r\n/g, '\n').trim()).digest('hex').slice(0, 12)
+  return crypto.createHash('sha256').update(normalizeNewlines(text)).digest('hex').slice(0, 12)
 }
 
 // Everybody except admins has to accept

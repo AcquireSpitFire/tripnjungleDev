@@ -5,7 +5,9 @@
 import type { Payload } from 'payload'
 
 import type { Artist, Exhibition, Media } from '../../payload-types'
-import { absolute, findPublicExhibitions, getServerUrl, imageUrl } from '../seo'
+import { absolute, findPublicExhibitions, imageUrl } from '../seo'
+import { serverUrl } from '../site-identity'
+import { isSlug } from '../slug'
 import { contentIsOpen, toId } from '../visibility'
 
 type PrintRow = NonNullable<NonNullable<NonNullable<Exhibition['gallery']>[number]['prints']>[number]>
@@ -81,8 +83,7 @@ export function parseCartItems(value: unknown): CartItemInput[] | null {
     const photoId = typeof photo === 'number' ? String(photo) : photo
 
     if (
-      typeof exhibition !== 'string' ||
-      !/^[a-z0-9-]{1,100}$/i.test(exhibition) ||
+      !isSlug(exhibition) ||
       typeof photoId !== 'string' ||
       !ID_PATTERN.test(photoId) ||
       typeof print !== 'string' ||
@@ -180,7 +181,7 @@ export function offersOf(exhibition: Exhibition, base: string, options: { previe
 
 // The offers of some exhibitions (by ID = slug), each exhibition loaded once
 export async function findOffers(payload: Payload, slugs: string[]): Promise<Map<string, Offer>> {
-  const base = getServerUrl(payload)
+  const base = serverUrl()
   const offers = new Map<string, Offer>()
 
   for (const slug of new Set(slugs)) {

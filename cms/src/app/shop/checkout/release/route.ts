@@ -5,23 +5,19 @@
 import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 
+import { errorJson, json } from '@/lib/http'
 import { parseReleaseValue, releaseCheckout } from '@/lib/shop/hold'
-import { errorJson, isSameOrigin, json, readJson } from '@/lib/shop/http'
+import { shopPost } from '@/lib/shop/route'
 
 export const dynamic = 'force-dynamic'
 
-export async function POST(request: Request) {
-  if (!isSameOrigin(request)) {
-    return errorJson('Forbidden', 403)
-  }
-
-  const body = await readJson(request)
+export const POST = shopPost(async (body) => {
   const payload = await getPayload({ config: configPromise })
-  const orderId = parseReleaseValue(payload.secret, body?.release)
+  const orderId = parseReleaseValue(payload.secret, body.release)
 
   if (orderId === null) {
     return errorJson('Forbidden', 403)
   }
 
   return json({ released: await releaseCheckout(payload, orderId) })
-}
+})

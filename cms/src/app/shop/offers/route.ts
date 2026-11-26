@@ -11,11 +11,12 @@ import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 
 import { getRole } from '@/access/roles'
-import { getServerUrl } from '@/lib/seo'
+import { errorJson, json } from '@/lib/http'
+import { serverUrl } from '@/lib/site-identity'
 import { findOffers, offersOf, type Offer } from '@/lib/shop/catalog'
-import { errorJson, json } from '@/lib/shop/http'
 import { getShopSettings } from '@/lib/shop/settings'
 import { copiesLeft, countTaken } from '@/lib/shop/stock'
+import { isSlug } from '@/lib/slug'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,7 +24,7 @@ export async function GET(request: Request) {
   const url = new URL(request.url)
   const slug = (url.searchParams.get('exhibition') || '').toLowerCase()
 
-  if (!/^[a-z0-9-]{1,100}$/.test(slug)) {
+  if (!isSlug(slug)) {
     return errorJson('Invalid exhibition', 400)
   }
 
@@ -45,7 +46,7 @@ export async function GET(request: Request) {
       overrideAccess: false,
     })
 
-    offers = docs[0] ? offersOf(docs[0], getServerUrl(payload), { preview: true }) : []
+    offers = docs[0] ? offersOf(docs[0], serverUrl(), { preview: true }) : []
   } else if (settings.enabled) {
     offers = [...(await findOffers(payload, [slug])).values()]
   } else {

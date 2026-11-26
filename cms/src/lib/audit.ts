@@ -4,6 +4,7 @@
 import type { CollectionBeforeChangeHook, Field } from 'payload'
 
 import { getUserId, loggedInField } from '../access/roles'
+import { serverOnly } from '../fields/server-only'
 
 export function auditFields(options: { updatedBy?: boolean } = {}): Field[] {
   const fields: Field[] = [
@@ -12,7 +13,7 @@ export function auditFields(options: { updatedBy?: boolean } = {}): Field[] {
       label: 'Created by',
       type: 'relationship',
       relationTo: 'users',
-      access: { read: loggedInField, create: () => false, update: () => false },
+      access: { ...serverOnly, read: loggedInField },
       admin: { readOnly: true, position: 'sidebar' },
     },
   ]
@@ -23,7 +24,7 @@ export function auditFields(options: { updatedBy?: boolean } = {}): Field[] {
       label: 'Last changed by',
       type: 'relationship',
       relationTo: 'users',
-      access: { read: loggedInField, create: () => false, update: () => false },
+      access: { ...serverOnly, read: loggedInField },
       admin: { readOnly: true, position: 'sidebar' },
     })
   }

@@ -1,4 +1,5 @@
 // Release and visibility of an exhibition (see src/collections/Exhibitions.ts).
+import { isSlug } from './slug'
 
 export type Visibility = 'locked' | 'link' | 'public'
 export type Release = 'scheduled' | 'comingSoon' | 'planning'
@@ -33,8 +34,11 @@ type SlugRequest = {
   searchParams?: URLSearchParams
 }
 
+// Context key with which findPublicExhibitions (src/lib/seo.ts) passes the slug it looks up
+export const SLUG_CONTEXT_KEY = 'tjSlug'
+
 export function requestedSlug(req: SlugRequest | null | undefined): string | null {
-  const fromContext = req?.context?.tjSlug
+  const fromContext = req?.context?.[SLUG_CONTEXT_KEY]
   const where = req?.query?.where as { slug?: { equals?: unknown } } | undefined
   const candidate =
     (typeof fromContext === 'string' && fromContext) ||
@@ -42,13 +46,15 @@ export function requestedSlug(req: SlugRequest | null | undefined): string | nul
     req?.searchParams?.get('where[slug][equals]') ||
     null
 
-  return candidate && /^[a-z0-9-]+$/i.test(candidate) ? candidate.toLowerCase() : null
+  const slug = candidate ? candidate.toLowerCase() : null
+
+  return isSlug(slug) ? slug : null
 }
 
 export type Ref = number | string | { id: number | string } | null | undefined
 
 export function toId(ref: Ref): number | string | null {
-  if (ref === null || ref === undefined) {
+  if (ref === null || ref === undefined || ref === '') {
     return null
   }
 

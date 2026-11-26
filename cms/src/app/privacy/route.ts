@@ -1,6 +1,6 @@
 // "/privacy": privacy policy from Admin → Site settings → Privacy
 import { renderStaticPage } from '@/lib/static-page'
-import { SITE_NAME } from '@/lib/seo'
+import { SITE_NAME } from '@/lib/site-identity'
 import { escapeHtml } from '@/lib/render-template'
 import { formatDate, mailLink, paragraphs, required, urlLink } from '@/lib/site'
 

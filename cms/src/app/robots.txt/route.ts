@@ -2,13 +2,13 @@
 import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 
-import { getServerUrl } from '@/lib/seo'
+import { serverUrl } from '@/lib/site-identity'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
   const payload = await getPayload({ config: configPromise })
-  const base = getServerUrl(payload)
+  const base = serverUrl()
 
   // The cart, the order pages and the shop endpoints are nothing to index
   const text = [

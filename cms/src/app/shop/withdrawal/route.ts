@@ -7,23 +7,16 @@ import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 
 import { sendWithdrawalEmails } from '@/lib/shop/emails'
-import { cleanText, errorJson, isEmail, isSameOrigin, json, readJson } from '@/lib/shop/http'
+import { cleanText, errorJson, isEmail, json } from '@/lib/http'
+import { HOLDING_STATUSES } from '@/lib/shop/order-status'
+import { shopPost } from '@/lib/shop/route'
 
 export const dynamic = 'force-dynamic'
 
 const NOT_FOUND =
   'We could not find an order with this number and e-mail address. Please check both, or send your withdrawal by e-mail (see the instructions below).'
 
-export async function POST(request: Request) {
-  if (!isSameOrigin(request)) {
-    return errorJson('Forbidden', 403)
-  }
-
-  const body = await readJson(request)
-
-  if (!body) {
-    return errorJson('Invalid request', 400)
-  }
+export const POST = shopPost(async (body) => {
 
   const orderNumber = cleanText(body.orderNumber, 40).toUpperCase()
   const email = cleanText(body.email, 254).toLowerCase()
@@ -47,7 +40,7 @@ export async function POST(request: Request) {
   if (
     !order?.customerEmail ||
     order.customerEmail.toLowerCase() !== email ||
-    !['awaitingPayment', 'paid', 'shipped'].includes(order.status)
+    !HOLDING_STATUSES.includes(order.status)
   ) {
     return errorJson(NOT_FOUND, 404)
   }
@@ -83,4 +76,4 @@ export async function POST(request: Request) {
   }
 
   return json({ ok: true, received: receivedAt.toISOString() })
-}
+})

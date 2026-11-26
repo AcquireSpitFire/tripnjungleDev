@@ -1,6 +1,10 @@
-// Small helpers for the shop routes (src/app/shop/**): JSON in and out, size limit, same origin.
+// Small helpers for our own route handlers and endpoints: JSON in and out (never cached), a size
+// limit for request bodies, the same-origin check, and cleaning of form values.
+import { serverUrl } from './site-identity'
+
 const MAX_BODY_BYTES = 32 * 1024
 
+// Every JSON answer of our own routes; errors are always { error: "…" }
 export function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
     status,
@@ -21,10 +25,7 @@ export function isSameOrigin(request: Request): boolean {
     return false
   }
 
-  const allowed = [process.env.PAYLOAD_PUBLIC_SERVER_URL || 'http://localhost:3000']
-    .map((value) => value.replace(/\/$/, ''))
-
-  if (allowed.includes(origin)) {
+  if (origin === serverUrl()) {
     return true
   }
 
@@ -36,6 +37,7 @@ export function isSameOrigin(request: Request): boolean {
   }
 }
 
+// The JSON object of a request body, or null (wrong type, too large, not an object)
 export async function readJson(request: Request): Promise<Record<string, unknown> | null> {
   if (!(request.headers.get('content-type') || '').includes('application/json')) {
     return null

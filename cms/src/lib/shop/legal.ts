@@ -7,25 +7,18 @@
 // a block whose lines all start with "— " or "- " = list.
 import type { Site } from '../../payload-types'
 import { escapeHtml } from '../render-template'
+import { serverUrl } from '../site-identity'
+import { normalizeNewlines, operatorAddressLines, splitParagraphs } from '../text'
 import { toShopSettings } from './settings'
 
 const MISSING_OPERATOR = '[Name, address and e-mail – fill in under Site settings → Legal notice]'
 
-function siteUrl(): string {
-  return (process.env.PAYLOAD_PUBLIC_SERVER_URL || 'http://localhost:3000').replace(/\/$/, '')
-}
-
 function operatorLines(site: Site): string[] {
   return [
-    site.operatorName,
-    site.operatorStreet,
-    site.operatorCity,
-    site.operatorCountry,
-    site.operatorEmail ? 'E-mail: ' + site.operatorEmail : '',
-    site.operatorPhone ? 'Phone: ' + site.operatorPhone : '',
-  ]
-    .map((line) => (line || '').trim())
-    .filter(Boolean)
+    ...operatorAddressLines(site),
+    site.operatorEmail?.trim() ? 'E-mail: ' + site.operatorEmail.trim() : '',
+    site.operatorPhone?.trim() ? 'Phone: ' + site.operatorPhone.trim() : '',
+  ].filter(Boolean)
 }
 
 export function defaultWithdrawalText(site: Site): string {
@@ -42,7 +35,7 @@ To exercise the right of withdrawal, you must inform us
 
 ${operator}
 
-of your decision to withdraw from this contract by an unequivocal statement (e.g. a letter sent by post or an e-mail). You can also use the withdrawal function on our website: ${siteUrl()}/withdrawal. You may use the model withdrawal form below, but it is not obligatory.
+of your decision to withdraw from this contract by an unequivocal statement (e.g. a letter sent by post or an e-mail). You can also use the withdrawal function on our website: ${serverUrl()}/withdrawal. You may use the model withdrawal form below, but it is not obligatory.
 
 To meet the withdrawal deadline, it is sufficient for you to send your communication concerning your exercise of the right of withdrawal before the withdrawal period has expired.
 
@@ -77,7 +70,7 @@ You are only liable for any diminished value of the goods resulting from the han
 export function defaultTermsText(site: Site): string {
   const name = site.operatorName?.trim() || '[Name – fill in under Site settings → Legal notice]'
   const law = site.jurisdiction === 'at' ? 'Austrian' : 'German'
-  const base = siteUrl()
+  const base = serverUrl()
 
   return `## 1. Scope
 
@@ -134,12 +127,7 @@ export function withdrawalText(site: Site): string {
 
 // Text format → HTML (every value escaped)
 export function legalTextToHtml(text: string): string {
-  return text
-    .replace(/\r\n/g, '\n')
-    .trim()
-    .split(/\n\s*\n/)
-    .map((block) => block.trim())
-    .filter(Boolean)
+  return splitParagraphs(text)
     .map((block) => {
       if (block.startsWith('## ')) {
         return `<h2>${escapeHtml(block.slice(3).trim())}</h2>`
@@ -158,8 +146,5 @@ export function legalTextToHtml(text: string): string {
 
 // Text format → plain text for e-mails ("## Heading" → "HEADING")
 export function legalTextToPlain(text: string): string {
-  return text
-    .replace(/\r\n/g, '\n')
-    .trim()
-    .replace(/^## (.*)$/gm, (_, heading: string) => heading.toUpperCase())
+  return normalizeNewlines(text).replace(/^## (.*)$/gm, (_, heading: string) => heading.toUpperCase())
 }

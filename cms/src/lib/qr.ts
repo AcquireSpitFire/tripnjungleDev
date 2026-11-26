@@ -10,6 +10,8 @@
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from 'pdf-lib'
 import QRCode from 'qrcode'
 
+import { SITE_NAME } from './site-identity'
+
 export type QrLabelFormat = 'a6' | 'a5' | 'square100'
 
 export type QrPdfSettings = {
@@ -169,8 +171,8 @@ export async function buildQrPdf(labels: QrLabel[], settings: QrPdfSettings, tit
   const gray = rgb(0.35, 0.35, 0.35)
 
   pdf.setTitle(safeText(regular, title))
-  pdf.setCreator('Tripnjungle')
-  pdf.setProducer('Tripnjungle')
+  pdf.setCreator(SITE_NAME)
+  pdf.setProducer(SITE_NAME)
 
   for (const label of labels) {
     const page = pdf.addPage([width, height])

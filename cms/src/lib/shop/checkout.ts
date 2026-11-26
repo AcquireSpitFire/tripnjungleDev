@@ -9,6 +9,7 @@
 import type { Payload } from 'payload'
 
 import type { Order } from '../../payload-types'
+import { SITE_NAME } from '../site-identity'
 import { findOffers, offerKey, type CartItemInput, type Offer } from './catalog'
 import { countryName } from './countries'
 import {
@@ -252,7 +253,7 @@ export async function createCheckout(
 
   const { order, quote } = held
   const orderNumber = order.orderNumber || formatOrderNumber(order.id, order.createdAt)
-  const seller = settings.site.operatorName?.trim() || 'Tripnjungle'
+  const seller = settings.site.operatorName?.trim() || SITE_NAME
 
   // The Stripe session is created outside the lock: the copies are already held by the order
   try {
@@ -263,7 +264,7 @@ export async function createCheckout(
         metadata: { orderId: String(order.id), orderNumber },
         payment_intent_data: {
           metadata: { orderId: String(order.id), orderNumber },
-          description: `${orderNumber} – Tripnjungle prints`,
+          description: `${orderNumber} – ${SITE_NAME} prints`,
         },
         line_items: quote.lines.map((line) => ({
           quantity: line.quantity,

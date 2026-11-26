@@ -5,11 +5,11 @@
 import type { Payload } from 'payload'
 
 import { escapeHtml } from '../render-template'
+import { SITE_NAME, serverUrl } from '../site-identity'
+import { operatorAddressLines } from '../text'
 import { countryName } from './countries'
 import { legalTextToHtml, legalTextToPlain, termsText, withdrawalText } from './legal'
 import { formatMoney, getShopSettings, type ShopSettings } from './settings'
-
-const SITE = 'Tripnjungle'
 
 type Address = {
   name?: string | null
@@ -54,10 +54,6 @@ export type OrderMailDoc = {
 
 type Message = { to: string; subject: string; lines: string[]; html?: string; replyTo?: string }
 
-function serverUrl(): string {
-  return (process.env.PAYLOAD_PUBLIC_SERVER_URL || 'http://localhost:3000').replace(/\/$/, '')
-}
-
 // ---------- Building blocks ----------
 
 function addressLines(address: Address | undefined): string[] {
@@ -99,9 +95,7 @@ function totalsLines(order: OrderMailDoc): string[] {
 function sellerLines(settings: ShopSettings): string[] {
   const site = settings.site
 
-  return [site.operatorName, site.operatorStreet, site.operatorCity, site.operatorCountry, site.operatorEmail]
-    .map((line) => (line || '').trim())
-    .filter(Boolean)
+  return [...operatorAddressLines(site), (site.operatorEmail || '').trim()].filter(Boolean)
 }
 
 function paragraph(lines: string[]): string {
@@ -111,7 +105,7 @@ function paragraph(lines: string[]): string {
 function layout(body: string): string {
   const url = serverUrl()
 
-  return `<!DOCTYPE html><html lang="en"><body style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.5;color:#111;max-width:640px;margin:0 auto;padding:16px">${body}<p style="color:#666;font-size:13px;margin-top:32px">${escapeHtml(SITE)} · <a href="${escapeHtml(url)}">${escapeHtml(url.replace(/^https?:\/\//, ''))}</a></p></body></html>`
+  return `<!DOCTYPE html><html lang="en"><body style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.5;color:#111;max-width:640px;margin:0 auto;padding:16px">${body}<p style="color:#666;font-size:13px;margin-top:32px">${escapeHtml(SITE_NAME)} · <a href="${escapeHtml(url)}">${escapeHtml(url.replace(/^https?:\/\//, ''))}</a></p></body></html>`
 }
 
 // Blank lines in "lines" separate paragraphs in the HTML part
@@ -166,7 +160,7 @@ export async function sendOrderConfirmation(payload: Payload, order: OrderMailDo
   await send(payload, {
     to: order.customerEmail,
     replyTo: settings.shopEmail || undefined,
-    subject: `Your order ${order.orderNumber} at ${SITE}`,
+    subject: `Your order ${order.orderNumber} at ${SITE_NAME}`,
     lines: [
       intro,
       '',
@@ -243,7 +237,7 @@ export async function sendShippedEmail(payload: Payload, order: OrderMailDoc): P
       ...(order.trackingNumber ? ['Tracking number: ' + order.trackingNumber] : []),
       ...(trackingUrl ? ['Track your parcel: ' + trackingUrl] : []),
       '',
-      `Thank you for supporting ${SITE}!`,
+      `Thank you for supporting ${SITE_NAME}!`,
     ],
   })
 }

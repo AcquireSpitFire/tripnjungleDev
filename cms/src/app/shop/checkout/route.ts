@@ -6,25 +6,21 @@ import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 
 import { clientAddress } from '@/lib/client-address'
-import { getServerUrl } from '@/lib/seo'
-import { holdKeyFor } from '@/lib/shop/hold'
+import { errorJson, json } from '@/lib/http'
 import { parseCartItems } from '@/lib/shop/catalog'
 import { createCheckout } from '@/lib/shop/checkout'
 import { isCountryCode } from '@/lib/shop/countries'
-import { errorJson, isSameOrigin, json, readJson } from '@/lib/shop/http'
+import { holdKeyFor } from '@/lib/shop/hold'
+import { shopPost } from '@/lib/shop/route'
 import { getShopSettings } from '@/lib/shop/settings'
+import { serverUrl } from '@/lib/site-identity'
 
 export const dynamic = 'force-dynamic'
 
-export async function POST(request: Request) {
-  if (!isSameOrigin(request)) {
-    return errorJson('Forbidden', 403)
-  }
+export const POST = shopPost(async (body, request) => {
+  const items = parseCartItems(body.items)
 
-  const body = await readJson(request)
-  const items = body && parseCartItems(body.items)
-
-  if (!body || !items || !items.length) {
+  if (!items || !items.length) {
     return errorJson('Your cart is empty.', 400)
   }
 
@@ -40,7 +36,7 @@ export async function POST(request: Request) {
   }
 
   const holdKey = holdKeyFor(payload.secret, clientAddress(request.headers))
-  const result = await createCheckout(payload, settings, items, body.country, getServerUrl(payload), holdKey)
+  const result = await createCheckout(payload, settings, items, body.country, serverUrl(), holdKey)
 
   return 'url' in result ? json({ url: result.url }) : errorJson(result.error, 409, { quote: result.quote })
-}
+})

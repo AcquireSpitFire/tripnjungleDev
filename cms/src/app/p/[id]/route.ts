@@ -7,14 +7,14 @@ import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 
 import { htmlResponse, renderTemplate } from '@/lib/render-template'
-import { SITE_DESCRIPTION, SITE_NAME, getServerUrl } from '@/lib/seo'
+import { SITE_DESCRIPTION, SITE_NAME, serverUrl } from '@/lib/site-identity'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const payload = await getPayload({ config: configPromise })
-  const base = getServerUrl(payload)
+  const base = serverUrl()
 
   const missing = () =>
     htmlResponse(
@@ -30,7 +30,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
         photoState: 'missing',
         heading: 'Photo not found',
         backUrl: '/',
-        backLabel: 'Tripnjungle',
+        backLabel: SITE_NAME,
         exhibitionUrl: '/exhibitions',
         exhibitionLabel: 'All exhibitions',
       }),

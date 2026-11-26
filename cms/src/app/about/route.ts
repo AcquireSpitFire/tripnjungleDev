@@ -1,6 +1,6 @@
 // "/about": text and contact from Admin → Site settings → About
 import { renderStaticPage } from '@/lib/static-page'
-import { SITE_NAME } from '@/lib/seo'
+import { SITE_NAME } from '@/lib/site-identity'
 import { mailLink, paragraphs } from '@/lib/site'
 
 export const dynamic = 'force-dynamic'

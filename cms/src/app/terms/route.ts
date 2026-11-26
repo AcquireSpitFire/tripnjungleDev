@@ -1,6 +1,6 @@
 // "/terms": terms and conditions of the shop (Admin → Site settings → Shop, src/lib/shop/legal.ts)
 import { renderStaticPage } from '@/lib/static-page'
-import { SITE_NAME } from '@/lib/seo'
+import { SITE_NAME } from '@/lib/site-identity'
 import { legalTextToHtml, termsText } from '@/lib/shop/legal'
 import { formatDate } from '@/lib/site'
 

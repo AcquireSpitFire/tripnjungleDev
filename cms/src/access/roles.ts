@@ -11,6 +11,8 @@
 //              (field "editors"); cannot publish, create or delete
 import type { FieldAccess, PayloadRequest, Where } from 'payload'
 
+import { toId } from '../lib/visibility'
+
 export const ROLE_OPTIONS = [
   { label: 'Admin (everything)', value: 'admin' },
   { label: 'Manager (one or more sections)', value: 'manager' },
@@ -80,13 +82,7 @@ export function isEditor(user: MaybeUser): boolean {
 
 // Id of the artist profile linked to an artist account (null if none)
 export function getArtistProfileId(user: MaybeUser): number | string | null {
-  const ref = asRoleUser(user)?.artist
-
-  if (ref === null || ref === undefined) {
-    return null
-  }
-
-  return typeof ref === 'object' ? ref.id : ref
+  return toId(asRoleUser(user)?.artist)
 }
 
 export function getUserId(user: MaybeUser): number | string | null {

@@ -4,6 +4,8 @@
 import fs from 'fs'
 import path from 'path'
 
+import { serverUrl } from './site-identity'
+
 // Relative to the working directory (cms/), because the bundled code lives
 // somewhere else in the build than the source file
 const templatesDir = path.join(process.cwd(), 'src', 'templates')
@@ -69,10 +71,9 @@ export function summarize(text: string | null | undefined, max = 160): string {
 // Allowed: own scripts/styles/images, the YouTube player (API script + iframe), nothing else.
 // Inline scripts are not allowed; the JSON-LD is a data block and is not executed.
 function contentSecurityPolicy(): string {
-  // Media URLs are absolute on PAYLOAD_PUBLIC_SERVER_URL; if the page is opened under a
-  // different address (e.g. a preview domain), that origin has to be allowed
-  const serverOrigin = (process.env.PAYLOAD_PUBLIC_SERVER_URL || '').replace(/\/$/, '')
-  const self = ["'self'", serverOrigin].filter(Boolean).join(' ')
+  // Media URLs are absolute on the server address; if the page is opened under a different
+  // address (e.g. a preview domain), that origin has to be allowed
+  const self = `'self' ${serverUrl()}`
 
   return [
     "default-src 'self'",

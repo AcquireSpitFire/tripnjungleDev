@@ -6,24 +6,23 @@ import { getPayload } from 'payload'
 
 import { htmlResponse, jsonForScript, renderTemplate, summarize } from '@/lib/render-template'
 import {
-  SITE_DESCRIPTION,
-  SITE_NAME,
   absolute,
   artistsJsonLd,
   asMedia,
   eventJsonLd,
   findPublicExhibitions,
-  getServerUrl,
   imageUrl,
   isUpcoming,
 } from '@/lib/seo'
+import { SITE_DESCRIPTION, SITE_NAME, serverUrl } from '@/lib/site-identity'
+import { isSlug } from '@/lib/slug'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(_request: Request, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
   const payload = await getPayload({ config: configPromise })
-  const base = getServerUrl(payload)
+  const base = serverUrl()
 
   const common = {
     siteName: SITE_NAME,
@@ -31,7 +30,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
     ogImageDefault: base + '/og-default.jpg',
   }
 
-  if (!/^[a-z0-9-]+$/i.test(slug)) {
+  if (!isSlug(slug)) {
     return htmlResponse(
       renderTemplate('exhibition.html', {
         ...common,

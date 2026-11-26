@@ -3,6 +3,7 @@ import type { Payload } from 'payload'
 
 import type { Site } from '../payload-types'
 import { escapeHtml } from './render-template'
+import { splitParagraphs } from './text'
 
 export type SiteSettings = Site
 
@@ -12,14 +13,7 @@ export async function getSiteSettings(payload: Payload): Promise<SiteSettings> {
 
 // Textarea → <p>…</p> per paragraph (blank line), line break inside → <br>
 export function paragraphs(text: string | null | undefined): string {
-  const clean = (text || '').replace(/\r\n/g, '\n').trim()
-
-  if (!clean) {
-    return ''
-  }
-
-  return clean
-    .split(/\n\s*\n/)
+  return splitParagraphs(text)
     .map((block) => `<p>${escapeHtml(block).replace(/\n/g, '<br>')}</p>`)
     .join('\n')
 }

@@ -1,22 +1,12 @@
-import type { CollectionConfig, Field, FieldAccess } from 'payload'
+import type { CollectionConfig } from 'payload'
 
 import { canManageShop } from '../access/roles'
+import { readOnlyText, serverOnly } from '../fields/server-only'
 
 // "Request price" for prints with "Price on request" (release 3.0). Created only by the server
 // (src/app/shop/request/route.ts), which also e-mails the shop address with Reply-To set to the
 // visitor. Only managers of the section "Shop" see them; they answer by e-mail and set the
 // status. Nothing is sent to the visitor's address automatically (no spam relay).
-const serverOnly: { access: { create: FieldAccess; update: FieldAccess } } = {
-  access: { create: () => false, update: () => false },
-}
-
-const readOnlyText = (name: string, label: string, width?: string): Field => ({
-  name,
-  label,
-  type: 'text',
-  ...serverOnly,
-  admin: { readOnly: true, ...(width ? { width } : {}) },
-})
 
 export const PriceRequests: CollectionConfig = {
   slug: 'price-requests',
@@ -58,8 +48,8 @@ export const PriceRequests: CollectionConfig = {
       admin: { position: 'sidebar' },
     },
     readOnlyText('name', 'Name'),
-    { name: 'email', label: 'E-mail', type: 'email', required: true, ...serverOnly, admin: { readOnly: true } },
-    { name: 'message', label: 'Message', type: 'textarea', ...serverOnly, admin: { readOnly: true } },
+    { name: 'email', label: 'E-mail', type: 'email', required: true, access: serverOnly, admin: { readOnly: true } },
+    { name: 'message', label: 'Message', type: 'textarea', access: serverOnly, admin: { readOnly: true } },
     {
       type: 'row',
       fields: [
@@ -74,9 +64,9 @@ export const PriceRequests: CollectionConfig = {
       label: 'Exhibition',
       type: 'relationship',
       relationTo: 'exhibitions',
-      ...serverOnly,
+      access: serverOnly,
       admin: { readOnly: true },
     },
-    { name: 'printId', type: 'text', ...serverOnly, admin: { hidden: true } },
+    { name: 'printId', type: 'text', access: serverOnly, admin: { hidden: true } },
   ],
 }

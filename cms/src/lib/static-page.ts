@@ -4,7 +4,7 @@ import configPromise from '@payload-config'
 import { getPayload, type Payload } from 'payload'
 
 import { htmlResponse, jsonForScript, renderTemplate } from './render-template'
-import { SITE_DESCRIPTION, SITE_NAME, getServerUrl } from './seo'
+import { SITE_DESCRIPTION, SITE_NAME, serverUrl } from './site-identity'
 import { getSiteSettings, type SiteSettings } from './site'
 
 type StaticPage = {
@@ -22,7 +22,7 @@ type StaticPage = {
 export async function renderStaticPage(page: StaticPage): Promise<Response> {
   const payload = await getPayload({ config: configPromise })
   const settings = await getSiteSettings(payload)
-  const base = getServerUrl(payload)
+  const base = serverUrl()
   const description = page.description || settings.siteDescription?.trim() || SITE_DESCRIPTION
   const data = page.jsonLd?.(base, description)
 

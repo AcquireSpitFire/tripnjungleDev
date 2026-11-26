@@ -1,7 +1,7 @@
 // "/cart": the cart (public/js/cart.js). The page itself contains no personal data – the items
 // live in the visitor's browser – so it is cached like the other pages.
 import { renderStaticPage } from '@/lib/static-page'
-import { SITE_NAME } from '@/lib/seo'
+import { SITE_NAME } from '@/lib/site-identity'
 import { shippingCountries, toShopSettings } from '@/lib/shop/settings'
 import { paragraphs } from '@/lib/site'
 

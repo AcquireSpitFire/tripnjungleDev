@@ -7,23 +7,16 @@ import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 
 import { htmlResponse, jsonForScript, renderTemplate, summarize } from '@/lib/render-template'
-import {
-  SITE_DESCRIPTION,
-  SITE_NAME,
-  absolute,
-  artistsJsonLd,
-  asMedia,
-  findPublicExhibitions,
-  getServerUrl,
-  imageUrl,
-} from '@/lib/seo'
+import { absolute, artistsJsonLd, asMedia, findPublicExhibitions, imageUrl } from '@/lib/seo'
+import { SITE_DESCRIPTION, SITE_NAME, serverUrl } from '@/lib/site-identity'
+import { isSlug } from '@/lib/slug'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(_request: Request, { params }: { params: Promise<{ slug: string; photo: string }> }) {
   const { slug, photo } = await params
   const payload = await getPayload({ config: configPromise })
-  const base = getServerUrl(payload)
+  const base = serverUrl()
   const path = `/exhibition/${encodeURIComponent(slug)}/photo/${encodeURIComponent(photo)}`
 
   const common = {
@@ -44,14 +37,14 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
         photoState: 'missing',
         heading: 'Photo not found',
         backUrl: '/',
-        backLabel: 'Tripnjungle',
+        backLabel: SITE_NAME,
         exhibitionUrl: '/exhibitions',
         exhibitionLabel: 'All exhibitions',
       }),
       { status: 404, cache: 'no-store' },
     )
 
-  if (!/^[a-z0-9-]+$/i.test(slug) || !/^\d{1,12}$/.test(photo)) {
+  if (!isSlug(slug) || !/^\d{1,12}$/.test(photo)) {
     return missing()
   }
 

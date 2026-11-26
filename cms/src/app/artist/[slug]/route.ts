@@ -7,8 +7,10 @@ import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 
 import { escapeHtml, htmlResponse, jsonForScript, renderTemplate, summarize } from '@/lib/render-template'
-import { SITE_NAME, absolute, asMedia, findPublicExhibitions, getServerUrl, imageUrl } from '@/lib/seo'
+import { absolute, asMedia, findPublicExhibitions, imageUrl } from '@/lib/seo'
+import { SITE_NAME, serverUrl } from '@/lib/site-identity'
 import { getSiteSettings, mailLink, mailtoHref, paragraphs } from '@/lib/site'
+import { isSlug } from '@/lib/slug'
 import type { Artist, Media } from '@/payload-types'
 
 export const dynamic = 'force-dynamic'
@@ -93,7 +95,7 @@ function contactHtml(artist: Artist, siteContact: string | null | undefined): st
 export async function GET(_request: Request, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
   const payload = await getPayload({ config: configPromise })
-  const base = getServerUrl(payload)
+  const base = serverUrl()
 
   const common = {
     siteName: SITE_NAME,
@@ -116,7 +118,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
       { status: 404, cache: 'no-store' },
     )
 
-  if (!/^[a-z0-9-]+$/.test(slug)) {
+  if (!isSlug(slug)) {
     return notFound()
   }
 

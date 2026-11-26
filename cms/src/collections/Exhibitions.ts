@@ -15,6 +15,7 @@ import { auditFields, auditHook } from '../lib/audit'
 import { requireAcceptedTerms } from '../lib/contributor-terms'
 import { limitPublicQueries } from '../lib/query-limits'
 import { assertMediaMayBeAdded, mediaIdsOf, syncMediaLocks } from '../lib/media-lock'
+import { SLUG_RULE, isSlug } from '../lib/slug'
 import {
   contentIsOpen,
   getRelease,
@@ -373,10 +374,7 @@ export const Exhibitions: CollectionConfig = {
       admin: {
         description: 'Lowercase letters, numbers and hyphens only, e.g. exhibition-3. Used in the URL.',
       },
-      validate: (value: unknown) =>
-        typeof value === 'string' && /^[a-z0-9-]+$/.test(value)
-          ? true
-          : 'Lowercase letters, numbers and hyphens only.',
+      validate: (value: unknown) => (isSlug(value) ? true : SLUG_RULE),
     },
     {
       // Accounts that may change the content of this exhibition (not publish it)

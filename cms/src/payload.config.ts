@@ -12,11 +12,12 @@ import { Artists } from './collections/Artists'
 import { Orders } from './collections/Orders'
 import { PriceRequests } from './collections/PriceRequests'
 import { Site } from './globals/Site'
+import { SITE_NAME, serverUrl } from './lib/site-identity'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
 
-const serverURL = process.env.PAYLOAD_PUBLIC_SERVER_URL || 'http://localhost:3000'
+const serverURL = serverUrl()
 
 // The secret signs logins and sessions: a short or example value would let anyone forge them.
 // (An empty one is rejected by Payload itself.)
@@ -48,7 +49,7 @@ if (process.env.SMTP_HOST && !emailFrom) {
 const email = process.env.SMTP_HOST
   ? nodemailerAdapter({
       defaultFromAddress: emailFrom,
-      defaultFromName: process.env.EMAIL_FROM_NAME || 'Tripnjungle',
+      defaultFromName: process.env.EMAIL_FROM_NAME || SITE_NAME,
       // Do not block the start when the mail server is briefly unreachable
       skipVerify: true,
       transportOptions: {

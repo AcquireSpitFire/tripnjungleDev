@@ -10,7 +10,7 @@
 import type { Endpoint, PayloadRequest } from 'payload'
 
 import { buildQrPdf, photoShortUrl, qrPng, type QrLabelFormat, type QrPdfSettings } from '../lib/qr'
-import { getServerUrl } from '../lib/seo'
+import { serverUrl } from '../lib/site-identity'
 import { toId } from '../lib/visibility'
 
 const FORMATS: QrLabelFormat[] = ['a6', 'a5', 'square100']
@@ -88,7 +88,7 @@ export const exhibitionQrEndpoint: Endpoint = {
       return error(404, media ? 'This photo is not part of the saved exhibition.' : 'The exhibition has no photos yet.')
     }
 
-    const base = getServerUrl(req.payload)
+    const base = serverUrl()
 
     if (format === 'png') {
       const png = await qrPng(photoShortUrl(base, media as string))

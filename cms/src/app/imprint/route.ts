@@ -1,6 +1,6 @@
 // "/imprint": legal notice from Admin → Site settings → Legal notice
 import { renderStaticPage } from '@/lib/static-page'
-import { SITE_NAME } from '@/lib/seo'
+import { SITE_NAME } from '@/lib/site-identity'
 import { escapeHtml } from '@/lib/render-template'
 import { lines, mailLink, optional, paragraphs, required } from '@/lib/site'
 

@@ -1,52 +1,22 @@
-import type { CollectionConfig, Field, FieldAccess } from 'payload'
+import type { CollectionConfig, Field } from 'payload'
 
 import { canManageShop, isAdmin } from '../access/roles'
+import { hiddenServerOnly, readOnlyText, serverOnly } from '../fields/server-only'
 import { sendShippedEmail } from '../lib/shop/emails'
+import { ORDER_STATUS_OPTIONS } from '../lib/shop/order-status'
 
 // Orders of prints (release 3.0). Created only by the server (src/lib/shop/checkout.ts) when a
 // buyer goes to the Stripe payment page, completed by the Stripe webhook (src/lib/shop/webhook.ts).
 // Managers of the section "Shop" see them and change the status (shipped, cancelled, refunded)
 // and the tracking details. Everything the buyer agreed to (items, prices, address) is a
-// snapshot that cannot be changed afterwards.
-//
-// Status and stock (src/lib/shop/stock.ts):
-//   pending          checkout started, the copies are held until "expiresAt"
-//   awaitingPayment  paid with a delayed method (e.g. SEPA direct debit), copies held
-//   paid             paid – to be shipped
-//   shipped          shipped
-//   cancelled        expired, failed or cancelled – the copies are free again
-//   refunded         refunded in Stripe – the copies are free again
-export const ORDER_STATUS_OPTIONS = [
-  { label: 'Checkout started (not paid)', value: 'pending' },
-  { label: 'Payment pending (e.g. SEPA)', value: 'awaitingPayment' },
-  { label: 'Paid – to ship', value: 'paid' },
-  { label: 'Shipped', value: 'shipped' },
-  { label: 'Cancelled / expired', value: 'cancelled' },
-  { label: 'Refunded', value: 'refunded' },
-] as const
-
-// Statuses whose copies count as taken (besides "pending" until it expires)
-export const HOLDING_STATUSES = ['awaitingPayment', 'paid', 'shipped'] as const
-
-// Only the server writes these (overrideAccess); in the admin they are read-only
-const serverOnly: { access: { create: FieldAccess; update: FieldAccess } } = {
-  access: { create: () => false, update: () => false },
-}
+// snapshot that cannot be changed afterwards. The statuses: src/lib/shop/order-status.ts.
 
 const money = (name: string, label: string): Field => ({
   name,
   label,
   type: 'number',
-  ...serverOnly,
+  access: serverOnly,
   admin: { readOnly: true, step: 0.01, width: '33%' },
-})
-
-const readOnlyText = (name: string, label: string, width?: string): Field => ({
-  name,
-  label,
-  type: 'text',
-  ...serverOnly,
-  admin: { readOnly: true, ...(width ? { width } : {}) },
 })
 
 // Address as Stripe returns it; the country is the ISO code (AT, DE, …)
@@ -176,14 +146,14 @@ export const Orders: CollectionConfig = {
       name: 'paidAt',
       label: 'Paid on',
       type: 'date',
-      ...serverOnly,
+      access: serverOnly,
       admin: { position: 'sidebar', readOnly: true, date: { pickerAppearance: 'dayAndTime' } },
     },
     {
       name: 'shippedAt',
       label: 'Shipped on',
       type: 'date',
-      ...serverOnly,
+      access: serverOnly,
       admin: { position: 'sidebar', readOnly: true, date: { pickerAppearance: 'dayAndTime' } },
     },
     {
@@ -191,7 +161,7 @@ export const Orders: CollectionConfig = {
       label: 'Copies held until',
       type: 'date',
       index: true,
-      ...serverOnly,
+      access: serverOnly,
       admin: {
         position: 'sidebar',
         readOnly: true,
@@ -205,7 +175,7 @@ export const Orders: CollectionConfig = {
       name: 'holdKey',
       type: 'text',
       index: true,
-      access: { read: () => false, create: () => false, update: () => false },
+      access: hiddenServerOnly,
       admin: { hidden: true },
     },
     {
@@ -213,7 +183,7 @@ export const Orders: CollectionConfig = {
       name: 'withdrawalReceivedAt',
       label: 'Withdrawal received',
       type: 'date',
-      ...serverOnly,
+      access: serverOnly,
       admin: {
         position: 'sidebar',
         readOnly: true,
@@ -225,7 +195,7 @@ export const Orders: CollectionConfig = {
       name: 'withdrawalStatement',
       label: 'Withdrawal statement',
       type: 'textarea',
-      ...serverOnly,
+      access: serverOnly,
       admin: { position: 'sidebar', readOnly: true, condition: (data) => Boolean(data?.withdrawalReceivedAt) },
     },
     {
@@ -239,7 +209,7 @@ export const Orders: CollectionConfig = {
       name: 'items',
       label: 'Items',
       type: 'array',
-      ...serverOnly,
+      access: serverOnly,
       admin: { readOnly: true },
       fields: [
         {
@@ -298,7 +268,7 @@ export const Orders: CollectionConfig = {
               name: 'customerEmail',
               label: 'E-mail',
               type: 'email',
-              ...serverOnly,
+              access: serverOnly,
               admin: { readOnly: true, width: '33%' },
             },
             readOnlyText('customerPhone', 'Phone', '33%'),
@@ -308,7 +278,7 @@ export const Orders: CollectionConfig = {
           name: 'shippingAddress',
           label: 'Shipping address',
           type: 'group',
-          ...serverOnly,
+          access: serverOnly,
           admin: { readOnly: true },
           fields: addressFields,
         },
@@ -316,7 +286,7 @@ export const Orders: CollectionConfig = {
           name: 'billingAddress',
           label: 'Billing address',
           type: 'group',
-          ...serverOnly,
+          access: serverOnly,
           admin: { readOnly: true },
           fields: addressFields,
         },
@@ -333,7 +303,7 @@ export const Orders: CollectionConfig = {
           name: 'confirmationSent',
           label: 'Order confirmation sent',
           type: 'checkbox',
-          ...serverOnly,
+          access: serverOnly,
           admin: { readOnly: true },
         },
       ],

@@ -3,13 +3,14 @@ import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 
 import { escapeHtml } from '@/lib/render-template'
-import { findPublicExhibitions, getServerUrl } from '@/lib/seo'
+import { findPublicExhibitions } from '@/lib/seo'
+import { serverUrl } from '@/lib/site-identity'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
   const payload = await getPayload({ config: configPromise })
-  const base = getServerUrl(payload)
+  const base = serverUrl()
   const exhibitions = await findPublicExhibitions(payload)
 
   const entries: { loc: string; lastmod?: string; priority: string }[] = [

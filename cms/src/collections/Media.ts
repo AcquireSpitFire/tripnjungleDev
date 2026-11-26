@@ -15,10 +15,12 @@ import {
   getUserId,
   loggedInField,
 } from '../access/roles'
+import { serverOnly } from '../fields/server-only'
 import { auditFields, auditHook } from '../lib/audit'
 import { assertTermsAccepted, mustAcceptTerms } from '../lib/contributor-terms'
 import { syncMediaLocks } from '../lib/media-lock'
 import { limitPublicQueries } from '../lib/query-limits'
+import { serverUrl } from '../lib/site-identity'
 import { toId } from '../lib/visibility'
 import { WATERMARK_SIZES, removeWatermarkedFiles, watermarkFileName, type WatermarkSize } from '../lib/watermark'
 
@@ -242,7 +244,7 @@ export const Media: CollectionConfig = {
           return doc
         }
 
-        const base = (req.payload.config.serverURL || '').replace(/\/$/, '')
+        const base = serverUrl()
         const url = (size: WatermarkSize) => `${base}/media-wm/${watermarkFileName(doc.id, doc.watermarkKey, size)}`
         const sizes = { ...(doc.sizes || {}) } as Record<string, { url?: string | null; filename?: string | null } | null>
         let largest: WatermarkSize = 'large'
@@ -403,7 +405,7 @@ export const Media: CollectionConfig = {
       name: 'rightsConfirmedAt',
       label: 'Rights confirmed on',
       type: 'date',
-      access: { read: loggedInField, create: () => false, update: () => false },
+      access: { ...serverOnly, read: loggedInField },
       admin: {
         position: 'sidebar',
         readOnly: true,
@@ -417,7 +419,7 @@ export const Media: CollectionConfig = {
       label: 'Rights confirmed by',
       type: 'text',
       // Contains an e-mail address: only for logged-in accounts
-      access: { read: loggedInField, create: () => false, update: () => false },
+      access: { ...serverOnly, read: loggedInField },
       admin: { position: 'sidebar', readOnly: true, condition: (data) => Boolean(data?.rightsConfirmedBy) },
     },
     {
@@ -425,7 +427,7 @@ export const Media: CollectionConfig = {
       type: 'checkbox',
       defaultValue: true,
       // Only the sync in src/lib/media-lock.ts (overrideAccess) may change it, not the API
-      access: { create: () => false, update: () => false },
+      access: serverOnly,
       admin: {
         readOnly: true,
         description: 'Set automatically by the exhibition.',
@@ -439,7 +441,7 @@ export const Media: CollectionConfig = {
       label: 'For sale (shown with watermark)',
       type: 'checkbox',
       defaultValue: false,
-      access: { create: () => false, update: () => false },
+      access: serverOnly,
       admin: {
         readOnly: true,
         position: 'sidebar',
@@ -451,7 +453,7 @@ export const Media: CollectionConfig = {
       // so a new watermark gives new URLs. Readable by everybody: it is part of those URLs anyway.
       name: 'watermarkKey',
       type: 'text',
-      access: { create: () => false, update: () => false },
+      access: serverOnly,
       admin: { hidden: true },
     },
     ...auditFields({ updatedBy: false }),

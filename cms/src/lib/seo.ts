@@ -2,14 +2,8 @@
 import type { Payload, Where } from 'payload'
 
 import type { Exhibition, Media } from '../payload-types'
-
-export const SITE_NAME = 'Tripnjungle'
-export const SITE_DESCRIPTION =
-  "Tripnjungle is Tom's web gallery: photo and video exhibitions from trips, nights out and everything in between."
-
-export function getServerUrl(payload: Payload): string {
-  return (payload.config.serverURL || 'http://localhost:3000').replace(/\/$/, '')
-}
+import { SITE_NAME } from './site-identity'
+import { SLUG_CONTEXT_KEY } from './visibility'
 
 type MediaRef = number | string | Media | null | undefined
 
@@ -62,7 +56,7 @@ export async function findPublicExhibitions(payload: Payload, where?: Where) {
   const result = await payload.find({
     collection: 'exhibitions',
     where,
-    context: typeof slug === 'string' ? { tjSlug: slug } : undefined,
+    context: typeof slug === 'string' ? { [SLUG_CONTEXT_KEY]: slug } : undefined,
     depth: 1,
     limit: 100,
     sort: 'date',

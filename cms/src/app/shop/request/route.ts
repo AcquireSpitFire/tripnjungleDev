@@ -8,21 +8,14 @@ import { getPayload } from 'payload'
 
 import { findOffers, offerKey } from '@/lib/shop/catalog'
 import { sendPriceRequestEmail } from '@/lib/shop/emails'
-import { cleanText, errorJson, isEmail, isSameOrigin, json, readJson } from '@/lib/shop/http'
+import { shopPost } from '@/lib/shop/route'
+import { cleanText, errorJson, isEmail, json } from '@/lib/http'
 import { getShopSettings } from '@/lib/shop/settings'
+import { isSlug } from '@/lib/slug'
 
 export const dynamic = 'force-dynamic'
 
-export async function POST(request: Request) {
-  if (!isSameOrigin(request)) {
-    return errorJson('Forbidden', 403)
-  }
-
-  const body = await readJson(request)
-
-  if (!body) {
-    return errorJson('Invalid request', 400)
-  }
+export const POST = shopPost(async (body) => {
 
   // Honeypot filled: pretend success, store nothing
   if (cleanText(body.website, 200)) {
@@ -47,7 +40,7 @@ export async function POST(request: Request) {
     return errorJson('The shop is closed at the moment.', 503)
   }
 
-  const offer = /^[a-z0-9-]+$/.test(exhibition)
+  const offer = isSlug(exhibition)
     ? (await findOffers(payload, [exhibition])).get(offerKey(exhibition, photo, print))
     : undefined
 
@@ -89,4 +82,4 @@ export async function POST(request: Request) {
   }
 
   return json({ ok: true })
-}
+})

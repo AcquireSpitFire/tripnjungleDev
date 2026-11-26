@@ -3,13 +3,14 @@ import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 
 import { htmlResponse, jsonForScript, renderTemplate } from '@/lib/render-template'
-import { SITE_NAME, eventJsonLd, findPublicExhibitions, getServerUrl, isUpcoming } from '@/lib/seo'
+import { eventJsonLd, findPublicExhibitions, isUpcoming } from '@/lib/seo'
+import { SITE_NAME, serverUrl } from '@/lib/site-identity'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
   const payload = await getPayload({ config: configPromise })
-  const base = getServerUrl(payload)
+  const base = serverUrl()
   const upcoming = (await findPublicExhibitions(payload)).filter(isUpcoming)
 
   const jsonLd = upcoming.length

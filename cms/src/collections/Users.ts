@@ -4,11 +4,12 @@ import {
   addDataAndFileToRequest,
   type AccessResult,
   type CollectionConfig,
-  type FieldAccess,
   type PayloadRequest,
 } from 'payload'
 
+import { serverOnly } from '../fields/server-only'
 import { currentContributorTerms, hasAcceptedCurrentTerms, mustAcceptTerms } from '../lib/contributor-terms'
+import { serverUrl } from '../lib/site-identity'
 
 import {
   ROLE_OPTIONS,
@@ -33,8 +34,6 @@ import {
 
 const MIN_PASSWORD_LENGTH = 12
 
-const serverURL = process.env.PAYLOAD_PUBLIC_SERVER_URL || 'http://localhost:3000'
-
 async function countOtherAdmins(req: PayloadRequest, excludeId: number | string) {
   const { totalDocs } = await req.payload.count({
     collection: 'users',
@@ -45,9 +44,6 @@ async function countOtherAdmins(req: PayloadRequest, excludeId: number | string)
 
   return totalDocs
 }
-
-// Written only by the server (overrideAccess), never through the API or the form
-const serverOnly: { create: FieldAccess; update: FieldAccess } = { create: () => false, update: () => false }
 
 const lastAdminMessage = 'At least one admin account has to remain. Make another account admin first.'
 
@@ -73,7 +69,7 @@ export const Users: CollectionConfig = {
     cookies: {
       sameSite: 'Strict',
       // Only over HTTPS (a local "npm start" on http://localhost still works)
-      secure: serverURL.startsWith('https://'),
+      secure: serverUrl().startsWith('https://'),
     },
   },
   access: {

@@ -4,7 +4,7 @@
 // Nothing is written into the exhibition, so an editor saving it never overwrites the stock.
 import type { Payload, Where } from 'payload'
 
-import { HOLDING_STATUSES } from '../../collections/Orders'
+import { HOLDING_STATUSES } from './order-status'
 import type { Offer } from './catalog'
 
 function holdingNow(): Where {

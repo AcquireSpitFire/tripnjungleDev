@@ -2,7 +2,7 @@
 // webhook (src/app/shop/webhook/route.ts); this page only says thank you and empties the cart in
 // the browser (public/js/shop.js).
 import { renderStaticPage } from '@/lib/static-page'
-import { SITE_NAME } from '@/lib/seo'
+import { SITE_NAME } from '@/lib/site-identity'
 
 export const dynamic = 'force-dynamic'
 
