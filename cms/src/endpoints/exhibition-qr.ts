@@ -9,16 +9,13 @@
 // anything else answers 404 without telling whether the exhibition exists.
 import type { Endpoint, PayloadRequest } from 'payload'
 
+import { errorJson } from '../lib/http'
 import { buildQrPdf, photoShortUrl, qrPng, type QrLabelFormat, type QrPdfSettings } from '../lib/qr'
 import { serverUrl } from '../lib/site-identity'
 import { toId } from '../lib/visibility'
 
 const FORMATS: QrLabelFormat[] = ['a6', 'a5', 'square100']
 const MAX_LABELS = 300
-
-function error(status: number, message: string): Response {
-  return Response.json({ error: message }, { status, headers: { 'Cache-Control': 'no-store' } })
-}
 
 // "Ana & Ben" from populated artist profiles
 function artistNames(artists: unknown): string {
@@ -46,7 +43,7 @@ export const exhibitionQrEndpoint: Endpoint = {
   method: 'get',
   handler: async (req) => {
     if (!req.user) {
-      return error(401, 'Please log in.')
+      return errorJson('Please log in.', 401)
     }
 
     const id = String(req.routeParams?.id ?? '')
@@ -54,11 +51,11 @@ export const exhibitionQrEndpoint: Endpoint = {
     const media = req.searchParams.get('media')
 
     if (!/^\d+$/.test(id) || (media !== null && !/^\d+$/.test(media)) || !['png', 'pdf'].includes(format)) {
-      return error(400, 'Invalid request.')
+      return errorJson('Invalid request.', 400)
     }
 
     if (format === 'png' && !media) {
-      return error(400, 'A PNG needs a photo (media=…).')
+      return errorJson('A PNG needs a photo (media=…).', 400)
     }
 
     let exhibition
@@ -66,7 +63,7 @@ export const exhibitionQrEndpoint: Endpoint = {
     try {
       exhibition = await req.payload.findByID({ collection: 'exhibitions', id, depth: 1, overrideAccess: false, req })
     } catch {
-      return error(404, 'Exhibition not found.')
+      return errorJson('Exhibition not found.', 404)
     }
 
     // One label per photo; a photo used twice gets one label. At most MAX_LABELS pages
@@ -85,7 +82,7 @@ export const exhibitionQrEndpoint: Endpoint = {
     const selected = (media ? rows.filter((row) => String(toId(row.file)) === media) : rows).slice(0, MAX_LABELS)
 
     if (!selected.length) {
-      return error(404, media ? 'This photo is not part of the saved exhibition.' : 'The exhibition has no photos yet.')
+      return errorJson(media ? 'This photo is not part of the saved exhibition.' : 'The exhibition has no photos yet.', 404)
     }
 
     const base = serverUrl()

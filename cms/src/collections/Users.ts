@@ -1,14 +1,13 @@
 import {
   APIError,
   ValidationError,
-  addDataAndFileToRequest,
   type AccessResult,
   type CollectionConfig,
   type PayloadRequest,
 } from 'payload'
 
+import { acceptContributorTermsEndpoint, contributorTermsEndpoint } from '../endpoints/contributor-terms'
 import { serverOnly } from '../fields/server-only'
-import { currentContributorTerms, hasAcceptedCurrentTerms, mustAcceptTerms } from '../lib/contributor-terms'
 import { serverUrl } from '../lib/site-identity'
 
 import {
@@ -106,68 +105,7 @@ export const Users: CollectionConfig = {
     delete: ({ req }) => isAdmin(req.user),
     unlock: ({ req }) => isAdmin(req.user),
   },
-  endpoints: [
-    {
-      // GET /api/users/contributor-terms: the current terms and whether this account has accepted them
-      // (src/components/ContributorTerms.tsx and ContributorTermsNotice.tsx)
-      path: '/contributor-terms',
-      method: 'get',
-      handler: async (req) => {
-        if (!getRole(req.user)) {
-          return Response.json({ error: 'Please log in.' }, { status: 401, headers: { 'Cache-Control': 'no-store' } })
-        }
-
-        const { text, version } = await currentContributorTerms(req)
-        const account = req.user as unknown as { termsAcceptedVersion?: string | null; termsAcceptedAt?: string | null }
-
-        return Response.json(
-          {
-            required: mustAcceptTerms(req.user),
-            accepted: await hasAcceptedCurrentTerms(req),
-            acceptedAt: account.termsAcceptedAt ?? null,
-            text,
-            version,
-          },
-          { headers: { 'Cache-Control': 'no-store' } },
-        )
-      },
-    },
-    {
-      // POST /api/users/contributor-terms/accept { version }: the logged-in account accepts the terms
-      // it was shown. Only ever for itself – nobody can accept for another account.
-      path: '/contributor-terms/accept',
-      method: 'post',
-      handler: async (req) => {
-        if (!mustAcceptTerms(req.user)) {
-          return Response.json({ error: 'Not needed for this account.' }, { status: 400, headers: { 'Cache-Control': 'no-store' } })
-        }
-
-        await addDataAndFileToRequest(req)
-
-        const { text, version } = await currentContributorTerms(req)
-
-        // The text may have changed while the page was open: then the new one has to be read first
-        if ((req.data as { version?: unknown } | undefined)?.version !== version) {
-          return Response.json(
-            { error: 'The terms have changed in the meantime. Please reload the page and read them again.' },
-            { status: 409, headers: { 'Cache-Control': 'no-store' } },
-          )
-        }
-
-        const acceptedAt = new Date().toISOString()
-
-        await req.payload.update({
-          collection: 'users',
-          id: getUserId(req.user) as number,
-          data: { termsAcceptedAt: acceptedAt, termsAcceptedVersion: version, termsAcceptedText: text },
-          overrideAccess: true,
-          req,
-        })
-
-        return Response.json({ accepted: true, acceptedAt }, { headers: { 'Cache-Control': 'no-store' } })
-      },
-    },
-  ],
+  endpoints: [contributorTermsEndpoint, acceptContributorTermsEndpoint],
   hooks: {
     // Before every operation that sets a password: create, update and reset (a field hook
     // would not see the new password on reset, Payload hashes it before the field hooks)

@@ -9,7 +9,7 @@ import { getPayload } from 'payload'
 import { escapeHtml, htmlResponse, jsonForScript, renderTemplate, summarize } from '@/lib/render-template'
 import { absolute, asMedia, findPublicExhibitions, imageUrl } from '@/lib/seo'
 import { SITE_NAME, serverUrl } from '@/lib/site-identity'
-import { getSiteSettings, mailLink, mailtoHref, paragraphs } from '@/lib/site'
+import { getSiteSettings, htmlMailLink, htmlParagraphs, mailtoHref } from '@/lib/site-settings'
 import { isSlug } from '@/lib/slug'
 import type { Artist, Media } from '@/payload-types'
 
@@ -89,7 +89,7 @@ function contactHtml(artist: Artist, siteContact: string | null | undefined): st
     return parts.length ? `<h2>Contact</h2><p>${parts.join('<br>')}</p>` : ''
   }
 
-  return `<h2>Contact</h2><p>Inquiries via ${SITE_NAME}: ${mailLink(siteContact, 'Contact e-mail')}</p>`
+  return `<h2>Contact</h2><p>Inquiries via ${SITE_NAME}: ${htmlMailLink(siteContact, 'Contact e-mail')}</p>`
 }
 
 export async function GET(_request: Request, { params }: { params: Promise<{ slug: string }> }) {
@@ -197,7 +197,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
       artistBody:
         [
           portraitHtml(portrait, artist.name),
-          paragraphs(artist.shortText),
+          htmlParagraphs(artist.shortText),
           linksHtml(artist),
           contactHtml(artist, settings.contactEmail),
           exhibitionsHtml,

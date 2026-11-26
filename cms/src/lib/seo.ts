@@ -66,8 +66,8 @@ export async function findPublicExhibitions(payload: Payload, where?: Where) {
   return result.docs
 }
 
-// Upcoming exhibition with a fixed date (Coming soon has none and gets no event JSON-LD)
-export function isUpcoming(exhibition: Exhibition): boolean {
+// An exhibition with a fixed date that is still to come (Coming soon has none and gets no event JSON-LD)
+export function hasUpcomingDate(exhibition: Exhibition): boolean {
   if (!exhibition.date || (exhibition.release && exhibition.release !== 'scheduled')) {
     return false
   }

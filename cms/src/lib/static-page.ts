@@ -5,7 +5,7 @@ import { getPayload, type Payload } from 'payload'
 
 import { htmlResponse, jsonForScript, renderTemplate } from './render-template'
 import { SITE_DESCRIPTION, SITE_NAME, serverUrl } from './site-identity'
-import { getSiteSettings, type SiteSettings } from './site'
+import { getSiteSettings, type SiteSettings } from './site-settings'
 
 type StaticPage = {
   template: string

@@ -1,6 +1,6 @@
 // Countries the shop can ship to (ISO 3166-1 alpha-2, as Stripe expects them).
 // Which of them are actually offered comes from the shipping zones in Site settings → Shop.
-export const COUNTRIES = [
+const COUNTRIES = [
   ['AT', 'Austria'],
   ['DE', 'Germany'],
   ['CH', 'Switzerland'],

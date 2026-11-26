@@ -116,7 +116,7 @@ async function run() {
     payload.updateGlobal({ slug: 'site', data: { aboutText: 'hacked' }, ...as(manager) }),
   )
 
-  // ---------- Contributor terms (release 3.0) ----------
+  // ---------- Contributor terms ----------
   console.log('Contributor terms')
 
   const { createLocalReq } = await import('payload')
@@ -820,7 +820,7 @@ async function run() {
     [count(withPlaceholder), count(withoutPlaceholder)],
   )
 
-  const { mailtoHref } = await import('../src/lib/site')
+  const { mailtoHref } = await import('../src/lib/site-settings')
 
   check('mail links cannot add hidden recipients', !mailtoHref('a?bcc=x@evil.example').includes('?'), mailtoHref('a?bcc=x@evil.example'))
 
@@ -982,7 +982,7 @@ async function run() {
   )
   check('a large original keeps its data (only logged-in accounts get it)', Boolean(largeMeta.exif) && largeMeta.width === 1600)
 
-  // ---------- Shop (release 3.0): model and access ----------
+  // ---------- Shop: model and access ----------
   console.log('Shop – model')
 
   const shopImage: AnyDoc = await payload.create({ collection: 'media', data: { alt: 'S', rightsConfirmed: true }, file: file(), ...as(manager) })

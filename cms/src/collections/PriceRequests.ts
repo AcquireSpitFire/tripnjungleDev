@@ -3,7 +3,7 @@ import type { CollectionConfig } from 'payload'
 import { canManageShop } from '../access/roles'
 import { readOnlyText, serverOnly } from '../fields/server-only'
 
-// "Request price" for prints with "Price on request" (release 3.0). Created only by the server
+// "Request price" for prints with "Price on request". Created only by the server
 // (src/app/shop/request/route.ts), which also e-mails the shop address with Reply-To set to the
 // visitor. Only managers of the section "Shop" see them; they answer by e-mail and set the
 // status. Nothing is sent to the visitor's address automatically (no spam relay).

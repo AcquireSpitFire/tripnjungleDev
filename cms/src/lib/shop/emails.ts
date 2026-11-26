@@ -98,7 +98,7 @@ function sellerLines(settings: ShopSettings): string[] {
   return [...operatorAddressLines(site), (site.operatorEmail || '').trim()].filter(Boolean)
 }
 
-function paragraph(lines: string[]): string {
+function htmlLines(lines: string[]): string {
   return `<p>${lines.map(escapeHtml).join('<br>')}</p>`
 }
 
@@ -125,7 +125,7 @@ async function send(payload: Payload, message: Message): Promise<void> {
     replyTo: message.replyTo,
     subject: message.subject,
     text: message.lines.join('\n'),
-    html: layout(message.html ?? blocks.filter((block) => block.length).map(paragraph).join('\n')),
+    html: layout(message.html ?? blocks.filter((block) => block.length).map(htmlLines).join('\n')),
   })
 }
 
@@ -175,11 +175,11 @@ export async function sendOrderConfirmation(payload: Payload, order: OrderMailDo
       legalTextToPlain(terms),
     ],
     html: [
-      paragraph([intro]),
+      htmlLines([intro]),
       summary
         .join('\n')
         .split('\n\n')
-        .map((block) => paragraph(block.split('\n')))
+        .map((block) => htmlLines(block.split('\n')))
         .join('\n'),
       '<hr>',
       legalTextToHtml(withdrawal),

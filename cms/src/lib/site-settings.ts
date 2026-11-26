@@ -12,14 +12,14 @@ export async function getSiteSettings(payload: Payload): Promise<SiteSettings> {
 }
 
 // Textarea → <p>…</p> per paragraph (blank line), line break inside → <br>
-export function paragraphs(text: string | null | undefined): string {
+export function htmlParagraphs(text: string | null | undefined): string {
   return splitParagraphs(text)
     .map((block) => `<p>${escapeHtml(block).replace(/\n/g, '<br>')}</p>`)
     .join('\n')
 }
 
 // Textarea → <ul><li>…</li></ul>, one line = one item
-export function lines(text: string | null | undefined): string {
+export function htmlList(text: string | null | undefined): string {
   const items = (text || '')
     .split(/\r?\n/)
     .map((line) => line.trim())
@@ -33,7 +33,7 @@ export function lines(text: string | null | undefined): string {
 }
 
 // Mark a missing required detail visibly so it is noticed before going live
-export function required(value: string | null | undefined, label: string): string {
+export function htmlRequired(value: string | null | undefined, label: string): string {
   const clean = (value || '').trim()
 
   return clean
@@ -41,7 +41,7 @@ export function required(value: string | null | undefined, label: string): strin
     : `<mark>[${escapeHtml(label)} – fill in under Admin → Site settings]</mark>`
 }
 
-export function optional(value: string | null | undefined): string {
+export function htmlOptional(value: string | null | undefined): string {
   return escapeHtml((value || '').trim())
 }
 
@@ -57,15 +57,15 @@ export function mailtoHref(email: string): string {
   return 'mailto:' + encodeURIComponent(email.slice(0, at)) + '@' + encodeURIComponent(email.slice(at + 1))
 }
 
-export function mailLink(value: string | null | undefined, label: string): string {
+export function htmlMailLink(value: string | null | undefined, label: string): string {
   const clean = (value || '').trim()
 
   return clean
     ? `<a href="${escapeHtml(mailtoHref(clean))}">${escapeHtml(clean)}</a>`
-    : required('', label)
+    : htmlRequired('', label)
 }
 
-export function urlLink(value: string | null | undefined): string {
+export function htmlUrlLink(value: string | null | undefined): string {
   const clean = (value || '').trim()
 
   return /^https?:\/\//.test(clean)
@@ -73,7 +73,7 @@ export function urlLink(value: string | null | undefined): string {
     : ''
 }
 
-export function formatDate(value: string | null | undefined): string {
+export function formatLongDate(value: string | null | undefined): string {
   const date = value ? new Date(value) : new Date()
 
   return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })

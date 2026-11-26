@@ -67,7 +67,7 @@ You are only liable for any diminished value of the goods resulting from the han
 (*) Delete as appropriate.`
 }
 
-export function defaultTermsText(site: Site): string {
+function defaultTermsText(site: Site): string {
   const name = site.operatorName?.trim() || '[Name – fill in under Site settings → Legal notice]'
   const law = site.jurisdiction === 'at' ? 'Austrian' : 'German'
   const base = serverUrl()

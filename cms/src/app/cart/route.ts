@@ -3,7 +3,7 @@
 import { renderStaticPage } from '@/lib/static-page'
 import { SITE_NAME } from '@/lib/site-identity'
 import { shippingCountries, toShopSettings } from '@/lib/shop/settings'
-import { paragraphs } from '@/lib/site'
+import { htmlParagraphs } from '@/lib/site-settings'
 
 export const dynamic = 'force-dynamic'
 
@@ -22,7 +22,7 @@ export async function GET() {
         countriesJson: JSON.stringify(shippingCountries(settings)),
         vatNote: settings.vatNote,
         sellerName: site.operatorName?.trim() || SITE_NAME,
-        shopNote: paragraphs(settings.shopNote),
+        shopNote: htmlParagraphs(settings.shopNote),
       }
     },
   })

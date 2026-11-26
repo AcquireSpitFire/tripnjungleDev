@@ -1,28 +1,17 @@
-import {
-  ValidationError,
-  type AccessResult,
-  type CollectionBeforeOperationHook,
-  type CollectionConfig,
-  type PayloadRequest,
-  type Where,
-} from 'payload'
-import sharp, { type Sharp } from 'sharp'
+import type { CollectionConfig } from 'payload'
 
-import {
-  canManageExhibitions,
-  getAccessibleMediaIds,
-  getRole,
-  getUserId,
-  loggedInField,
-} from '../access/roles'
+import { getRole, loggedInField } from '../access/roles'
 import { serverOnly } from '../fields/server-only'
 import { auditFields, auditHook } from '../lib/audit'
-import { assertTermsAccepted, mustAcceptTerms } from '../lib/contributor-terms'
-import { syncMediaLocks } from '../lib/media-lock'
 import { limitPublicQueries } from '../lib/query-limits'
-import { serverUrl } from '../lib/site-identity'
-import { toId } from '../lib/visibility'
-import { WATERMARK_SIZES, removeWatermarkedFiles, watermarkFileName, type WatermarkSize } from '../lib/watermark'
+import { changeMedia, hideFilesFromVisitors, readMedia } from './media/access'
+import {
+  removeWatermarkCopies,
+  requireRightsConfirmation,
+  resyncAfterReupload,
+  stripMetadataOfSmallImages,
+  watermarkedUrlsForVisitors,
+} from './media/hooks'
 
 // Images, videos and posters.
 //
@@ -58,109 +47,8 @@ import { WATERMARK_SIZES, removeWatermarkedFiles, watermarkFileName, type Waterm
 // Watermark images (Site settings → Shop, or the watermark of an exhibition) are only changed by
 // managers, even when they are somebody's own locked upload: replacing the file would change the
 // watermark on every photo for sale.
-async function watermarkImageIds(req: PayloadRequest): Promise<(number | string)[]> {
-  const site = await req.payload.findGlobal({ slug: 'site', depth: 0, overrideAccess: true, req })
-  const { docs } = await req.payload.find({
-    collection: 'exhibitions',
-    where: { watermark: { exists: true } },
-    depth: 0,
-    pagination: false,
-    overrideAccess: true,
-    select: { watermark: true },
-    req,
-  })
-
-  return [site.watermarkImage, ...docs.map((exhibition) => exhibition.watermark)]
-    .map(toId)
-    .filter((id): id is number | string => id !== null)
-}
-
-async function ownLockedUploadsOrManager(req: PayloadRequest): Promise<boolean | Where> {
-  if (canManageExhibitions(req.user)) {
-    return true
-  }
-
-  const userId = getUserId(req.user)
-
-  if (!getRole(req.user) || userId === null) {
-    return false
-  }
-
-  const watermarks = await watermarkImageIds(req)
-
-  return {
-    and: [
-      { createdBy: { equals: userId } },
-      { locked: { equals: true } },
-      ...(watermarks.length ? [{ id: { not_in: watermarks } }] : []),
-    ],
-  }
-}
-
-type MediaFileDoc = {
-  filename?: string | null
-  mimeType?: string | null
-  sizes?: Record<string, { filename?: string | null } | null | undefined> | null
-}
-
-function isProtectedOriginal(doc: MediaFileDoc, filename: string): boolean {
-  const mimeType = doc.mimeType || ''
-
-  if (!mimeType.startsWith('image/') || mimeType === 'image/gif' || filename !== doc.filename) {
-    return false
-  }
-
-  return Object.values(doc.sizes || {}).some((size) => Boolean(size?.filename))
-}
-
-// Width of the smallest generated size ("thumb" below)
-const THUMB_WIDTH = 600
-const LARGEST_UNRESIZED_SIDE = 1280
-
-// Same format as uploaded; sharp writes no metadata unless asked to
-const REENCODE: Record<string, (image: Sharp) => Sharp> = {
-  'image/jpeg': (image) => image.jpeg({ quality: 90 }),
-  'image/png': (image) => image.png(),
-  'image/webp': (image) => image.webp({ quality: 90 }),
-  'image/avif': (image) => image.avif({ quality: 90 }),
-}
-
-// Images too small for any generated size are delivered to visitors as the original file.
-// Those originals are saved again without metadata (EXIF: GPS position, time, camera serial),
-// turned upright first. Larger originals stay untouched (print quality) and only reach
-// logged-in accounts (isProtectedOriginal). GIFs are kept (animation).
-const stripMetadataOfSmallImages: CollectionBeforeOperationHook = async ({ args, operation }) => {
-  const file = (args as { req?: PayloadRequest }).req?.file
-  const reencode = file ? REENCODE[file.mimetype] : undefined
-
-  if ((operation !== 'create' && operation !== 'update') || !file?.data?.length || !reencode) {
-    return args
-  }
-
-  const { width = 0, height = 0, orientation = 1 } = await sharp(file.data).metadata()
-  // Orientations 5–8 are turned by 90°: width and height swap
-  const uprightWidth = orientation >= 5 ? height : width
-
-  if (uprightWidth > THUMB_WIDTH || Math.max(width, height) > LARGEST_UNRESIZED_SIDE) {
-    return args
-  }
-
-  const data = await reencode(sharp(file.data).rotate()).toBuffer()
-
-  file.data = data
-  file.size = data.length
-
-  return args
-}
-
-// GET /api/media or /api/media/<id> (not the file route /api/media/file/…)
-function isDirectMediaApiRequest(req: PayloadRequest): boolean {
-  const apiRoute = req.payload.config.routes.api || '/api'
-  const path = req.pathname || ''
-
-  return path.startsWith(`${apiRoute}/media`) && !path.startsWith(`${apiRoute}/media/file/`)
-}
-
+//
+// The rules in code: src/collections/media/access.ts (access, file route), media/hooks.ts (hooks).
 export const Media: CollectionConfig = {
   slug: 'media',
   labels: {
@@ -172,135 +60,19 @@ export const Media: CollectionConfig = {
     defaultColumns: ['filename', 'alt', 'name', 'locked', 'updatedAt'],
   },
   access: {
-    read: async ({ req }): Promise<AccessResult> => {
-      if (canManageExhibitions(req.user)) {
-        return true
-      }
-
-      const userId = getUserId(req.user)
-
-      if (!getRole(req.user) || userId === null) {
-        return isDirectMediaApiRequest(req) ? false : { locked: { equals: false } }
-      }
-
-      const conditions: Where[] = [{ locked: { equals: false } }, { createdBy: { equals: userId } }]
-      const ids = await getAccessibleMediaIds(req)
-
-      if (ids.length) {
-        conditions.push({ id: { in: ids } })
-      }
-
-      return { or: conditions }
-    },
+    read: readMedia,
     create: ({ req }) => Boolean(getRole(req.user)),
-    update: ({ req }) => ownLockedUploadsOrManager(req),
-    delete: ({ req }) => ownLockedUploadsOrManager(req),
+    update: changeMedia,
+    delete: changeMedia,
   },
+  // What each hook does: src/collections/media/hooks.ts
   hooks: {
     // Page size for visitors/artists/editors at most 100 (src/lib/query-limits.ts)
     beforeOperation: [limitPublicQueries, stripMetadataOfSmallImages],
-    beforeChange: [
-      // Uploading a new file (also replacing one) only after accepting the contributor terms and
-      // with the rights confirmed for this file. Updates without a file (alt text, the lock sync)
-      // are not affected, and the confirmation cannot be changed afterwards.
-      async ({ data, operation, originalDoc, req }) => {
-        if (operation !== 'create' && !req.file) {
-          data.rightsConfirmed = originalDoc?.rightsConfirmed ?? false
-          return data
-        }
-
-        await assertTermsAccepted(req)
-
-        if (mustAcceptTerms(req.user)) {
-          if (data.rightsConfirmed !== true) {
-            throw new ValidationError({
-              collection: 'media',
-              errors: [
-                {
-                  path: 'rightsConfirmed',
-                  message:
-                    'Please confirm that you hold all rights to this file (“Rights confirmed”). Several files at once: “Edit all” → “Rights confirmed”.',
-                },
-              ],
-            })
-          }
-
-          const account = req.user as unknown as { id: number | string; email?: string }
-
-          data.rightsConfirmedAt = new Date().toISOString()
-          data.rightsConfirmedBy = `${account.email || 'unknown'} (account ${account.id})`
-        }
-
-        return data
-      },
-      auditHook({ updatedBy: false }),
-    ],
-    // Photos for sale: visitors only get the watermarked copies (src/lib/watermark.ts). Every
-    // URL of the medium points to /media-wm/…, so the site, the SEO data and Stripe use them
-    // without knowing about it. Logged-in accounts (admin, preview) keep the plain files.
-    afterRead: [
-      ({ doc, req }) => {
-        if (req.user || !doc?.forSale || !doc.watermarkKey) {
-          return doc
-        }
-
-        const base = serverUrl()
-        const url = (size: WatermarkSize) => `${base}/media-wm/${watermarkFileName(doc.id, doc.watermarkKey, size)}`
-        const sizes = { ...(doc.sizes || {}) } as Record<string, { url?: string | null; filename?: string | null } | null>
-        let largest: WatermarkSize = 'large'
-
-        for (const size of WATERMARK_SIZES) {
-          if (sizes[size]?.filename) {
-            sizes[size] = { ...sizes[size], url: url(size) }
-            largest = size
-          }
-        }
-
-        return { ...doc, url: url(largest), thumbnailURL: url('thumb'), sizes }
-      },
-    ],
-    afterChange: [
-      async ({ doc, previousDoc, operation, req }) => {
-        // A new file (re-upload): new watermark key for this photo, and for all photos for sale
-        // if it is used as a watermark
-        if (operation !== 'update' || (doc.filename === previousDoc?.filename && doc.filesize === previousDoc?.filesize)) {
-          return doc
-        }
-
-        const site = await req.payload.findGlobal({ slug: 'site', depth: 0, overrideAccess: true, req })
-        const { totalDocs: usedByExhibitions } = await req.payload.count({
-          collection: 'exhibitions',
-          where: { watermark: { equals: doc.id } },
-          overrideAccess: true,
-          req,
-        })
-        const isWatermark = String(toId(site.watermarkImage)) === String(doc.id) || usedByExhibitions > 0
-        const ids = isWatermark
-          ? (
-              await req.payload.find({
-                collection: 'media',
-                where: { forSale: { equals: true } },
-                depth: 0,
-                pagination: false,
-                overrideAccess: true,
-                select: {},
-                req,
-              })
-            ).docs.map((medium) => medium.id)
-          : doc.forSale
-            ? [doc.id]
-            : []
-
-        await syncMediaLocks(req, ids)
-
-        return doc
-      },
-    ],
-    afterDelete: [
-      ({ doc }) => {
-        removeWatermarkedFiles(doc.id)
-      },
-    ],
+    beforeChange: [requireRightsConfirmation, auditHook({ updatedBy: false })],
+    afterRead: [watermarkedUrlsForVisitors],
+    afterChange: [resyncAfterReupload],
+    afterDelete: [removeWatermarkCopies],
   },
   upload: {
     // Where the files are stored; when hosting, point it at a persistent volume (MEDIA_DIR)
@@ -309,24 +81,7 @@ export const Media: CollectionConfig = {
     // addresses on behalf of the account
     pasteURL: false,
     // Runs after the read access check of the file route (locked media are 403 already)
-    handlers: [
-      (req, { doc, params }) => {
-        // Photos for sale: visitors get the watermarked copies (/media-wm/…), never these files
-        if (!req.user && (doc as { forSale?: boolean | null }).forSale) {
-          return Response.json({ errors: [{ message: 'Not found.' }] }, {
-            status: 404,
-            headers: { 'Cache-Control': 'no-store' },
-          })
-        }
-
-        if (!req.user && isProtectedOriginal(doc as MediaFileDoc, params.filename)) {
-          return Response.json({ errors: [{ message: 'Not found.' }] }, {
-            status: 404,
-            headers: { 'Cache-Control': 'no-store' },
-          })
-        }
-      },
-    ],
+    handlers: [hideFilesFromVisitors],
     // Only the browser may cache files (a week), never a shared cache: whether a file may
     // be delivered depends on the login, and a locked file must not end up in a CDN/proxy.
     // Only called for successful responses, so errors are not cached.

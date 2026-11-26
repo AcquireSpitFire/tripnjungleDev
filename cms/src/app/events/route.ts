@@ -3,7 +3,7 @@ import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 
 import { htmlResponse, jsonForScript, renderTemplate } from '@/lib/render-template'
-import { eventJsonLd, findPublicExhibitions, isUpcoming } from '@/lib/seo'
+import { eventJsonLd, findPublicExhibitions, hasUpcomingDate } from '@/lib/seo'
 import { SITE_NAME, serverUrl } from '@/lib/site-identity'
 
 export const dynamic = 'force-dynamic'
@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic'
 export async function GET() {
   const payload = await getPayload({ config: configPromise })
   const base = serverUrl()
-  const upcoming = (await findPublicExhibitions(payload)).filter(isUpcoming)
+  const upcoming = (await findPublicExhibitions(payload)).filter(hasUpcomingDate)
 
   const jsonLd = upcoming.length
     ? `<script type="application/ld+json">${jsonForScript({

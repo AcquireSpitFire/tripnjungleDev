@@ -1,4 +1,4 @@
-// Watermark on photos that are for sale (release 3.0).
+// Watermark on photos that are for sale.
 //
 // A medium is "for sale" when some exhibition offers a print of it with a fixed price or on
 // request (src/lib/media-lock.ts sets "forSale" and "watermarkKey"). Visitors then only get

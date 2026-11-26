@@ -6,7 +6,7 @@ export const SITE_NAME = 'Tripnjungle'
 
 export const SITE_DESCRIPTION = `${SITE_NAME} is Tom's web gallery: photo and video exhibitions from trips, nights out and everything in between.`
 
-export const DEFAULT_SERVER_URL = 'http://localhost:3000'
+const DEFAULT_SERVER_URL = 'http://localhost:3000'
 
 export function serverUrl(): string {
   return (process.env.PAYLOAD_PUBLIC_SERVER_URL || DEFAULT_SERVER_URL).replace(/\/+$/, '')

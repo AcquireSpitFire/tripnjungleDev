@@ -55,7 +55,7 @@ export function isAdmin(user: MaybeUser): boolean {
   return getRole(user) === 'admin'
 }
 
-export function managesSection(user: MaybeUser, section: Section): boolean {
+function managesSection(user: MaybeUser, section: Section): boolean {
   if (isAdmin(user)) {
     return true
   }
@@ -76,7 +76,7 @@ export function isArtist(user: MaybeUser): boolean {
   return getRole(user) === 'artist'
 }
 
-export function isEditor(user: MaybeUser): boolean {
+function isEditor(user: MaybeUser): boolean {
   return getRole(user) === 'editor'
 }
 

@@ -1,5 +1,5 @@
-// Keeps the "locked" flag of media in sync with the exhibitions that use them – and, since
-// release 3.0, "forSale" and "watermarkKey" (see saleState below and src/lib/watermark.ts).
+// Keeps the "locked" flag of media in sync with the exhibitions that use them – and "forSale"
+// and "watermarkKey" (see saleState below and src/lib/watermark.ts).
 //
 // A medium is public (locked: false) as soon as ANY exhibition makes it public:
 //   - as a poster of an exhibition that is not in "planning"

@@ -12,7 +12,7 @@ import {
   eventJsonLd,
   findPublicExhibitions,
   imageUrl,
-  isUpcoming,
+  hasUpcomingDate,
 } from '@/lib/seo'
 import { SITE_DESCRIPTION, SITE_NAME, serverUrl } from '@/lib/site-identity'
 import { isSlug } from '@/lib/slug'
@@ -95,7 +95,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
   }
 
   // Link-only pages are noindex and carry no structured data of their own
-  if (isUpcoming(exhibition) && !linkOnly) {
+  if (hasUpcomingDate(exhibition) && !linkOnly) {
     graph.push(eventJsonLd(exhibition, base))
   }
 

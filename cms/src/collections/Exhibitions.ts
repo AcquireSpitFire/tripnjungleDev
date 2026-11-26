@@ -1,8 +1,7 @@
-import { ValidationError, type CollectionBeforeChangeHook, type CollectionConfig, type Field, type FieldAccess, type Where } from 'payload'
+import type { CollectionConfig, FieldAccess, Where } from 'payload'
 
 import {
   canManageExhibitions,
-  clearAccessCache,
   exhibitionManagersOnlyField,
   getAccessibleExhibitionIds,
   getArtistProfileId,
@@ -14,17 +13,20 @@ import { exhibitionQrEndpoint } from '../endpoints/exhibition-qr'
 import { auditFields, auditHook } from '../lib/audit'
 import { requireAcceptedTerms } from '../lib/contributor-terms'
 import { limitPublicQueries } from '../lib/query-limits'
-import { assertMediaMayBeAdded, mediaIdsOf, syncMediaLocks } from '../lib/media-lock'
 import { SLUG_RULE, isSlug } from '../lib/slug'
-import {
-  contentIsOpen,
-  getRelease,
-  getVisibility,
-  requestedSlug,
-  toId,
-  type Ref,
-} from '../lib/visibility'
+import { contentIsOpen, getVisibility, requestedSlug } from '../lib/visibility'
 import { getYouTubeId } from '../lib/youtube'
+import {
+  appendBulkUploads,
+  artistCreatesPlanned,
+  checkAddedMedia,
+  deriveVisibility,
+  keepPrintsWithTheirPhoto,
+  syncMediaAfterChange,
+  syncMediaAfterDelete,
+  withDerivedValues,
+} from './exhibitions/hooks'
+import { printsField } from './exhibitions/prints-field'
 
 // An exhibition.
 //
@@ -83,136 +85,7 @@ const onlyWhenUnlocked: FieldAccess = ({ req, doc }) => {
 // make it public through their own exhibition).
 const readableMediaOnly = () => true as const
 
-// Prints of a photo that visitors can buy (release 3.0, see src/lib/shop/).
-// Visitors read them with the photo (same read access as the gallery). Prints and prices are
-// set by exhibition managers only; artists and editors keep the rows as they are.
-// "No price" (default) shows nothing and adds no watermark. "Fixed price" and "Price on request"
-// make the photo "for sale": it is shown with the watermark (src/lib/watermark.ts).
-// The copies still left are not stored here but counted from the orders (src/lib/shop/stock.ts),
-// so a purchase never writes into the exhibition.
-const printsField: Field = {
-  name: 'prints',
-  label: 'Prints for sale',
-  type: 'array',
-  labels: { singular: 'Print', plural: 'Prints' },
-  maxRows: 10,
-  access: { create: exhibitionManagersOnlyField, update: exhibitionManagersOnlyField },
-  admin: {
-    initCollapsed: true,
-    description:
-      'Optional: prints of this photo that visitors can order. “No price” shows nothing; with a fixed price or “Price on request” the print is shown below the photo and the photo gets the watermark. Photos only, not videos.',
-  },
-  fields: [
-    {
-      name: 'label',
-      label: 'Name of the print',
-      type: 'text',
-      required: true,
-      maxLength: 80,
-      admin: { placeholder: 'e.g. Fine art print 30 × 40 cm' },
-    },
-    {
-      type: 'row',
-      fields: [
-        { name: 'width', label: 'Width (cm)', type: 'number', min: 1, max: 1000, admin: { width: '25%' } },
-        { name: 'height', label: 'Height (cm)', type: 'number', min: 1, max: 1000, admin: { width: '25%' } },
-        {
-          name: 'material',
-          label: 'Paper / material',
-          type: 'text',
-          maxLength: 120,
-          admin: { width: '50%', placeholder: 'e.g. Hahnemühle Photo Rag 308 g/m²' },
-        },
-      ],
-    },
-    {
-      name: 'details',
-      label: 'Further details',
-      type: 'textarea',
-      maxLength: 600,
-      admin: {
-        description:
-          'Shown to buyers, in the cart and in the order confirmation: edition, signed/numbered, frame, production time …',
-      },
-    },
-    {
-      type: 'row',
-      fields: [
-        {
-          name: 'pricing',
-          label: 'Price',
-          type: 'select',
-          required: true,
-          // As a function: applies in the form, but not as a column default in the database
-          defaultValue: () => 'none',
-          options: [
-            { label: 'No price (not shown)', value: 'none' },
-            { label: 'Fixed price (add to cart)', value: 'fixed' },
-            { label: 'Price on request', value: 'request' },
-          ],
-          admin: { width: '34%', isClearable: false },
-        },
-        {
-          name: 'price',
-          label: 'Price in EUR (final price for the buyer)',
-          type: 'number',
-          min: 1,
-          max: 100000,
-          admin: {
-            width: '33%',
-            step: 0.01,
-            condition: (_data, siblingData) => siblingData?.pricing === 'fixed',
-            description: 'Empty = not shown, like “No price”.',
-          },
-        },
-        {
-          name: 'copies',
-          label: 'Copies for sale in total',
-          type: 'number',
-          min: 0,
-          max: 10000,
-          admin: {
-            width: '33%',
-            step: 1,
-            description: 'Empty = no limit (open edition). Visitors see how many are left.',
-          },
-        },
-      ],
-    },
-  ],
-}
 
-type GalleryRow = { id?: string | null; file?: Ref; prints?: unknown[] | null }
-
-// A print belongs to its photo. Artists and editors cannot change prints, but by putting another
-// file into a row that has prints they could sell them with a different photo: only managers may
-// replace the file of such a row (a new photo can always be added as a new row).
-const keepPrintsWithTheirPhoto: CollectionBeforeChangeHook = ({ data, originalDoc, req }) => {
-  if (canManageExhibitions(req.user) || !Array.isArray(data.gallery) || !originalDoc?.gallery) {
-    return data
-  }
-
-  const before = new Map((originalDoc.gallery as GalleryRow[]).map((row) => [String(row.id), row]))
-  const replaced = (data.gallery as GalleryRow[]).some((row) => {
-    const old = row.id ? before.get(String(row.id)) : undefined
-
-    return Boolean(old?.prints?.length) && String(toId(row.file)) !== String(toId(old?.file))
-  })
-
-  if (replaced) {
-    throw new ValidationError({
-      collection: 'exhibitions',
-      errors: [
-        {
-          path: 'gallery',
-          message: 'This item has prints: only a manager can replace its photo. Add the new photo as a new item instead.',
-        },
-      ],
-    })
-  }
-
-  return data
-}
 
 export const Exhibitions: CollectionConfig = {
   slug: 'exhibitions',
@@ -256,110 +129,20 @@ export const Exhibitions: CollectionConfig = {
   hooks: {
     // Page size for visitors/artists/editors at most 100 (src/lib/query-limits.ts)
     beforeOperation: [limitPublicQueries],
+    // In this order; what each one does: src/collections/exhibitions/hooks.ts
     beforeChange: [
       // Artists, editors and managers only after accepting the contributor terms
       requireAcceptedTerms,
       keepPrintsWithTheirPhoto,
       auditHook(),
-      ({ data, operation, req }) => {
-        // An artist creates: credited to their own profile, nothing goes public without a manager
-        if (operation === 'create' && !canManageExhibitions(req.user) && isArtist(req.user)) {
-          data.artists = [getArtistProfileId(req.user)]
-          data.release = 'planning'
-          data.visibility = 'locked'
-        }
-
-        return data
-      },
-      async ({ data, originalDoc, req }) => {
-        // Partial updates lack fields in data; then the stored state applies
-        const visibility = getVisibility({
-          visibility: data.visibility ?? originalDoc?.visibility,
-          locked: data.locked ?? originalDoc?.locked,
-        })
-
-        data.visibility = visibility
-        data.release = data.release ?? originalDoc?.release ?? 'scheduled'
-        data.locked = visibility !== 'public'
-
-        // Bulk upload: append the files as new rows to "gallery", then empty the field
-        const bulk = ((data.bulkMedia as Ref[] | undefined) || [])
-          .map(toId)
-          .filter((id): id is number | string => id !== null)
-
-        if (bulk.length) {
-          const rows: { file?: Ref; name?: string | null; alt?: string | null }[] = [
-            ...(data.gallery ?? originalDoc?.gallery ?? []),
-          ]
-          const present = new Set(rows.map((row) => String(toId(row.file))))
-
-          for (const id of bulk) {
-            if (!present.has(String(id))) {
-              // Copy the alt text entered in the upload dialog into the row
-              const media = await req.payload
-                .findByID({ collection: 'media', id, depth: 0, req, overrideAccess: true })
-                .catch(() => null)
-
-              rows.push({ file: id, name: '', alt: media?.alt || '' })
-              present.add(String(id))
-            }
-          }
-
-          data.gallery = rows
-        }
-
-        data.bulkMedia = []
-
-        // Artists/editors may only add media that are public already or their own uploads.
-        // Posters and content are compared separately: posters are public sooner (outside
-        // "planning"), so a locked gallery photo must not become a poster either.
-        const posters = (data.posters ?? originalDoc?.posters) as Ref[] | undefined
-        const content = {
-          frontPage: 'frontPage' in data ? data.frontPage : originalDoc?.frontPage,
-          gallery: data.gallery ?? originalDoc?.gallery,
-        }
-
-        await assertMediaMayBeAdded(
-          req,
-          mediaIdsOf({ posters }),
-          mediaIdsOf({ posters: originalDoc?.posters }),
-          'exhibitions',
-        )
-        await assertMediaMayBeAdded(
-          req,
-          mediaIdsOf(content),
-          mediaIdsOf({ frontPage: originalDoc?.frontPage, gallery: originalDoc?.gallery }),
-          'exhibitions',
-        )
-
-        return data
-      },
+      artistCreatesPlanned,
+      deriveVisibility,
+      appendBulkUploads,
+      checkAddedMedia,
     ],
-    afterRead: [
-      ({ doc }) => {
-        // Deliver old entries (columns still empty) with derived values
-        doc.visibility = getVisibility(doc)
-        doc.release = getRelease(doc)
-
-        return doc
-      },
-    ],
-    afterChange: [
-      async ({ doc, previousDoc, req }) => {
-        // Media used now and media removed by this change: both may change their lock state
-        clearAccessCache(req)
-        await syncMediaLocks(req, [...mediaIdsOf(doc), ...mediaIdsOf(previousDoc)])
-        return doc
-      },
-    ],
-    afterDelete: [
-      async ({ doc, req }) => {
-        // The deleted exhibition no longer counts, its media are locked unless used elsewhere
-        clearAccessCache(req)
-        await syncMediaLocks(req, mediaIdsOf(doc))
-        return doc
-      },
-    ],
+    afterRead: [withDerivedValues],
+    afterChange: [syncMediaAfterChange],
+    afterDelete: [syncMediaAfterDelete],
   },
   fields: [
     {

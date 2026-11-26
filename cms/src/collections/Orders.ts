@@ -1,11 +1,12 @@
-import type { CollectionConfig, Field } from 'payload'
+import type { CollectionAfterChangeHook, CollectionBeforeChangeHook, CollectionConfig, Field } from 'payload'
 
 import { canManageShop, isAdmin } from '../access/roles'
 import { hiddenServerOnly, readOnlyText, serverOnly } from '../fields/server-only'
 import { sendShippedEmail } from '../lib/shop/emails'
+import { withNote } from '../lib/shop/order-note'
 import { ORDER_STATUS_OPTIONS } from '../lib/shop/order-status'
 
-// Orders of prints (release 3.0). Created only by the server (src/lib/shop/checkout.ts) when a
+// Orders of prints. Created only by the server (src/lib/shop/checkout.ts) when a
 // buyer goes to the Stripe payment page, completed by the Stripe webhook (src/lib/shop/webhook.ts).
 // Managers of the section "Shop" see them and change the status (shipped, cancelled, refunded)
 // and the tracking details. Everything the buyer agreed to (items, prices, address) is a
@@ -35,6 +36,52 @@ const addressFields: Field[] = [
   },
 ]
 
+// Context flag of the server's own follow-up updates: they must not run the shipping hook again
+const SKIP_SHIPPING_HOOK = 'skipShippingHook'
+
+// The anonymous connection key is only needed while the checkout runs (src/lib/shop/hold.ts)
+const clearHoldKey: CollectionBeforeChangeHook = ({ data }) => {
+  if (data.status && data.status !== 'pending') {
+    data.holdKey = null
+  }
+
+  return data
+}
+
+// Set to "Shipped": stamp "Shipped on" (a server-only field, so with overrideAccess) and e-mail the
+// buyer the tracking details. An e-mail problem must not undo the status change; it is noted on
+// the order.
+const stampShippedAndNotify: CollectionAfterChangeHook = async ({ doc, previousDoc, operation, req, context }) => {
+  if (operation !== 'update' || doc.status !== 'shipped' || previousDoc?.status === 'shipped' || context[SKIP_SHIPPING_HOOK]) {
+    return doc
+  }
+
+  const stamped = await req.payload.update({
+    collection: 'orders',
+    id: doc.id,
+    data: { shippedAt: new Date().toISOString() },
+    overrideAccess: true,
+    context: { [SKIP_SHIPPING_HOOK]: true },
+    req,
+  })
+
+  if (doc.notifyOnShipping !== false) {
+    await sendShippedEmail(req.payload, stamped).catch(async (error) => {
+      req.payload.logger.error({ err: error, msg: `Shipping e-mail for ${doc.orderNumber} failed` })
+      await req.payload.update({
+        collection: 'orders',
+        id: doc.id,
+        data: { internalNote: withNote(doc, 'the shipping e-mail could not be sent.') },
+        overrideAccess: true,
+        context: { [SKIP_SHIPPING_HOOK]: true },
+        req,
+      })
+    })
+  }
+
+  return stamped
+}
+
 export const Orders: CollectionConfig = {
   slug: 'orders',
   labels: { singular: 'Order', plural: 'Orders' },
@@ -57,55 +104,8 @@ export const Orders: CollectionConfig = {
   },
   defaultSort: '-createdAt',
   hooks: {
-    beforeChange: [
-      // The anonymous connection key is only needed while the checkout runs (src/lib/shop/hold.ts)
-      ({ data }) => {
-        if (data.status && data.status !== 'pending') {
-          data.holdKey = null
-        }
-
-        return data
-      },
-    ],
-    afterChange: [
-      async ({ doc, previousDoc, operation, req, context }) => {
-        if (operation !== 'update' || doc.status !== 'shipped' || previousDoc?.status === 'shipped' || context.tjShippedStamp) {
-          return doc
-        }
-
-        // "Shipped on" is a server-only field: stamp it with overrideAccess (marked in the
-        // context so this hook does not run a second time)
-        const stamped = await req.payload.update({
-          collection: 'orders',
-          id: doc.id,
-          data: { shippedAt: new Date().toISOString() },
-          overrideAccess: true,
-          context: { tjShippedStamp: true },
-          req,
-        })
-
-        if (doc.notifyOnShipping !== false) {
-          // An e-mail problem must not undo the status change; it is noted on the order
-          await sendShippedEmail(req.payload, stamped).catch(async (error) => {
-            req.payload.logger.error({ err: error, msg: `Shipping e-mail for ${doc.orderNumber} failed` })
-            await req.payload.update({
-              collection: 'orders',
-              id: doc.id,
-              data: {
-                internalNote: [doc.internalNote, `${new Date().toISOString()}: the shipping e-mail could not be sent.`]
-                  .filter(Boolean)
-                  .join('\n'),
-              },
-              overrideAccess: true,
-              context: { tjShippedStamp: true },
-              req,
-            })
-          })
-        }
-
-        return stamped
-      },
-    ],
+    beforeChange: [clearHoldKey],
+    afterChange: [stampShippedAndNotify],
   },
   fields: [
     { ...readOnlyText('orderNumber', 'Order number'), index: true } as Field,

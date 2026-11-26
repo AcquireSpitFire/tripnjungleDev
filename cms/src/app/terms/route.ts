@@ -2,7 +2,7 @@
 import { renderStaticPage } from '@/lib/static-page'
 import { SITE_NAME } from '@/lib/site-identity'
 import { legalTextToHtml, termsText } from '@/lib/shop/legal'
-import { formatDate } from '@/lib/site'
+import { formatLongDate } from '@/lib/site-settings'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,7 +13,7 @@ export async function GET() {
     title: `Terms and conditions – ${SITE_NAME}`,
     description: `Terms and conditions (AGB) for prints ordered at ${SITE_NAME}.`,
     values: (site) => ({
-      updated: formatDate(site.updatedAt),
+      updated: formatLongDate(site.updatedAt),
       termsHtml: legalTextToHtml(termsText(site)),
     }),
   })

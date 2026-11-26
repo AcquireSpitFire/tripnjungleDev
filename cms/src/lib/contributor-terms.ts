@@ -20,7 +20,7 @@ import { normalizeNewlines } from './text'
 
 const VERSION_KEY = 'tj:contributorTermsVersion'
 
-export function defaultContributorTermsText(site: Pick<Site, 'operatorName' | 'jurisdiction'>): string {
+function defaultContributorTermsText(site: Pick<Site, 'operatorName' | 'jurisdiction'>): string {
   const operator = site.operatorName?.trim() || `the operator of ${SITE_NAME} (see the legal notice)`
   const austria = site.jurisdiction === 'at'
   const personRights = austria ? '§ 78 UrhG' : '§ 22 KUG'
@@ -69,7 +69,7 @@ export function contributorTermsText(site: Pick<Site, 'contributorTermsText' | '
   return site.contributorTermsText?.trim() || defaultContributorTermsText(site)
 }
 
-export function contributorTermsVersion(text: string): string {
+function contributorTermsVersion(text: string): string {
   return crypto.createHash('sha256').update(normalizeNewlines(text)).digest('hex').slice(0, 12)
 }
 

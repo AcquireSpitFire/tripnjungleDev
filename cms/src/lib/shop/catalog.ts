@@ -40,8 +40,8 @@ export type Offer = {
   photoUrl: string
 }
 
-export const MAX_CART_LINES = 20
-export const MAX_QUANTITY = 10
+const MAX_CART_LINES = 20
+const MAX_QUANTITY = 10
 
 // Is this print shown to visitors? "No price" is not, and neither is a fixed price without an
 // amount. Also decides whether the photo is "for sale" and gets the watermark (media-lock.ts).

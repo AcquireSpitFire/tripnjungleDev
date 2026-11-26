@@ -3,7 +3,7 @@
 import { renderStaticPage } from '@/lib/static-page'
 import { SITE_NAME } from '@/lib/site-identity'
 import { legalTextToHtml, withdrawalText } from '@/lib/shop/legal'
-import { formatDate } from '@/lib/site'
+import { formatLongDate } from '@/lib/site-settings'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,7 +14,7 @@ export async function GET() {
     title: `Right of withdrawal – ${SITE_NAME}`,
     description: `Instructions on withdrawal, model withdrawal form and withdrawal function for orders at ${SITE_NAME}.`,
     values: (site) => ({
-      updated: formatDate(site.updatedAt),
+      updated: formatLongDate(site.updatedAt),
       withdrawalHtml: legalTextToHtml(withdrawalText(site)),
     }),
   })

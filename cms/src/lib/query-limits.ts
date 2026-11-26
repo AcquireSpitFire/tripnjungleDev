@@ -8,7 +8,7 @@ import type { CollectionBeforeOperationHook } from 'payload'
 
 import { canManageExhibitions } from '../access/roles'
 
-export const MAX_PUBLIC_LIMIT = 100
+const MAX_PUBLIC_LIMIT = 100
 
 export const limitPublicQueries: CollectionBeforeOperationHook = ({ args, operation, overrideAccess, req }) => {
   if (operation !== 'read' || overrideAccess || canManageExhibitions(req.user)) {

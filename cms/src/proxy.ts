@@ -72,7 +72,7 @@ type Counter = { count: number; resetAt: number }
 const counters = new Map<string, Counter>()
 
 // The form of a path the router also uses: decoded, lower case, no double or trailing slashes
-export function normalizePath(pathname: string): string {
+function normalizePath(pathname: string): string {
   let path = pathname
 
   try {
