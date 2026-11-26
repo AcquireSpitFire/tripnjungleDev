@@ -6,7 +6,8 @@
 import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 
-import { escapeHtml, htmlResponse, jsonForScript, renderTemplate, summarize } from '@/lib/render-template'
+import { escapeHtml, htmlResponse, renderTemplate, summarize } from '@/lib/render-template'
+import { defaultOgImage, jsonLdScript } from '@/lib/page'
 import { absolute, asMedia, findPublicExhibitions, imageUrl } from '@/lib/seo'
 import { SITE_NAME, serverUrl } from '@/lib/site-identity'
 import { getSiteSettings, htmlMailLink, htmlParagraphs, mailtoHref } from '@/lib/site-settings'
@@ -98,9 +99,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
   const base = serverUrl()
 
   const common = {
-    siteName: SITE_NAME,
-    siteUrl: base,
-    ogImage: base + '/og-default.jpg',
+    ogImage: defaultOgImage(),
+    ogType: 'profile',
     jsonLd: '',
   }
 
@@ -174,7 +174,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
 
   const sameAs = [httpsUrl(artist.website), httpsUrl(artist.instagram)].filter(Boolean)
   const image = absolute(base, imageUrl(portrait, 'large'))
-  const jsonLd = `<script type="application/ld+json">${jsonForScript({
+  const jsonLd = jsonLdScript({
     '@context': 'https://schema.org',
     '@type': 'Person',
     name: artist.name,
@@ -182,7 +182,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
     description: summarize(artist.shortText) || undefined,
     image: image || undefined,
     sameAs: sameAs.length ? sameAs : undefined,
-  })}</script>`
+  })
 
   return htmlResponse(
     renderTemplate('artist.html', {

@@ -10,6 +10,7 @@ export async function GET() {
   return renderStaticPage({
     template: 'privacy.html',
     path: '/privacy',
+    twitterCard: 'summary',
     title: `Privacy policy – ${SITE_NAME}`,
     description: `Privacy policy of ${SITE_NAME}: hosting, YouTube videos after consent, local storage, orders and payment, your rights.`,
     values: (settings) => {

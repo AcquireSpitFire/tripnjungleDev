@@ -10,6 +10,7 @@ export async function GET() {
   return renderStaticPage({
     template: 'terms.html',
     path: '/terms',
+    twitterCard: 'summary',
     title: `Terms and conditions – ${SITE_NAME}`,
     description: `Terms and conditions (AGB) for prints ordered at ${SITE_NAME}.`,
     values: (site) => ({

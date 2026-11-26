@@ -3,7 +3,8 @@
 import configPromise from '@payload-config'
 import { getPayload, type Payload } from 'payload'
 
-import { htmlResponse, jsonForScript, renderTemplate } from './render-template'
+import { htmlResponse, renderTemplate } from './render-template'
+import { defaultOgImage, jsonLdScript } from './page'
 import { SITE_DESCRIPTION, SITE_NAME, serverUrl } from './site-identity'
 import { getSiteSettings, type SiteSettings } from './site-settings'
 
@@ -14,6 +15,8 @@ type StaticPage = {
   // If missing, the site description from the Site settings applies
   description?: string
   robots?: string
+  // "summary" for text pages (small preview without the large image)
+  twitterCard?: 'summary'
   jsonLd?: (base: string, description: string) => unknown
   // Additional placeholders, computed from the Site settings
   values?: (settings: SiteSettings, payload: Payload) => Record<string, string>
@@ -28,14 +31,13 @@ export async function renderStaticPage(page: StaticPage): Promise<Response> {
 
   return htmlResponse(
     renderTemplate(page.template, {
-      siteName: SITE_NAME,
-      siteUrl: base,
       title: page.title,
       description,
       canonical: base + page.path,
-      ogImage: base + '/og-default.jpg',
+      ogImage: defaultOgImage(),
       robots: page.robots || 'index, follow',
-      jsonLd: data ? `<script type="application/ld+json">${jsonForScript(data)}</script>` : '',
+      ...(page.twitterCard ? { twitterCard: page.twitterCard } : {}),
+      jsonLd: jsonLdScript(data),
       ...(page.values?.(settings, payload) ?? {}),
     }),
     { cache: 'public, s-maxage=300, stale-while-revalidate=86400' },

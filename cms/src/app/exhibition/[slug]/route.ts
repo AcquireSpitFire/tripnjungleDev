@@ -4,7 +4,8 @@
 import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 
-import { htmlResponse, jsonForScript, renderTemplate, summarize } from '@/lib/render-template'
+import { htmlResponse, renderTemplate, summarize } from '@/lib/render-template'
+import { defaultOgImage, jsonLdScript } from '@/lib/page'
 import {
   absolute,
   artistsJsonLd,
@@ -24,11 +25,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
   const payload = await getPayload({ config: configPromise })
   const base = serverUrl()
 
-  const common = {
-    siteName: SITE_NAME,
-    siteUrl: base,
-    ogImageDefault: base + '/og-default.jpg',
-  }
+  // Values every answer of this page shares
+  const common = { ogType: 'article' }
+  const ogImageDefault = defaultOgImage()
 
   if (!isSlug(slug)) {
     return htmlResponse(
@@ -37,7 +36,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
         title: 'Exhibition not found – ' + SITE_NAME,
         description: SITE_DESCRIPTION,
         canonical: base + '/exhibition/' + encodeURIComponent(slug),
-        ogImage: common.ogImageDefault,
+        ogImage: ogImageDefault,
         robots: 'noindex',
         jsonLd: '',
       }),
@@ -54,7 +53,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
         title: 'Exhibition not found – ' + SITE_NAME,
         description: SITE_DESCRIPTION,
         canonical: base + '/exhibition/' + encodeURIComponent(slug),
-        ogImage: common.ogImageDefault,
+        ogImage: ogImageDefault,
         robots: 'noindex',
         jsonLd: '',
       }),
@@ -69,7 +68,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
   const poster = asMedia(exhibition.posters?.[0])
   const frontPage = asMedia(exhibition.frontPage)
   const ogImage =
-    (!linkOnly && absolute(base, imageUrl(poster) || imageUrl(frontPage))) || common.ogImageDefault
+    (!linkOnly && absolute(base, imageUrl(poster) || imageUrl(frontPage))) || ogImageDefault
   const description = summarize(
     exhibition.description ||
       [exhibition.theme, SITE_DESCRIPTION].filter(Boolean).join(' – '),
@@ -100,7 +99,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
   }
 
   const jsonLd = graph.length
-    ? `<script type="application/ld+json">${jsonForScript({ '@context': 'https://schema.org', '@graph': graph })}</script>`
+    ? jsonLdScript({ '@context': 'https://schema.org', '@graph': graph })
     : ''
 
   return htmlResponse(

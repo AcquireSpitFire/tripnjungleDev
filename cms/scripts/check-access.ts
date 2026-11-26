@@ -820,6 +820,15 @@ async function run() {
     [count(withPlaceholder), count(withoutPlaceholder)],
   )
 
+  const withPartialText = renderTemplate('about.html', { title: 'plain', aboutText: '<p>{{> footer}}</p>' })
+
+  check(
+    'shared pieces ({{> name}}) are put in, but not when typed into a text',
+    withPartialText.includes('<p>{{> footer}}</p>') &&
+      withPartialText.split('class="site_footer"').length === 2 &&
+      !withoutPlaceholder.includes('{{>'),
+  )
+
   const { mailtoHref } = await import('../src/lib/site-settings')
 
   check('mail links cannot add hidden recipients', !mailtoHref('a?bcc=x@evil.example').includes('?'), mailtoHref('a?bcc=x@evil.example'))

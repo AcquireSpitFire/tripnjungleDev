@@ -11,6 +11,7 @@ export async function GET() {
   return renderStaticPage({
     template: 'withdrawal.html',
     path: '/withdrawal',
+    twitterCard: 'summary',
     title: `Right of withdrawal – ${SITE_NAME}`,
     description: `Instructions on withdrawal, model withdrawal form and withdrawal function for orders at ${SITE_NAME}.`,
     values: (site) => ({

@@ -10,6 +10,7 @@ export async function GET() {
   return renderStaticPage({
     template: 'imprint.html',
     path: '/imprint',
+    twitterCard: 'summary',
     title: `Legal notice – ${SITE_NAME}`,
     description: `Legal notice (Impressum) of ${SITE_NAME}: operator, address and contact.`,
     values: (settings) => {

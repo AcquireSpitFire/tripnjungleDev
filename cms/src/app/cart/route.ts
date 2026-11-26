@@ -11,6 +11,7 @@ export async function GET() {
   return renderStaticPage({
     template: 'cart.html',
     path: '/cart',
+    twitterCard: 'summary',
     title: `Cart – ${SITE_NAME}`,
     description: `Your cart at ${SITE_NAME}: prints of the photos in the exhibitions.`,
     robots: 'noindex, follow',

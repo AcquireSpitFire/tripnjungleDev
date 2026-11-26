@@ -2,7 +2,8 @@
 import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 
-import { htmlResponse, jsonForScript, renderTemplate } from '@/lib/render-template'
+import { htmlResponse, renderTemplate } from '@/lib/render-template'
+import { defaultOgImage, jsonLdScript } from '@/lib/page'
 import { eventJsonLd, findPublicExhibitions, hasUpcomingDate } from '@/lib/seo'
 import { SITE_NAME, serverUrl } from '@/lib/site-identity'
 
@@ -14,7 +15,7 @@ export async function GET() {
   const upcoming = (await findPublicExhibitions(payload)).filter(hasUpcomingDate)
 
   const jsonLd = upcoming.length
-    ? `<script type="application/ld+json">${jsonForScript({
+    ? jsonLdScript({
         '@context': 'https://schema.org',
         '@type': 'ItemList',
         name: 'Upcoming exhibitions – ' + SITE_NAME,
@@ -23,15 +24,16 @@ export async function GET() {
           position: index + 1,
           item: { '@context': 'https://schema.org', ...eventJsonLd(exhibition, base) },
         })),
-      })}</script>`
+      })
     : ''
 
   return htmlResponse(
     renderTemplate('events.html', {
-      siteName: SITE_NAME,
-      siteUrl: base,
+      title: `Events – ${SITE_NAME}`,
+      description: `Upcoming ${SITE_NAME} exhibitions: posters, dates, times and locations.`,
+      robots: 'index, follow',
       canonical: base + '/events',
-      ogImage: base + '/og-default.jpg',
+      ogImage: defaultOgImage(),
       jsonLd,
     }),
   )

@@ -1,10 +1,11 @@
 // Fill the HTML templates from src/templates with meta data.
-//   {{key}}   → HTML-escaped
-//   {{{key}}} → raw (for JSON-LD)
+//   {{key}}    → HTML-escaped
+//   {{{key}}}  → raw (only for HTML the server built itself, never for text from a visitor)
+//   {{> name}} → the shared piece src/templates/partials/<name>.html (head, footer, scripts)
 import fs from 'fs'
 import path from 'path'
 
-import { serverUrl } from './site-identity'
+import { SITE_NAME, serverUrl } from './site-identity'
 
 // Relative to the working directory (cms/), because the bundled code lives
 // somewhere else in the build than the source file
@@ -25,6 +26,7 @@ export function jsonForScript(value: unknown): string {
   return JSON.stringify(value).replace(/</g, '\\u003c')
 }
 
+// The template with its partials put in (partials do not contain partials themselves)
 function readTemplate(name: string): string {
   const cached = cache.get(name)
 
@@ -32,11 +34,19 @@ function readTemplate(name: string): string {
     return cached
   }
 
-  const html = fs.readFileSync(path.join(templatesDir, name), 'utf8')
+  const read = (file: string) => fs.readFileSync(path.join(templatesDir, file), 'utf8').replace(/\r\n/g, '\n')
+  const html = read(name).replace(/\{\{> ([\w-]+)\}\}\n?/g, (_, partial: string) => read(`partials/${partial}.html`))
 
   cache.set(name, html)
 
   return html
+}
+
+// Values of the shared head (partials/head.html) a page does not have to set itself
+const DEFAULT_VALUES: Record<string, string> = {
+  siteName: SITE_NAME,
+  ogType: 'website',
+  twitterCard: 'summary_large_image',
 }
 
 // Version for /css/ and /js/: changes with every deploy (Railway sets the
@@ -44,11 +54,13 @@ function readTemplate(name: string): string {
 // next.config.ts) and fetches the new ones right after a deploy because of the new URL.
 const assetVersion = (process.env.RAILWAY_GIT_COMMIT_SHA || Date.now().toString(36)).slice(0, 12)
 
-export function renderTemplate(name: string, values: Record<string, string>): string {
+export function renderTemplate(name: string, pageValues: Record<string, string>): string {
+  const values = { ...DEFAULT_VALUES, ...pageValues }
+
   // One single pass: inserted values are never scanned again, so "{{key}}" typed into a
   // CMS text stays literal text (a second pass would expand it – content corruption and,
   // repeated, a huge response that exhausts the server memory).
-  // The asset version is added to the template itself, before any value is inserted.
+  // Partials and the asset version are part of the template itself, put in before any value.
   return readTemplate(name)
     .replace(/((?:href|src)="\/(?:css|js)\/[^"?#]+)"/g, `$1?v=${assetVersion}"`)
     .replace(/\{\{\{(\w+)\}\}\}|\{\{(\w+)\}\}/g, (_, rawKey: string | undefined, key: string | undefined) =>

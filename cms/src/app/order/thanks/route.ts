@@ -10,6 +10,7 @@ export async function GET() {
   return renderStaticPage({
     template: 'order-thanks.html',
     path: '/order/thanks',
+    twitterCard: 'summary',
     title: `Thank you – ${SITE_NAME}`,
     robots: 'noindex, nofollow',
   })

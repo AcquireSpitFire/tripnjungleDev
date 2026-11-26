@@ -6,7 +6,8 @@
 import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 
-import { htmlResponse, jsonForScript, renderTemplate, summarize } from '@/lib/render-template'
+import { htmlResponse, renderTemplate, summarize } from '@/lib/render-template'
+import { defaultOgImage, jsonLdScript } from '@/lib/page'
 import { absolute, artistsJsonLd, asMedia, findPublicExhibitions, imageUrl } from '@/lib/seo'
 import { SITE_DESCRIPTION, SITE_NAME, serverUrl } from '@/lib/site-identity'
 import { isSlug } from '@/lib/slug'
@@ -20,9 +21,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
   const path = `/exhibition/${encodeURIComponent(slug)}/photo/${encodeURIComponent(photo)}`
 
   const common = {
-    siteName: SITE_NAME,
-    siteUrl: base,
     canonical: base + path,
+    ogType: 'article',
   }
 
   const missing = () =>
@@ -31,7 +31,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
         ...common,
         title: 'Photo not found – ' + SITE_NAME,
         description: SITE_DESCRIPTION,
-        ogImage: base + '/og-default.jpg',
+        ogImage: defaultOgImage(),
         robots: 'noindex',
         jsonLd: '',
         photoState: 'missing',
@@ -76,7 +76,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
 
   const jsonLd =
     !locked && media
-      ? `<script type="application/ld+json">${jsonForScript({
+      ? jsonLdScript({
           '@context': 'https://schema.org',
           '@type': 'Photograph',
           name: name || exhibition.title,
@@ -85,7 +85,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
           url: base + path,
           creator: artistsJsonLd(artists, base),
           isPartOf: { '@type': 'ImageGallery', name: exhibition.title, url: base + exhibitionUrl },
-        })}</script>`
+        })
       : ''
 
   return htmlResponse(
@@ -93,7 +93,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
       ...common,
       title: `${name ? name + ' – ' : ''}${exhibition.title} – ${SITE_NAME}`,
       description,
-      ogImage: image || base + '/og-default.jpg',
+      ogImage: image || defaultOgImage(),
       robots: linkOnly ? 'noindex, nofollow' : locked ? 'noindex, follow' : 'index, follow',
       jsonLd,
       photoState: 'ok',
