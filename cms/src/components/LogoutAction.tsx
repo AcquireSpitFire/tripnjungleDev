@@ -33,7 +33,11 @@ export function LogoutAction() {
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-      <span style={{ fontSize: '0.85rem', opacity: 0.75, whiteSpace: 'nowrap' }}>
+      {/* Hidden on phones (src/app/(payload)/custom.scss): no room next to the breadcrumbs */}
+      <span
+        className="logout-action__account"
+        style={{ fontSize: '0.85rem', opacity: 0.75, whiteSpace: 'nowrap' }}
+      >
         {name}
         {role ? ` · ${role}` : ''}
       </span>

@@ -36,7 +36,7 @@ flowchart LR
   answers with a strict Content Security Policy (`htmlResponse`).
 - **Data in the browser**: `public/js/data.js` calls `/api/exhibitions` **without cookies**, so the site
   looks the same for a logged-in admin and a visitor. Only the preview (`?preview`) sends the login.
-- **Admin**: Payload's own React admin; our additions are in `src/components/` (registered in
+- **Admin**: Payload's own React admin; its look on phones and desktops in `src/app/(payload)/custom.scss`, our additions are in `src/components/` (registered in
   `src/app/(payload)/admin/importMap.js`, generated with `npm run generate:importmap`).
 
 ## Data model

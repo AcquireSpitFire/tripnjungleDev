@@ -1,0 +1,142 @@
+// Look of the admin (Payload), loaded by layout.tsx after Payload's own styles.
+//
+// Payload sizes everything in rem from the root font size (13px, and only 12px below 1024px –
+// which made phones hard to use). A larger root size scales text, fields, buttons and spacing
+// together. These rules are outside Payload's CSS layers, so they win without !important.
+//
+//   every screen   a little larger, rounder frames, calm card look for array rows and groups
+//   ≤ 1024 px      tablets: 15px instead of 12px
+//   ≤ 768 px       phones: 16px, inputs 16px (no zoom on iPhone), touch targets ≥ 44px
+
+:root {
+  --style-radius-s: 6px;
+  --style-radius-m: 8px;
+  --style-radius-l: 12px;
+}
+
+html {
+  font-size: 14px;
+}
+
+// ---------- Frames ----------
+
+// Text fields, selects, upload and relationship boxes: soft round frames
+.field-type input,
+.field-type textarea,
+.rs__control,
+.upload__dropzoneAndUpload,
+.file-details {
+  border-radius: var(--style-radius-m);
+}
+
+// Array rows (gallery items, prints, shipping zones) and collapsible groups as cards
+.collapsible {
+  border-radius: var(--style-radius-l);
+  box-shadow: 0 0 0 1px var(--theme-elevation-150);
+}
+
+.collapsible__toggle-wrap {
+  border-top-left-radius: var(--style-radius-l);
+  border-top-right-radius: var(--style-radius-l);
+}
+
+.collapsible__content {
+  border-bottom-left-radius: var(--style-radius-l);
+  border-bottom-right-radius: var(--style-radius-l);
+}
+
+.array-field__draggable-rows > * + * {
+  margin-top: calc(var(--base) * 0.6);
+}
+
+// Buttons and focus: round and clearly visible
+.btn {
+  border-radius: var(--style-radius-m);
+}
+
+.field-type input:focus-visible,
+.field-type textarea:focus-visible,
+.btn:focus-visible {
+  outline: 2px solid var(--theme-success-500);
+  outline-offset: 2px;
+}
+
+// Dashboard cards: the titles are fixed at 13px by Payload
+.card__title {
+  font-size: 1rem;
+  line-height: 1.3;
+}
+
+// ---------- Tablets ----------
+
+@media (max-width: 1024px) {
+  html {
+    font-size: 15px;
+  }
+}
+
+// ---------- Phones ----------
+
+@media (max-width: 768px) {
+  html {
+    font-size: 16px;
+    line-height: 1.5;
+  }
+
+  // The account name next to "Log out" (src/components/LogoutAction.tsx) does not fit next to the
+  // breadcrumbs; the account page shows it
+  .logout-action__account {
+    display: none;
+  }
+
+  // 16px keeps iPhones from zooming into a field when it is tapped
+  input,
+  textarea,
+  select,
+  .rs__control,
+  .rs__input input {
+    font-size: 16px;
+  }
+
+  // Touch targets: at least 44px
+  .btn,
+  .rs__control,
+  .field-type input:not([type='checkbox']):not([type='radio']) {
+    min-height: 44px;
+  }
+
+  // The text stays in the middle of the taller buttons
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  // Labels and descriptions readable
+  .field-label {
+    font-size: 1rem;
+  }
+
+  .field-description {
+    font-size: 0.9rem;
+    line-height: 1.45;
+  }
+
+  // Cards: a bit more room to tap the header
+  .collapsible__toggle-wrap {
+    padding-top: calc(var(--base) * 0.5);
+    padding-bottom: calc(var(--base) * 0.5);
+  }
+
+  // Tables in lists scroll sideways instead of squeezing the columns
+  .table {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .table td,
+  .table th {
+    padding-top: calc(var(--base) * 0.6);
+    padding-bottom: calc(var(--base) * 0.6);
+  }
+}
