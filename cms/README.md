@@ -3,6 +3,11 @@
 Payload 3 (admin + REST API) with SQLite; Next.js serves the frontend. The site starts empty:
 all exhibitions, posters, photos and videos come from the admin panel.
 
+This README is about running and using the site. For working on the code:
+[ARCHITECTURE.md](ARCHITECTURE.md) (how it is built, where to change what),
+[CONTRIBUTING.md](CONTRIBUTING.md) (setup, security checklist, schema changes, tests) and
+[CHANGELOG.md](CHANGELOG.md) (releases and what to do when updating).
+
 ## Running locally
 
 ```
@@ -357,17 +362,8 @@ One-time setup, about an hour. Everything else happens in the admin afterwards.
 Every further push to the connected branch triggers a build and deploy automatically. `npm start` first
 runs the database migrations (`src/migrations`) and then starts the server.
 
-**Updating to release 3.0** (shop): download a backup of `tripnjungle.db` first. The migration adds the
-tables for prints, orders, price requests, the watermark and the shop settings; nothing existing changes.
-The shop stays closed until it is set up (see Shop above). Watermarked copies are stored in
-`MEDIA_DIR/watermarked/` (made on demand, can be deleted at any time). Accounts are no longer locked
-after wrong passwords (the columns `login_attempts`/`lock_until` are removed); locally, the next
-`npm run dev` asks once whether to accept dropping them – answer **y**.
-
-**Updating to release 2.0** (accounts, artists, QR codes): download a backup of `tripnjungle.db` first.
-The migrations run on the next start: field names become English (data is kept), all existing accounts
-become admins, artists/editors/QR settings are added. Then set `PAYLOAD_PUBLIC_SERVER_URL` to the real
-domain before printing any QR code, and create the manager/artist/editor accounts under Accounts.
+**Updating to a new release:** see [CHANGELOG.md](CHANGELOG.md) – it lists for every release what the
+migrations change and what to set up afterwards. Always download a backup first.
 
 **Backup:** Railway does not keep permanent volume backups automatically. Daily snapshots can be enabled
 under Volume → Backups (paid). In addition, download `tripnjungle.db` and `media/` from the volume now
@@ -380,73 +376,10 @@ For your own server (VPS) the same applies: Node 24, `.env` as above, `npm ci &&
 
 ## Changing the schema
 
-After changes to the collections: `npm run migrate:create` creates a new migration in
-`src/migrations`; it runs automatically on the next `npm start`. Locally (`npm run dev`) the schema is
-adjusted directly.
-
-**Renames** (a field or array gets a new name): `migrate:create` asks in the terminal whether a table or
-column was renamed or newly created and cannot run without an interactive terminal; if it treats it as
-new, the data is lost. In that case write the migration by hand with `ALTER TABLE … RENAME …` and create
-the schema snapshot with
-`PAYLOAD_MIGRATING=true npx tsx --env-file=.env scripts/write-schema-snapshot.ts <yyyymmdd_hhmmss_name>`
-(example: `src/migrations/20261122_230000_english_field_names.ts`). Back up the database first and test
-the migration on a copy.
-
-**Local database does not start** (`npm run dev` fails with “index … already exists”): when `npm run dev`
-adds a column with a reference to an existing table, drizzle-kit leaves out the foreign key and later tries
-to rebuild the table with every index twice. Stop the dev server and run `npm run db:repair-dev` (shows
-what it would do) and then `npm run db:repair-dev -- --yes`: it backs up the database file first, rebuilds
-the tables once and checks that no row is lost. Production is not affected (it uses the migrations).
-
-**Check:** `npm run migrate:create` adds references to other collections (e.g. `created_by_id`) without
-their delete rule; add `ON DELETE SET NULL` (single reference) or `ON DELETE CASCADE` (`*_rels` tables) by
-hand as in the generated `.json` snapshot, see the migrations of release 2.0.
-
-**Permissions:** `npm run test:access` checks the roles (accounts, exhibitions, media, artists, editors,
-QR codes, the security rules above) against a temporary database. Run it after every change to access rules.
+Migrations, renames, delete rules and repairing a local database: [CONTRIBUTING.md → Changing the
+schema](CONTRIBUTING.md#changing-the-schema). `npm run test:access` checks all access rules, the shop,
+the watermark, SEO and the legal pages against a temporary database – run it after every change.
 
 ## Files
 
-- `src/access/roles.ts` – roles and all permission helpers
-- `src/proxy.ts` – rate limit for login and password requests
-- `src/lib/query-limits.ts` – page-size cap for visitors, artists and editors
-- `src/collections/Exhibitions.ts` – fields, access, artists/editors, hooks
-- `src/collections/Media.ts` – uploads (`MEDIA_DIR`), image sizes, public only with `locked: false`;
-  watermarked URLs for photos for sale
-- `src/collections/Artists.ts` – artist profiles; `src/app/artist/[slug]/route.ts` – the artist page
-- `src/collections/Users.ts` – accounts, roles, login security, accepting the contributor terms
-- `src/lib/contributor-terms.ts` – standard text, version and check of the contributor terms;
-  `src/components/ContributorTerms.tsx` (account page), `ContributorTermsNotice.tsx` (reminder in the admin)
-- `src/components/ShopStatus.tsx` – shop status in Site settings → Shop
-- `scripts/repair-dev-schema.ts` – repairs a local development database (`npm run db:repair-dev`)
-- `src/lib/media-lock.ts` – keeps `locked`, `forSale` and the watermark key of the media in sync with
-  exhibitions and portraits
-- `src/lib/qr.ts`, `src/endpoints/exhibition-qr.ts` – QR PNG/PDF; `src/components/QrCodeField.tsx`,
-  `ExhibitionQrCodes.tsx` – the QR buttons in the admin; `src/app/p/[id]/route.ts` – short link
-- `src/collections/Orders.ts`, `src/collections/PriceRequests.ts` – orders and price requests (section Shop)
-- `src/lib/shop/` – the shop: `catalog.ts` (prints of the exhibitions), `stock.ts` (copies left, checkout
-  lock), `checkout.ts` (cart, prices, Stripe Checkout), `webhook.ts` (Stripe events → orders), `emails.ts`,
-  `legal.ts` (standard terms and withdrawal instructions), `settings.ts`, `countries.ts`, `http.ts`
-- `src/app/shop/*/route.ts` – shop endpoints (offers, quote, checkout, webhook, request, withdrawal);
-  `src/app/cart`, `src/app/order/thanks`, `src/app/terms`, `src/app/withdrawal` – the shop pages;
-  `public/js/cart-store.js` (cart in the browser), `shop.js` (prints, price requests), `cart.js` (cart page),
-  `withdrawal-form.js`
-- `src/lib/watermark.ts`, `src/app/media-wm/[file]/route.ts`, `src/assets/watermark-default.svg` – the
-  watermark; `src/lib/media-lock.ts` decides which photos are for sale
-- `src/globals/Site.ts` – Site settings, one tab per file in `src/globals/site/`; `src/lib/site-settings.ts` prepares them
-  for the templates
-- `src/templates/*.html` – the pages; `src/app/**/route.ts` serves them with title, description,
-  Open Graph and JSON-LD (`/`, `/exhibitions`, `/events`, `/archive`, `/about`, `/imprint`, `/privacy`,
-  `/exhibition/<id>`, `/exhibition/<id>/photo/<photo id>`, `/artist/<id>`, `/cart`, `/terms`, `/withdrawal`,
-  `/order/thanks`)
-- `src/app/sitemap.xml`, `src/app/robots.txt` – SEO
-- `src/migrations/` – database migrations for production
-- `public/` – CSS, JS, favicon, OG image; `public/js/data.js` talks to the API, `elements.js` picks the image
-  size, `slideshow.js` and `viewer.js` are shared by the home, exhibition and photo pages (each file starts
-  with what it needs and provides)
-- `scripts/regenerate-sizes.ts` – regenerate image sizes for existing media (`npm run media:regenerate -- --yes`; without `--yes` it only shows which database and folder it would change)
-- `scripts/set-locked.ts` – lock/unlock an exhibition from the command line (for testing; needs `--yes`)
-- `scripts/write-schema-snapshot.ts` – schema snapshot for hand-written migrations (see above)
-- `scripts/check-access.ts` – all checks (`npm run test:access`): one file per area in `scripts/access/`
-  (accounts, contributor terms, exhibitions, media lock, artists, editors, QR, security, shop …)
-- `tripnjungle.db`, `media/`, `.env` – local, not in git
+Folder map and “where do I change what”: [ARCHITECTURE.md](ARCHITECTURE.md#folder-map).
