@@ -12,6 +12,10 @@ import {
 
 export const dynamic = 'force-dynamic'
 
+// When nothing is entered: what this website does, including the sale of prints
+const DEFAULT_BUSINESS_PURPOSE =
+  'Online gallery of photo and video exhibitions and sale of photo prints'
+
 export async function GET() {
   return renderStaticPage({
     template: 'imprint.html',
@@ -35,7 +39,7 @@ export async function GET() {
         operatorEmail: htmlMailLink(settings.operatorEmail, 'E-mail'),
         operatorPhone: htmlRequired(settings.operatorPhone, 'Phone'),
         businessPurposeBlock: austria
-          ? `<h2>Business purpose (Unternehmensgegenstand)</h2><p>${htmlRequired(settings.businessPurpose, 'Business purpose')}</p>`
+          ? `<h2>Business purpose (Unternehmensgegenstand)</h2><p>${htmlOptional(settings.businessPurpose?.trim() || DEFAULT_BUSINESS_PURPOSE)}</p>`
           : settings.businessPurpose?.trim()
             ? `<h2>Activity</h2><p>${htmlOptional(settings.businessPurpose)}</p>`
             : '',
@@ -48,6 +52,8 @@ export async function GET() {
                 : name
             }<br>Address as above.</p>`,
         imprintExtra: htmlParagraphs(settings.imprintExtra),
+        // Digital Services Act: single point of contact (Art. 11, 12) and notices (Art. 16)
+        contactPoint: htmlMailLink(settings.operatorEmail, 'E-mail'),
       }
     },
   })

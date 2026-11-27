@@ -7,7 +7,7 @@
 import configPromise from '@payload-config'
 import { getPayload, type Payload } from 'payload'
 
-import { htmlResponse, renderTemplate, summarize } from '@/lib/render-template'
+import { escapeHtml, htmlResponse, renderTemplate, summarize } from '@/lib/render-template'
 import { jsonLdScript, mediaOgImage, ogImageValues } from '@/lib/page'
 import {
   absolute,
@@ -22,6 +22,7 @@ import { getShopSettings } from '@/lib/shop/settings'
 import { copiesLeft, countTaken } from '@/lib/shop/stock'
 import { SITE_DESCRIPTION, SITE_NAME, serverUrl } from '@/lib/site-identity'
 import { isSlug } from '@/lib/slug'
+import { getSiteSettings, mailtoHref } from '@/lib/site-settings'
 import type { Exhibition } from '@/payload-types'
 
 export const dynamic = 'force-dynamic'
@@ -65,6 +66,25 @@ async function printsJsonLd(
       url: pageUrl,
     },
   }))
+}
+
+// "Report this content" (Digital Services Act, Art. 16): an e-mail to the contact point of the
+// legal notice with the address of the photo already in it
+async function reportLink(payload: Payload, pageUrl: string): Promise<string> {
+  const site = await getSiteSettings(payload)
+  const email = site.operatorEmail?.trim() || site.contactEmail?.trim()
+
+  if (!email) {
+    return ''
+  }
+
+  const subject = encodeURIComponent('Report of illegal content')
+  const body = encodeURIComponent(
+    `Content: ${pageUrl}\n\nWhy it is illegal:\n\nMy name and e-mail address:\n\nI make this report in good faith; it is accurate and complete.`,
+  )
+  const href = `${mailtoHref(email)}?subject=${subject}&body=${body}`
+
+  return `<p class="report_line"><a href="${escapeHtml(href)}">Report this content</a></p>`
 }
 
 export async function GET(
@@ -175,6 +195,7 @@ export async function GET(
         ? jsonLdScript({ '@context': 'https://schema.org', '@graph': graph })
         : '',
       photoState: 'ok',
+      reportLink: await reportLink(payload, pageUrl),
       heading: name || exhibition.title,
       backUrl: exhibitionUrl,
       backLabel: exhibition.title,

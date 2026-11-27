@@ -226,5 +226,41 @@ export const shopTab: Tab = {
         },
       ],
     },
+    {
+      name: 'mailProviderOutsideEu',
+      type: 'checkbox',
+      label: 'The e-mail provider is a company outside the EU/EEA (e.g. USA)',
+      admin: {
+        description:
+          'The privacy policy then names the transfer to a third country (adequacy decision or standard contractual clauses of the provider).',
+      },
+    },
+    {
+      // Product safety (GPSR, Regulation (EU) 2023/988, Art. 19): every offer names the manufacturer
+      // and safety information; shown with the prints, in the cart and in the order confirmation
+      type: 'collapsible',
+      label: 'Product safety (GPSR)',
+      admin: { initCollapsed: true },
+      fields: [
+        {
+          name: 'manufacturer',
+          type: 'textarea',
+          label: 'Manufacturer (name, postal and e-mail address)',
+          admin: {
+            description:
+              'Shown with every print. Empty = the operator of the legal notice – right when the prints are sold under your name, also if a lab makes them. Put the same details on a label on the back of each print or on its packaging.',
+          },
+        },
+        {
+          name: 'safetyInformation',
+          type: 'textarea',
+          label: 'Safety information (optional)',
+          admin: {
+            description:
+              'Only if there is any, e.g. for framed prints with glass: “Glass – handle with care, hang with suitable fixings.”',
+          },
+        },
+      ],
+    },
   ],
 }

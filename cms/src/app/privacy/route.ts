@@ -51,6 +51,9 @@ export async function GET() {
                 .join(', '),
             )
           : htmlRequired('', 'E-mail provider, tab Shop'),
+        mailTransferNote: settings.mailProviderOutsideEu
+          ? ' The provider is based outside the EU/EEA; the transfer is secured by the EU standard contractual clauses (Art. 46 (2) (c) GDPR) or, for US companies certified under the EU-US Data Privacy Framework, by that framework (Art. 45 GDPR).'
+          : '',
         privacyExtra: htmlParagraphs(settings.privacyExtra),
       }
     },

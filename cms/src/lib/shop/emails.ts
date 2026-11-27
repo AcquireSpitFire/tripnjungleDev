@@ -160,7 +160,17 @@ export async function sendOrderConfirmation(payload: Payload, order: OrderMailDo
     'Seller:',
     ...sellerLines(settings),
     '',
+    // Product safety (GPSR)
+    'Manufacturer:',
+    ...settings.manufacturer.split('\n'),
+    ...(settings.safetyInformation
+      ? ['', 'Safety information: ' + settings.safetyInformation]
+      : []),
+    '',
     'You will get another e-mail when your order has been shipped.',
+    '',
+    // Withdrawal function of the website (Art. 11a Directive 2011/83/EU)
+    `Withdraw from the contract here: ${serverUrl()}/withdrawal`,
   ]
 
   await send(payload, {
@@ -194,6 +204,38 @@ export async function sendOrderConfirmation(payload: Payload, order: OrderMailDo
       legalTextToHtml(terms),
     ].join('\n'),
   })
+}
+
+// To the buyer, when the payment method takes a few days (e.g. SEPA direct debit): the order is
+// received, the copies are held, the confirmation with all details follows with the payment
+export async function sendOrderReceived(payload: Payload, order: OrderMailDoc): Promise<void> {
+  if (!order.customerEmail) {
+    return
+  }
+
+  const settings = await getShopSettings(payload)
+  const lines = [
+    `Thank you for your order${order.customerName ? ', ' + order.customerName : ''}! We have received order ${order.orderNumber}.`,
+    '',
+    'Your payment method takes a few days. Your prints are reserved for you; as soon as the payment has arrived you get the order confirmation with all details, the terms and the instructions on withdrawal.',
+    '',
+    ...items(order).flatMap((item) => [...itemLines(item), '']),
+    ...totalsLines(order),
+    '',
+    'Seller:',
+    ...sellerLines(settings),
+  ]
+
+  await send(payload, {
+    to: order.customerEmail,
+    replyTo: settings.shopEmail || undefined,
+    subject: `Order ${order.orderNumber} received – payment pending`,
+    lines,
+  })
+}
+
+function items(order: OrderMailDoc): OrderMailItem[] {
+  return order.items || []
 }
 
 // To the shop: a new paid order

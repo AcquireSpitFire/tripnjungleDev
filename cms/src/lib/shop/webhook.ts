@@ -14,7 +14,7 @@ import type Stripe from 'stripe'
 
 import type { Order } from '../../payload-types'
 import { formatOrderNumber } from './checkout'
-import { sendOrderConfirmation, sendOrderNotification } from './emails'
+import { sendOrderConfirmation, sendOrderNotification, sendOrderReceived } from './emails'
 import { withNote } from './order-note'
 import { toCents } from './settings'
 
@@ -167,8 +167,20 @@ export async function handleStripeEvent(payload: Payload, event: Stripe.Event): 
       if (session.payment_status === 'paid' || session.payment_status === 'no_payment_required') {
         await markPaid(payload, order, session)
       } else if (order.status === 'pending' || order.status === 'cancelled') {
-        // Delayed payment method: the copies stay held until Stripe reports the outcome
-        await update(payload, order, { ...customerData(session), status: 'awaitingPayment' })
+        // Delayed payment method: the copies stay held until Stripe reports the outcome; the
+        // buyer gets an acknowledgement of the order right away (only once: the status changes)
+        const received = await update(payload, order, {
+          ...customerData(session),
+          orderNumber: order.orderNumber || formatOrderNumber(order.id, order.createdAt),
+          status: 'awaitingPayment',
+        })
+
+        await sendOrderReceived(payload, received).catch((error) =>
+          payload.logger.error({
+            err: error,
+            msg: `Acknowledgement for ${order.orderNumber} failed`,
+          }),
+        )
       }
       break
 

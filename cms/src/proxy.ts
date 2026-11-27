@@ -69,6 +69,8 @@ const LIMITED_PATHS = new Map<string, Limit[]>([
   ['/shop/request', [{ bucket: 'request', per: 'address', max: 5, windowMs: 15 * MINUTE }]],
   // Order number + e-mail must match: few tries, no guessing
   ['/shop/withdrawal', [{ bucket: 'withdrawal', per: 'address', max: 5, windowMs: 15 * MINUTE }]],
+  // The same form without JavaScript (ordinary form post), same counter
+  ['/withdrawal', [{ bucket: 'withdrawal', per: 'address', max: 5, windowMs: 15 * MINUTE }]],
   // Cart updates (country, quantity): generous
   ['/shop/quote', [{ bucket: 'quote', per: 'address', max: 300, windowMs: 15 * MINUTE }]],
 ])

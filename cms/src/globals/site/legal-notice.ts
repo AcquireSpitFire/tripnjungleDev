@@ -33,6 +33,10 @@ export const legalNoticeTab: Tab = {
       type: 'text',
       label: 'Business purpose (Austria: Unternehmensgegenstand)',
       defaultValue: 'Photo and video exhibitions',
+      admin: {
+        description:
+          'What you do. With the shop open, name the sale of prints too, e.g. “Online gallery of photo and video exhibitions and sale of photo prints”.',
+      },
     },
     {
       name: 'legalExtra',

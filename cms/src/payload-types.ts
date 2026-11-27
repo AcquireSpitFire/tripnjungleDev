@@ -880,6 +880,9 @@ export interface Site {
    * A second fast contact channel besides e-mail is expected by law.
    */
   operatorPhone?: string | null;
+  /**
+   * What you do. With the shop open, name the sale of prints too, e.g. “Online gallery of photo and video exhibitions and sale of photo prints”.
+   */
   businessPurpose?: string | null;
   /**
    * Only if applicable: legal form, commercial register and number, VAT ID, supervisory authority, chamber. One item per line.
@@ -995,6 +998,18 @@ export interface Site {
   mailProviderName?: string | null;
   mailProviderAddress?: string | null;
   /**
+   * The privacy policy then names the transfer to a third country (adequacy decision or standard contractual clauses of the provider).
+   */
+  mailProviderOutsideEu?: boolean | null;
+  /**
+   * Shown with every print. Empty = the operator of the legal notice – right when the prints are sold under your name, also if a lab makes them. Put the same details on a label on the back of each print or on its packaging.
+   */
+  manufacturer?: string | null;
+  /**
+   * Only if there is any, e.g. for framed prints with glass: “Glass – handle with care, hang with suitable fixings.”
+   */
+  safetyInformation?: string | null;
+  /**
    * Empty = the standard text (responsibility for uploads, indemnity if at fault, rights of use, removal). Blank line = new paragraph, a line starting with “## ” = heading. Have it checked before going live.
    */
   contributorTermsText?: string | null;
@@ -1055,6 +1070,9 @@ export interface SiteSelect<T extends boolean = true> {
   withdrawalText?: T;
   mailProviderName?: T;
   mailProviderAddress?: T;
+  mailProviderOutsideEu?: T;
+  manufacturer?: T;
+  safetyInformation?: T;
   contributorTermsText?: T;
   qrFormat?: T;
   qrShowTitle?: T;

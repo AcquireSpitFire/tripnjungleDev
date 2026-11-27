@@ -48,6 +48,42 @@ export function countryName(code: string | null | undefined): string {
   return COUNTRIES.find(([value]) => value === code)?.[1] || code || ''
 }
 
+// Member states of the EU (customs union, VAT area). Deliveries elsewhere may cost the buyer
+// import duties and taxes – the cart and the payment page say so.
+const EU_COUNTRIES = new Set([
+  'AT',
+  'BE',
+  'BG',
+  'CY',
+  'CZ',
+  'DE',
+  'DK',
+  'EE',
+  'ES',
+  'FI',
+  'FR',
+  'GR',
+  'HR',
+  'HU',
+  'IE',
+  'IT',
+  'LT',
+  'LU',
+  'LV',
+  'MT',
+  'NL',
+  'PL',
+  'PT',
+  'RO',
+  'SE',
+  'SI',
+  'SK',
+])
+
+export function isEuCountry(code: string | null | undefined): boolean {
+  return Boolean(code && EU_COUNTRIES.has(code))
+}
+
 export function isCountryCode(value: unknown): value is CountryCode {
   return typeof value === 'string' && COUNTRIES.some(([code]) => code === value)
 }

@@ -187,6 +187,10 @@ function render(quote) {
       : formatPrice(quote.shipping);
   document.getElementById("cart_total").textContent =
     quote.total === null ? "–" : formatPrice(quote.total);
+  const customs = document.getElementById("cart_customs");
+
+  customs.textContent = quote.customsNote || "";
+  customs.hidden = !quote.customsNote;
   document.getElementById("cart_vat").textContent =
     quote.vatNote + (quote.vatAmount ? " (" + formatPrice(quote.vatAmount) + ")" : "");
   document.getElementById("cart_delivery").textContent = quote.deliveryTime

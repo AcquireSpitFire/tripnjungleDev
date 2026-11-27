@@ -77,6 +77,8 @@ export async function checkShopCheckout(t: Context): Promise<void> {
 
   process.env.STRIPE_SECRET_KEY = 'sk_test_access_check'
   process.env.STRIPE_WEBHOOK_SECRET = 'whsec_access_check'
+  // The shop only opens with e-mail (the checks capture the e-mails instead of sending them)
+  process.env.SMTP_HOST = 'smtp.access-check.local'
 
   await payload.updateGlobal({
     slug: 'site',

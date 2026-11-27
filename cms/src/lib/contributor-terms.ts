@@ -37,6 +37,8 @@ You may only upload or add content for which you hold all necessary rights, or f
 — every recognisable person shown has agreed to the publication (right to one's own image, ${personRights}),
 — the content does not infringe any rights of others (copyright, trademarks, personality rights, privacy) and is not unlawful or punishable (e.g. depictions of abuse, insults, incitement, glorification of violence).
 
+Keep proof of the consent of the people shown (e.g. a signed model release) and show it to the operator on request. For minors the consent of their parents or guardians is needed as well.
+
 Check every file before you upload it. If you are unsure, do not upload it and ask the operator.
 
 ## 3. Responsibility and indemnity
@@ -47,15 +49,15 @@ Tell the operator immediately if you learn that content you uploaded is unlawful
 
 ## 4. Rights of use
 
-You grant the operator the free, non-exclusive right to show your content on the website, in previews and link previews, on printed QR labels and in announcements of the exhibitions, for as long as it is part of the website. Prints of your photos are only sold under a separate agreement with you.
+You grant the operator the free, non-exclusive right to show your content on the website, in previews and link previews, on printed QR labels and in announcements of the exhibitions, for as long as it is part of the website. This includes the technical adaptations needed for it: smaller versions and other formats, crops for previews, and a watermark on photos offered as prints. Where your work is shown, you are named as its author as credited in the exhibition. Prints of your photos are only sold under a separate agreement with you.
 
 ## 5. Removal
 
-The operator may remove or lock content and accounts at any time, in particular after a notice of a legal violation.
+The operator may remove or lock content and accounts, in particular after a notice of a legal violation. You are told about it and the reason, unless the law forbids this (Art. 17 Digital Services Act); you can object by e-mail to the operator, who will look at the decision again.
 
 ## 6. Your account
 
-Keep your password secret and do not share your account. You are responsible for everything done with your account unless you are not at fault.
+Keep your password secret and do not share your account. You are responsible for what is done with your account if you are at fault, for example because you shared your password.
 
 ## 7. Changes
 

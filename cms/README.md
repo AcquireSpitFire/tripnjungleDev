@@ -121,7 +121,7 @@ Every photo has a QR code in its row under “Images and videos” (after saving
   `localhost` or a Railway address), and the exhibition must be *Locked with link* or *Public* by the
   time visitors scan – otherwise the page says “not available yet”.
 
-## Shop (release 3.0)
+## Shop
 
 Prints of the photos are sold directly in the exhibitions; there is no separate shop page.
 
@@ -170,11 +170,14 @@ addresses cannot be changed. Only admins delete orders; keep them for the retent
 Stripe confirms them. Problems (e-mail not sent, amount differs) are noted in *Internal note*.
 
 **Withdrawal:** `/withdrawal` shows the instructions, the model form and the withdrawal function required
-since 19 June 2026 (name, order number, e-mail, “Confirm withdrawal”). The order then shows “Withdrawal
-received”; the buyer and the shop get an e-mail.
+since 19 June 2026 (name, order number, e-mail, “Confirm withdrawal”) – every page links it in the footer
+(“Withdraw from contract here”), every order confirmation too, and the form also works without JavaScript.
+The order then shows “Withdrawal received” (a second withdrawal is added below, the date of the first
+stays); the buyer and the shop get an e-mail.
 
 **Shop status:** the top of Site settings → Shop shows whether the shop is open for visitors and what is
-still missing (switch, Stripe keys, shipping zone; e-mail and legal notice as recommendations). While the
+still missing (switch, Stripe keys, **e-mail sending**, shipping zone; legal notice, manufacturer, shipping
+outside the EU and VAT as recommendations). While the
 shop is closed, visitors see no prices at all – check the prints with **“Preview (with your login)”** in
 the exhibition: there they appear with a note “the shop is closed” and the buttons disabled.
 
@@ -196,7 +199,9 @@ checked before going live – and the e-mail provider for the privacy policy (se
    `checkout.session.expired`, then copy its signing secret (`whsec_…`). Test and live mode have
    different keys and webhooks.
 3. E-mail: `SMTP_HOST`, `SMTP_PORT` (587), `SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM`
-   (e.g. `shop@your-domain.com`), `EMAIL_FROM_NAME`. Without `SMTP_HOST` e-mails only appear in the log.
+   (e.g. `shop@your-domain.com`), `EMAIL_FROM_NAME`. **The shop only opens with `SMTP_HOST`**: buyers must
+   get the order confirmation with terms and withdrawal instructions by e-mail (durable medium). Until you
+   have your own address, an existing mailbox with an app password works (e.g. `smtp.gmail.com`, 587).
    Set up SPF/DKIM for the sender domain at the mail provider, otherwise confirmations land in spam.
 4. Site settings → Legal notice complete; → Shop: shipping zones, VAT, shop e-mail, watermark, e-mail
    provider. Check `/terms`, `/withdrawal` and `/privacy` (no yellow marks). Then tick *Shop is open*.
@@ -205,6 +210,27 @@ checked before going live – and the e-mail provider for the privacy policy (se
 
 Locally, `stripe listen --forward-to localhost:3000/shop/webhook` (Stripe CLI) forwards the webhooks and
 prints the `whsec_…` for `.env`.
+
+**Legal routines for the shop** (have the texts checked by a lawyer before going live):
+
+- **Product safety (GPSR):** the manufacturer with postal and e-mail address is shown with every print, in
+  the cart and in the order confirmation (Site settings → Shop → Product safety; empty = the operator of the
+  legal notice). Put the same details and the print (exhibition, photo, print name) on a label on the back
+  of each print or on its packaging.
+- **Price on request:** before you agree on a sale by e-mail, send the price incl. VAT note and shipping
+  costs, the terms (`/terms`) and the instructions on withdrawal (`/withdrawal`); confirm the agreed sale
+  by e-mail again. Payment and shipping as agreed.
+- **Outside the EU:** buyers are told automatically that import duties and taxes may apply (cart and
+  Stripe page). Add a customs declaration (CN22/CN23) to the parcel.
+- **Deleting data:** price requests – delete them once settled (Shop → Price requests); orders – keep them
+  for the retention period (Austria 7 years, Germany up to 10 years), then delete them (admins); the
+  record of a withdrawal stays with its order.
+- **Accessibility:** as a micro-enterprise (fewer than 10 people, at most €2 million turnover) the shop is
+  not bound by the accessibility acts (BaFG in Austria, BFSG in Germany); the basics are done anyway
+  (pause button of the slideshow, forms without JavaScript, alt texts).
+- **Illegal content (Digital Services Act):** the legal notice names the contact point and how to report
+  content; every photo page has “Report this content”. Check reports without delay, remove unlawful
+  content and tell the reporter and the uploader what you decided and why.
 
 **Later – print on demand:** the order items keep a full snapshot (photo, print, size, material,
 quantity, address), so a print lab API can be added as a step after “paid” without changing the shop.

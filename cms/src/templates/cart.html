@@ -36,6 +36,7 @@
 				<dd id="cart_total" class="cart_total">–</dd>
 			</dl>
 			<p id="cart_vat" class="cart_muted">{{vatNote}}</p>
+			<p id="cart_customs" class="cart_muted" hidden></p>
 
 			<!-- Information required before ordering (§ 312j BGB, § 4 FAGG) -->
 			<div class="cart_info">
@@ -44,6 +45,9 @@
 				<p><strong>Seller:</strong> {{sellerName}}, details in the <a href="/imprint">legal notice</a>.</p>
 				<p><strong>Right of withdrawal:</strong> 14 days after delivery, see the <a href="/withdrawal">instructions on withdrawal</a>. The <a href="/terms">terms and conditions</a> apply.</p>
 				<p>The watermark shown on the website is not printed.</p>
+				<!-- Product safety (GPSR): manufacturer and safety information -->
+				<p><strong>Manufacturer:</strong> {{manufacturer}}</p>
+				{{{safetyInformation}}}
 				{{{shopNote}}}
 			</div>
 

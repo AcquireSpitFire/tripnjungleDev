@@ -1,6 +1,7 @@
 // The slideshow of the home page (script.js) and of the exhibition page (exhibition.js):
 // one item after the other, dots, arrows, swipe, arrow keys, next item after 5 seconds
-// (videos: when they end).
+// (videos: when they end), and a button to pause it (WCAG 2.2.2). Visitors who asked their system
+// for reduced motion get it paused from the start.
 //
 // Needs:    –
 // Provides: createSlideshow(options)
@@ -22,14 +23,40 @@ function createSlideshow(options) {
   const { content, dots, items } = options;
   let current = 0;
   let timer;
+  let paused = Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)").matches);
 
   // With only one item there is nothing to advance to
   function startTimer() {
     clearTimeout(timer);
 
-    if (items.length > 1) {
+    if (items.length > 1 && !paused) {
       timer = setTimeout(next, SLIDE_DURATION);
     }
+  }
+
+  const pauseButton = document.createElement("button");
+
+  // The label says what a click does
+  function updatePauseButton() {
+    pauseButton.textContent = paused ? "Play slideshow" : "Pause slideshow";
+  }
+
+  pauseButton.type = "button";
+  pauseButton.className = "slideshow_pause";
+  pauseButton.addEventListener("click", () => {
+    paused = !paused;
+    updatePauseButton();
+
+    if (paused) {
+      clearTimeout(timer);
+    } else {
+      startTimer();
+    }
+  });
+
+  if (items.length > 1) {
+    updatePauseButton();
+    dots.insertAdjacentElement("afterend", pauseButton);
   }
 
   function updateDots() {
@@ -59,8 +86,12 @@ function createSlideshow(options) {
     const video = options.render(items[current], current, content);
 
     if (video) {
-      // Move to the next item when the video ends
-      video.addEventListener("ended", next);
+      // Move to the next item when the video ends (not while paused)
+      video.addEventListener("ended", () => {
+        if (!paused) {
+          next();
+        }
+      });
     } else {
       startTimer();
     }

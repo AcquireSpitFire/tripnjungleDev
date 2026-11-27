@@ -20,6 +20,7 @@ import { checkShopEmail } from './access/shop-email'
 import { checkShopCheckout } from './access/shop-checkout'
 import { checkShopWatermark } from './access/shop-watermark'
 import { checkSeo } from './access/seo'
+import { checkLegal } from './access/legal'
 import { checkShopForms } from './access/shop-forms'
 import { checkShopStatus } from './access/shop-status'
 
@@ -39,6 +40,7 @@ const AREAS = [
   checkShopForms,
   checkShopStatus,
   checkSeo,
+  checkLegal,
 ]
 
 async function run() {

@@ -11,7 +11,7 @@ import type { Payload } from 'payload'
 import type { Order } from '../../payload-types'
 import { SITE_NAME } from '../site-identity'
 import { findOffers, offerKey, type CartItemInput, type Offer } from './catalog'
-import { countryName } from './countries'
+import { countryName, isEuCountry } from './countries'
 import {
   CURRENCY,
   containedVat,
@@ -47,6 +47,8 @@ export type Quote = {
   countries: { code: string; name: string }[]
   zone: string | null
   deliveryTime: string
+  // Delivery outside the EU: import duties and taxes may apply (empty inside the EU)
+  customsNote: string
   subtotal: number
   shipping: number | null
   total: number | null
@@ -55,6 +57,10 @@ export type Quote = {
   ok: boolean
   message: string | null
 }
+
+// Shown in the cart and on the Stripe page for deliveries outside the EU
+export const CUSTOMS_NOTE =
+  'Delivery outside the EU: import duties, taxes and customs fees of the country of delivery may apply; they are not included in the price and are paid by the buyer.'
 
 export type CheckoutResult = { url: string } | { error: string; quote: Quote }
 
@@ -135,6 +141,7 @@ async function buildQuote(
       countries: shippingCountries(settings),
       zone: zone?.name ?? null,
       deliveryTime: zone?.deliveryTime ?? '',
+      customsNote: zone && country && !isEuCountry(country) ? CUSTOMS_NOTE : '',
       subtotal,
       shipping,
       total,
@@ -315,7 +322,7 @@ export async function createCheckout(
         custom_text: {
           submit: {
             message:
-              `By clicking “Pay” you place a binding order with ${seller} under our terms (${base}/terms). Right of withdrawal: ${base}/withdrawal. ${quote.vatNote}.`.slice(
+              `By clicking “Pay” you place a binding order with ${seller} under our terms (${base}/terms). Right of withdrawal: ${base}/withdrawal. ${quote.vatNote}.${quote.customsNote ? ' ' + quote.customsNote : ''}`.slice(
                 0,
                 1200,
               ),

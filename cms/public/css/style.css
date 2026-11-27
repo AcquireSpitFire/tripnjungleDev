@@ -491,6 +491,26 @@ video {
   gap: 0.6rem;
 }
 
+/* Pause / play of the slideshow (WCAG 2.2.2) */
+.slideshow_pause {
+  grid-column: 1 / -1;
+  justify-self: center;
+  margin: 0.4rem 0 0;
+  padding: 0.2rem 0.5rem;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.slideshow_pause:hover,
+.slideshow_pause:focus-visible {
+  color: var(--text);
+}
+
 .dot {
   width: 6px;
   height: 6px;
@@ -1363,6 +1383,15 @@ main {
 }
 
 /* "Prints from €120.00 ›" below a gallery photo */
+/* "incl. VAT, plus shipping" below the "Prints from …" teaser */
+.print_button_note {
+  display: block;
+  font-size: 0.75rem;
+  letter-spacing: 0;
+  color: var(--muted);
+  text-decoration: none;
+}
+
 .print_button {
   display: inline-block;
   margin: 0.4rem 0 0;
@@ -1402,6 +1431,7 @@ main {
 .print_offer_details,
 .print_offer_note,
 .print_offer_stock,
+.print_safety,
 .print_links {
   font-size: 0.85rem;
   color: var(--muted);
@@ -1736,4 +1766,15 @@ main {
     justify-items: start;
     align-items: center;
   }
+}
+
+/* "Report this content" below a photo (Digital Services Act) */
+.report_line {
+  margin: 1rem 0 0;
+  text-align: center;
+  font-size: 0.85rem;
+}
+
+.report_line a {
+  color: var(--muted);
 }

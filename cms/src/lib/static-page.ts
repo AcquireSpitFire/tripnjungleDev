@@ -15,6 +15,8 @@ type StaticPage = {
   // If missing, the site description from the Site settings applies
   description?: string | ((settings: SiteSettings) => string)
   robots?: string
+  // Cache-Control; default: public for 5 minutes (pages with something of one visitor: no-store)
+  cache?: string
   // "summary" for text pages (small preview without the large image)
   twitterCard?: 'summary'
   jsonLd?: (base: string, description: string) => unknown
@@ -43,6 +45,6 @@ export async function renderStaticPage(page: StaticPage): Promise<Response> {
       jsonLd: jsonLdScript(data),
       ...(page.values?.(settings, payload) ?? {}),
     }),
-    { cache: 'public, s-maxage=300, stale-while-revalidate=86400' },
+    { cache: page.cache || 'public, s-maxage=300, stale-while-revalidate=86400' },
   )
 }

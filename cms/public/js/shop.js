@@ -102,7 +102,8 @@ function createAddButton(offer, feedback, closed) {
 }
 
 // The list of prints with "Add to cart" / "Request price".
-//   context: { photoName, vatNote, closed (preview of a closed shop), onRequest(offer) }
+//   context: { photoName, vatNote, manufacturer, safetyInformation, closed (preview of a closed
+//              shop), onRequest(offer) }
 function createOffersList(offers, context) {
   const list = document.createElement("ul");
 
@@ -272,6 +273,19 @@ function createOffersBlock(offers, context) {
       },
     }),
   );
+  // Product safety (GPSR): who makes the prints, and safety information if there is any
+  if (context.manufacturer) {
+    block.appendChild(
+      createParagraph("print_safety", "Manufacturer: " + context.manufacturer.replace(/\n/g, ", ")),
+    );
+  }
+
+  if (context.safetyInformation) {
+    block.appendChild(
+      createParagraph("print_safety", "Safety information: " + context.safetyInformation),
+    );
+  }
+
   block.appendChild(links);
 
   return block;
@@ -334,7 +348,12 @@ async function setupExhibitionShop(exhibition) {
   }
 
   const groups = groupOffersByPhoto(data.offers);
-  const context = { vatNote: data.vatNote, closed: !data.enabled };
+  const context = {
+    vatNote: data.vatNote,
+    manufacturer: data.manufacturer,
+    safetyInformation: data.safetyInformation,
+    closed: !data.enabled,
+  };
 
   (exhibition.gallery || []).forEach((item) => {
     const offers = groups.get(String(item.id));
@@ -350,6 +369,15 @@ async function setupExhibitionShop(exhibition) {
     button.type = "button";
     button.className = "print_button";
     button.textContent = offersSummary(offers) + " ›";
+
+    // A price is always shown with VAT and shipping information
+    if (offers.some((offer) => offer.pricing === "fixed") && data.priceNote) {
+      const note = document.createElement("span");
+
+      note.className = "print_button_note";
+      note.textContent = data.priceNote;
+      button.appendChild(note);
+    }
     button.addEventListener("click", () =>
       openPrintDialog(item, offers, { ...context, photoName }),
     );
@@ -377,7 +405,13 @@ async function setupPhotoShop(exhibition, item, container) {
   heading.textContent = offers.length > 1 ? "Prints of this photo" : "Print of this photo";
   section.append(
     heading,
-    createOffersBlock(offers, { photoName, vatNote: data.vatNote, closed: !data.enabled }),
+    createOffersBlock(offers, {
+      photoName,
+      vatNote: data.vatNote,
+      manufacturer: data.manufacturer,
+      safetyInformation: data.safetyInformation,
+      closed: !data.enabled,
+    }),
   );
   container.appendChild(section);
 }

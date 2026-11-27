@@ -1,5 +1,6 @@
 // "/cart": the cart (public/js/cart.js). The page itself contains no personal data – the items
 // live in the visitor's browser – so it is cached like the other pages.
+import { escapeHtml } from '@/lib/render-template'
 import { renderStaticPage } from '@/lib/static-page'
 import { SITE_NAME } from '@/lib/site-identity'
 import { shippingCountries, toShopSettings } from '@/lib/shop/settings'
@@ -24,6 +25,10 @@ export async function GET() {
         vatNote: settings.vatNote,
         sellerName: site.operatorName?.trim() || SITE_NAME,
         shopNote: htmlParagraphs(settings.shopNote),
+        manufacturer: settings.manufacturer.replace(/\n/g, ', '),
+        safetyInformation: settings.safetyInformation
+          ? `<p><strong>Safety information:</strong> ${escapeHtml(settings.safetyInformation)}</p>`
+          : '',
       }
     },
   })

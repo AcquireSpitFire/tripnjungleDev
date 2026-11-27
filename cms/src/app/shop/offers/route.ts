@@ -64,6 +64,14 @@ export async function GET(request: Request) {
     enabled: settings.enabled,
     ...(preview ? { preview: true } : {}),
     vatNote: settings.vatNote,
+    // Next to every price, also the "Prints from …" teaser (price indication rules)
+    priceNote:
+      settings.vatMode === 'included'
+        ? `${settings.vatNote}, plus shipping`
+        : 'no VAT charged (small business), plus shipping',
+    // Product safety (GPSR): shown with every print
+    manufacturer: settings.manufacturer,
+    safetyInformation: settings.safetyInformation,
     offers: offers.map((offer) => ({
       exhibition: offer.exhibitionSlug,
       photo: offer.mediaId,

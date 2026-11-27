@@ -102,7 +102,7 @@ As a consumer you have a statutory right of withdrawal of 14 days. Details, the 
 
 ## 8. Warranty
 
-The statutory warranty rights apply. Slight differences in colour between your screen and the print are due to the technology and are not a defect. The watermark shown on the website is not part of the print. Please tell us about transport damage as soon as possible so that we can claim it from the carrier; your rights are not affected if you do not.
+The statutory warranty rights apply. Please note: screens show colours differently, so the colours of the print may look slightly different from what you see on your screen. The watermark shown on the website is not part of the print. Please tell us about transport damage as soon as possible so that we can claim it from the carrier; your rights are not affected if you do not.
 
 ## 9. Copyright
 
