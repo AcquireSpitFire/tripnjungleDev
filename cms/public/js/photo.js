@@ -15,9 +15,15 @@ const photoFigure = document.getElementById("photo");
 const photoNote = document.getElementById("photo_note");
 const prevLink = document.getElementById("prev_photo");
 const nextLink = document.getElementById("next_photo");
+// Fullscreen view through all photos of the exhibition; the photos are set in renderPhoto
+let shownInViewer = null;
+let afterViewerClose = () => {};
 const photoViewer = createViewer({
   element: document.getElementById("viewer"),
-  image: document.getElementById("viewer_image"),
+  onChange: (media) => {
+    shownInViewer = media;
+  },
+  onClose: () => afterViewerClose(),
 });
 
 // /exhibition/<slug>/photo/<id>
@@ -50,6 +56,16 @@ function setCredit(artists) {
 
 function renderPhoto(exhibition, item, index) {
   const gallery = exhibition.gallery;
+  const photos = gallery.filter((entry) => entry.type === "image");
+
+  photoViewer.setItems(photos);
+
+  // Closed on another photo than this one: go to that photo's page
+  afterViewerClose = () => {
+    if (shownInViewer && shownInViewer.id !== item.id) {
+      location.replace(photoLink(exhibition, shownInViewer));
+    }
+  };
 
   photoTitle.textContent = item.name || exhibition.title;
   setCredit(item.artist ? [item.artist] : exhibition.artists || []);
@@ -71,7 +87,9 @@ function renderPhoto(exhibition, item, index) {
       priority: true,
     });
     image.alt = item.alt || item.name || "";
-    image.addEventListener("click", () => photoViewer.open(item, image));
+    image.addEventListener("click", () =>
+      photoViewer.open(photos.findIndex((photo) => photo.id === item.id)),
+    );
     photoFigure.appendChild(image);
   }
 

@@ -1,7 +1,8 @@
 // Shows one exhibition: /exhibition/<id> (the old form exhibition.html?id=… is redirected by the
 // server).
 //
-// Top: title, theme, "by <artists>" and the slideshow with the cover + all images/videos.
+// Top: title, theme, "by <artists>" and the slideshow with the cover + all images/videos – on
+// phones (≤ 600 px) no slideshow, only the cover as one large image.
 // Below: description, gallery with all images/videos (phone: stacked, desktop: horizontally
 // scrolling strip), the artists with their short text and at the very bottom the intro video to
 // watch again. Locked exhibitions (locked: true) only show a notice, except with visibility
@@ -53,6 +54,7 @@ function createMedia(item, options = {}) {
     ...options,
   });
   image.alt = item.alt || "";
+  image.dataset.mediaId = item.id;
 
   return image;
 }
@@ -79,27 +81,23 @@ function renderSlide(item, index, content) {
   return video;
 }
 
-function setupSlideshow(exhibition) {
-  // Cover first, then all gallery items – without showing the cover twice
+// Cover first, then all gallery items – without showing the cover twice
+function mediaItems(exhibition) {
   const gallery = exhibition.gallery || [];
   const frontPage = exhibition.frontPage;
-  const items = frontPage
+
+  return frontPage
     ? [
         frontPage,
         ...gallery.filter((item) => item.id !== frontPage.id && item.src !== frontPage.src),
       ]
     : gallery.slice();
+}
 
-  if (items.length === 0) {
-    slideshowElement.hidden = true;
-    return;
-  }
+// Phones get no slideshow (swiping through the photos happens in the fullscreen view)
+const wideScreen = window.matchMedia("(min-width: 601px)");
 
-  // Dots only when there is more than one image
-  if (items.length === 1) {
-    slideshowElement.classList.add("single");
-  }
-
+function buildSlideshow(items) {
   slideshow = createSlideshow({
     content: slideContent,
     dots: dotsContainer,
@@ -112,6 +110,57 @@ function setupSlideshow(exhibition) {
     keysPaused: () => viewer?.isOpen(),
   });
   slideshow.show(0);
+}
+
+// Phones: the cover as one large image where the slideshow would be (tap → fullscreen view)
+function showCover(exhibition) {
+  const cover = mediaItems(exhibition)[0];
+
+  if (!cover) {
+    return;
+  }
+
+  const figure = document.createElement("figure");
+  const media = createMedia(cover, {
+    sizes: "100vw",
+    lazy: wideScreen.matches,
+    priority: !wideScreen.matches,
+  });
+
+  figure.className = "mobile_cover";
+  figure.appendChild(media);
+  slideshowElement.insertAdjacentElement("afterend", figure);
+}
+
+function setupSlideshow(exhibition) {
+  const items = mediaItems(exhibition);
+
+  if (items.length === 0) {
+    slideshowElement.hidden = true;
+    return;
+  }
+
+  // Dots only when there is more than one image
+  if (items.length === 1) {
+    slideshowElement.classList.add("single");
+  }
+
+  showCover(exhibition);
+
+  if (wideScreen.matches) {
+    buildSlideshow(items);
+  }
+
+  // Turning the phone or resizing the window across the breakpoint
+  wideScreen.addEventListener("change", (event) => {
+    if (event.matches && !slideshow) {
+      buildSlideshow(items);
+    } else if (event.matches) {
+      slideshow.resume();
+    } else {
+      slideshow?.pause();
+    }
+  });
 }
 
 // ---------- Gallery ----------
@@ -204,45 +253,49 @@ function setupGallery(exhibition) {
 }
 
 // ---------- Fullscreen ----------
-// Clicking an image (slideshow or gallery) shows it filling the screen (viewer.js).
-
-// Which medium is behind an <img>? (via the URL of one of its sizes)
-function findMediaForImage(image, exhibition) {
-  const all = [exhibition.frontPage, ...(exhibition.gallery || [])].filter(Boolean);
-
-  return all.find(
-    (item) =>
-      image.currentSrc === item.src ||
-      image.src === item.src ||
-      Object.values(item.sizes || {}).some(
-        (size) => size.url === image.currentSrc || size.url === image.src,
-      ),
-  );
-}
+// Clicking an image (slideshow, cover or gallery) shows it filling the screen; swipe or the arrow
+// keys go to the next/previous photo (viewer.js).
 
 function setupViewer(exhibition) {
+  const photos = mediaItems(exhibition).filter((item) => item.type === "image");
+
   viewer = createViewer({
     element: document.getElementById("viewer"),
-    image: document.getElementById("viewer_image"),
+    items: photos,
     // The slideshow pauses while an image is open
     onOpen: () => slideshow?.pause(),
-    onClose: () => slideshow?.resume(),
+    onClose: () => {
+      if (wideScreen.matches) {
+        slideshow?.resume();
+      }
+    },
   });
 
-  [slideContent, galleryElement].forEach((container) => {
-    container.addEventListener("click", (event) => {
-      if (event.target.tagName !== "IMG") {
-        return;
-      }
+  document.querySelector("main").addEventListener("click", (event) => {
+    const image = event.target.closest?.("img[data-media-id]");
 
-      // With a modifier key the link to the photo page works as usual
-      if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) {
-        return;
-      }
+    if (
+      !image ||
+      !(
+        slideContent.contains(image) ||
+        galleryElement.contains(image) ||
+        image.closest(".mobile_cover")
+      )
+    ) {
+      return;
+    }
 
+    // With a modifier key the link to the photo page works as usual
+    if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) {
+      return;
+    }
+
+    const position = photos.findIndex((item) => item.id === image.dataset.mediaId);
+
+    if (position >= 0) {
       event.preventDefault();
-      viewer.open(findMediaForImage(event.target, exhibition), event.target);
-    });
+      viewer.open(position);
+    }
   });
 }
 

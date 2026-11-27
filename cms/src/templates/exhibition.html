@@ -50,7 +50,10 @@
 	<!-- Fullscreen view: opens when an image is clicked -->
 	<div id="viewer" class="viewer" hidden>
 		<button id="viewer_close" class="viewer_close" aria-label="Close">×</button>
+		<button class="viewer_nav viewer_prev" aria-label="Previous photo">‹</button>
 		<img id="viewer_image" alt="">
+		<button class="viewer_nav viewer_next" aria-label="Next photo">›</button>
+		<p class="viewer_counter" aria-live="polite"></p>
 	</div>
 
 {{> scripts}}

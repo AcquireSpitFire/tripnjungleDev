@@ -656,6 +656,9 @@ main {
   justify-content: center;
   background: var(--bg);
   cursor: zoom-out;
+  touch-action: none;       /* every finger movement belongs to the swipe (viewer.js) */
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .viewer img {
@@ -664,6 +667,94 @@ main {
   aspect-ratio: auto;
   object-fit: contain;      /* whole image, nothing cropped */
   background: none;
+  -webkit-user-drag: none;
+  transition: transform 0.22s ease-out, opacity 0.22s ease-out;
+}
+
+/* ‹ › in the fullscreen view: big enough to tap, quiet on the photo */
+.viewer_nav {
+  position: absolute;
+  top: 50%;
+  z-index: 1;
+  transform: translateY(-50%);
+  min-width: 3rem;
+  min-height: 3rem;
+  padding: 0.5rem;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 2.5rem;
+  line-height: 1;
+  text-shadow: 0 0 6px #000;
+  cursor: pointer;
+}
+
+.viewer_prev {
+  left: 0.25rem;
+}
+
+.viewer_next {
+  right: 0.25rem;
+}
+
+.viewer_nav:hover,
+.viewer_nav:focus-visible {
+  color: var(--text);
+}
+
+/* "3 / 12" */
+.viewer_counter {
+  position: absolute;
+  bottom: 0.75rem;
+  left: 0;
+  right: 0;
+  margin: 0;
+  text-align: center;
+  font-size: 0.8rem;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  text-shadow: 0 0 6px #000;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .viewer img {
+    transition: none;
+  }
+}
+
+/* Phones: the cover as one large image instead of the slideshow (exhibition.js) */
+.mobile_cover {
+  margin: 0 0 var(--gap);
+}
+
+.mobile_cover img,
+.mobile_cover video {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 85svh;
+  aspect-ratio: auto;        /* its own shape, not the 3:2 box of the slideshow */
+}
+
+.mobile_cover img {
+  cursor: zoom-in;
+}
+
+@media (min-width: 601px) {
+  .mobile_cover {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .exhibition_slideshow {
+    display: none;
+  }
+
+  .viewer_nav {
+    font-size: 2rem;
+  }
 }
 
 .viewer_close,
