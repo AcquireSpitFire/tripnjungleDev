@@ -7,30 +7,30 @@ import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 
 import { htmlResponse, renderTemplate } from '@/lib/render-template'
-import { SITE_DESCRIPTION, SITE_NAME, getServerUrl } from '@/lib/seo'
+import { ogImageValues } from '@/lib/page'
+import { SITE_DESCRIPTION, SITE_NAME, serverUrl } from '@/lib/site-identity'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const payload = await getPayload({ config: configPromise })
-  const base = getServerUrl(payload)
+  const base = serverUrl()
 
   const missing = () =>
     htmlResponse(
       renderTemplate('photo.html', {
-        siteName: SITE_NAME,
-        siteUrl: base,
         title: 'Photo not found – ' + SITE_NAME,
         description: SITE_DESCRIPTION,
         canonical: base + '/p/' + encodeURIComponent(id),
-        ogImage: base + '/og-default.jpg',
+        ...ogImageValues(),
         robots: 'noindex',
+        ogType: 'article',
         jsonLd: '',
         photoState: 'missing',
         heading: 'Photo not found',
         backUrl: '/',
-        backLabel: 'Tripnjungle',
+        backLabel: SITE_NAME,
         exhibitionUrl: '/exhibitions',
         exhibitionLabel: 'All exhibitions',
       }),
@@ -63,7 +63,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   }
 
   // Prefer the exhibition that actually shows the photo: public, then "with link"
-  const rank = (visibility?: string | null) => (visibility === 'public' ? 0 : visibility === 'link' ? 1 : 2)
+  const rank = (visibility?: string | null) =>
+    visibility === 'public' ? 0 : visibility === 'link' ? 1 : 2
   const [target] = [...docs].sort((a, b) => rank(a.visibility) - rank(b.visibility))
 
   return new Response(null, {

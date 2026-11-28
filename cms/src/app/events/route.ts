@@ -2,18 +2,20 @@
 import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 
-import { htmlResponse, jsonForScript, renderTemplate } from '@/lib/render-template'
-import { SITE_NAME, eventJsonLd, findPublicExhibitions, getServerUrl, isUpcoming } from '@/lib/seo'
+import { htmlResponse, renderTemplate } from '@/lib/render-template'
+import { jsonLdScript, ogImageValues } from '@/lib/page'
+import { eventJsonLd, findPublicExhibitions, hasUpcomingDate } from '@/lib/seo'
+import { SITE_NAME, serverUrl } from '@/lib/site-identity'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
   const payload = await getPayload({ config: configPromise })
-  const base = getServerUrl(payload)
-  const upcoming = (await findPublicExhibitions(payload)).filter(isUpcoming)
+  const base = serverUrl()
+  const upcoming = (await findPublicExhibitions(payload)).filter(hasUpcomingDate)
 
   const jsonLd = upcoming.length
-    ? `<script type="application/ld+json">${jsonForScript({
+    ? jsonLdScript({
         '@context': 'https://schema.org',
         '@type': 'ItemList',
         name: 'Upcoming exhibitions – ' + SITE_NAME,
@@ -22,15 +24,16 @@ export async function GET() {
           position: index + 1,
           item: { '@context': 'https://schema.org', ...eventJsonLd(exhibition, base) },
         })),
-      })}</script>`
+      })
     : ''
 
   return htmlResponse(
     renderTemplate('events.html', {
-      siteName: SITE_NAME,
-      siteUrl: base,
+      title: `Events – ${SITE_NAME}`,
+      description: `Upcoming ${SITE_NAME} exhibitions: posters, dates, times and locations.`,
+      robots: 'index, follow',
       canonical: base + '/events',
-      ogImage: base + '/og-default.jpg',
+      ...ogImageValues(),
       jsonLd,
     }),
   )

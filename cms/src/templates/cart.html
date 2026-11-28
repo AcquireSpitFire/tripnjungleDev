@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+{{> head}}
+</head>
+<body data-shop-open="{{shopOpen}}" data-countries="{{countriesJson}}">
+	<header>
+		<div class="header_inner">
+			<p class="site_name"><a href="/">Tripnjungle</a></p>
+			<h1 class="page_title">Cart</h1>
+		</div>
+{{> nav}}
+	</header>
+
+	<!-- Rendered by public/js/cart.js: the items come from the browser (localStorage),
+	     names, prices, copies left and shipping always from the server (/shop/quote) -->
+	<main class="text_page cart_page">
+		<p id="cart_status" class="cart_status" role="status" aria-live="polite">Loading your cart …</p>
+
+		<ul id="cart_lines" class="cart_lines" hidden></ul>
+
+		<section id="cart_summary" class="cart_summary" hidden>
+			<label class="cart_country">
+				<span>Country of delivery</span>
+				<select id="cart_country">
+					<option value="">Choose …</option>
+				</select>
+			</label>
+
+			<dl class="cart_totals">
+				<dt>Items</dt>
+				<dd id="cart_subtotal">–</dd>
+				<dt>Shipping <span id="cart_zone" class="cart_muted"></span></dt>
+				<dd id="cart_shipping">choose the country</dd>
+				<dt class="cart_total_label">Total</dt>
+				<dd id="cart_total" class="cart_total">–</dd>
+			</dl>
+			<p id="cart_vat" class="cart_muted">{{vatNote}}</p>
+			<p id="cart_customs" class="cart_muted" hidden></p>
+
+			<!-- Information required before ordering (§ 312j BGB, § 4 FAGG) -->
+			<div class="cart_info">
+				<p><strong>Delivery time:</strong> <span id="cart_delivery">depends on the country of delivery, shown after choosing it</span>.</p>
+				<p><strong>Payment:</strong> securely through Stripe – card, Apple Pay, Google Pay and the other methods shown on the payment page.</p>
+				<p><strong>Seller:</strong> {{sellerName}}, details in the <a href="/imprint">legal notice</a>.</p>
+				<p><strong>Right of withdrawal:</strong> 14 days after delivery, see the <a href="/withdrawal">instructions on withdrawal</a>. The <a href="/terms">terms and conditions</a> apply.</p>
+				<p>The watermark shown on the website is not printed.</p>
+				<!-- Product safety (GPSR): manufacturer and safety information -->
+				<p><strong>Manufacturer:</strong> {{manufacturer}}</p>
+				{{{safetyInformation}}}
+				{{{shopNote}}}
+			</div>
+
+			<p id="cart_message" class="cart_message" role="alert" hidden></p>
+
+			<button type="button" id="cart_checkout" class="shop_button shop_button_primary" disabled>Continue to payment</button>
+			<p class="cart_muted cart_small">On the next page (Stripe) you enter address and payment details and can check everything again. Your order becomes binding when you click “Pay” there.</p>
+		</section>
+	</main>
+
+{{> footer}}
+
+{{> scripts}}
+	<script defer src="/js/cart.js"></script>
+</body>
+</html>

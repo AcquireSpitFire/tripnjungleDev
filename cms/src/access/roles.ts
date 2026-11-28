@@ -11,6 +11,8 @@
 //              (field "editors"); cannot publish, create or delete
 import type { FieldAccess, PayloadRequest, Where } from 'payload'
 
+import { toId } from '../lib/visibility'
+
 export const ROLE_OPTIONS = [
   { label: 'Admin (everything)', value: 'admin' },
   { label: 'Manager (one or more sections)', value: 'manager' },
@@ -18,8 +20,13 @@ export const ROLE_OPTIONS = [
   { label: 'Editor (assigned exhibitions)', value: 'editor' },
 ] as const
 
-// Sub pages a manager can be responsible for. Release 4.0 adds radio, shop, mag, adventure.
-export const SECTION_OPTIONS = [{ label: 'Exhibitions', value: 'exhibitions' }] as const
+// Sub pages a manager can be responsible for. Release 4.0 adds radio, mag, adventure.
+//   exhibitions – exhibitions, media, artists and the prints offered in them (prices, copies, watermark)
+//   shop        – orders and price requests (buyers' data, shipping)
+export const SECTION_OPTIONS = [
+  { label: 'Exhibitions', value: 'exhibitions' },
+  { label: 'Shop (orders and price requests)', value: 'shop' },
+] as const
 
 export type Role = (typeof ROLE_OPTIONS)[number]['value']
 export type Section = (typeof SECTION_OPTIONS)[number]['value']
@@ -35,7 +42,9 @@ type RoleUser = {
 }
 
 function asRoleUser(user: MaybeUser): RoleUser | null {
-  return user && typeof user === 'object' && user.collection === 'users' ? (user as unknown as RoleUser) : null
+  return user && typeof user === 'object' && user.collection === 'users'
+    ? (user as unknown as RoleUser)
+    : null
 }
 
 export function getRole(user: MaybeUser): Role | null {
@@ -48,7 +57,7 @@ export function isAdmin(user: MaybeUser): boolean {
   return getRole(user) === 'admin'
 }
 
-export function managesSection(user: MaybeUser, section: Section): boolean {
+function managesSection(user: MaybeUser, section: Section): boolean {
   if (isAdmin(user)) {
     return true
   }
@@ -60,23 +69,22 @@ export function canManageExhibitions(user: MaybeUser): boolean {
   return managesSection(user, 'exhibitions')
 }
 
+// Orders and price requests contain buyers' data: only for the section "Shop"
+export function canManageShop(user: MaybeUser): boolean {
+  return managesSection(user, 'shop')
+}
+
 export function isArtist(user: MaybeUser): boolean {
   return getRole(user) === 'artist'
 }
 
-export function isEditor(user: MaybeUser): boolean {
+function isEditor(user: MaybeUser): boolean {
   return getRole(user) === 'editor'
 }
 
 // Id of the artist profile linked to an artist account (null if none)
 export function getArtistProfileId(user: MaybeUser): number | string | null {
-  const ref = asRoleUser(user)?.artist
-
-  if (ref === null || ref === undefined) {
-    return null
-  }
-
-  return typeof ref === 'object' ? ref.id : ref
+  return toId(asRoleUser(user)?.artist)
 }
 
 export function getUserId(user: MaybeUser): number | string | null {
@@ -113,7 +121,9 @@ function ownExhibitionsWhere(user: MaybeUser): Where[] {
 
 // Ids of the exhibitions a logged-in artist/editor may see and edit.
 // Cached per request in req.context (cleared by the exhibitions afterChange hook).
-export async function getAccessibleExhibitionIds(req: PayloadRequest): Promise<(number | string)[]> {
+export async function getAccessibleExhibitionIds(
+  req: PayloadRequest,
+): Promise<(number | string)[]> {
   const cached = req.context?.[EXHIBITION_IDS_KEY] as (number | string)[] | undefined
 
   if (cached) {
@@ -164,7 +174,11 @@ export async function getAccessibleMediaIds(req: PayloadRequest): Promise<(numbe
     })
 
     for (const doc of result.docs) {
-      for (const ref of [...(doc.posters || []), doc.frontPage, ...(doc.gallery || []).map((row) => row.file)]) {
+      for (const ref of [
+        ...(doc.posters || []),
+        doc.frontPage,
+        ...(doc.gallery || []).map((row) => row.file),
+      ]) {
         const id = ref && typeof ref === 'object' ? ref.id : ref
 
         if (id !== null && id !== undefined) {

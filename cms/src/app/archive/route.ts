@@ -1,6 +1,6 @@
 // "/archive" – posters of past exhibitions
 import { renderStaticPage } from '@/lib/static-page'
-import { SITE_NAME } from '@/lib/seo'
+import { SITE_NAME } from '@/lib/site-identity'
 
 export const dynamic = 'force-dynamic'
 

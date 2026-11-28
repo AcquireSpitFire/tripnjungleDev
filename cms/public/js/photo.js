@@ -5,6 +5,9 @@
 // photo and to the whole exhibition. Arrow keys switch photos, a click opens
 // the fullscreen view. Same visibility as the exhibition page: public and
 // "locked with link" show the photo, otherwise "not available yet".
+//
+// Needs:    data.js, elements.js, shop.js (setupPhotoShop), viewer.js
+// Provides: –
 
 const photoTitle = document.getElementById("title");
 const photoArtists = document.getElementById("artists");
@@ -12,8 +15,16 @@ const photoFigure = document.getElementById("photo");
 const photoNote = document.getElementById("photo_note");
 const prevLink = document.getElementById("prev_photo");
 const nextLink = document.getElementById("next_photo");
-const photoViewer = document.getElementById("viewer");
-const photoViewerImage = document.getElementById("viewer_image");
+// Fullscreen view through all photos of the exhibition; the photos are set in renderPhoto
+let shownInViewer = null;
+let afterViewerClose = () => {};
+const photoViewer = createViewer({
+  element: document.getElementById("viewer"),
+  onChange: (media) => {
+    shownInViewer = media;
+  },
+  onClose: () => afterViewerClose(),
+});
 
 // /exhibition/<slug>/photo/<id>
 function getPhotoIds() {
@@ -23,7 +34,12 @@ function getPhotoIds() {
 }
 
 function photoLink(exhibition, item) {
-  return getExhibitionLink(exhibition) + "/photo/" + encodeURIComponent(item.id) + (PREVIEW ? "?preview" : "");
+  return (
+    getExhibitionLink(exhibition) +
+    "/photo/" +
+    encodeURIComponent(item.id) +
+    (PREVIEW ? "?preview" : "")
+  );
 }
 
 function showPhotoNote(message) {
@@ -38,32 +54,18 @@ function setCredit(artists) {
   }
 }
 
-function openPhotoViewer(item) {
-  setImageSources(photoViewerImage, item, { size: "large", sizes: "100vw" });
-  photoViewerImage.alt = item.alt || "";
-  photoViewer.hidden = false;
-  document.documentElement.classList.add("viewer_open");
-
-  if (photoViewer.requestFullscreen) {
-    photoViewer.requestFullscreen().catch(() => {});
-  }
-}
-
-function closePhotoViewer() {
-  if (photoViewer.hidden) {
-    return;
-  }
-
-  photoViewer.hidden = true;
-  document.documentElement.classList.remove("viewer_open");
-
-  if (document.fullscreenElement) {
-    document.exitFullscreen().catch(() => {});
-  }
-}
-
 function renderPhoto(exhibition, item, index) {
   const gallery = exhibition.gallery;
+  const photos = gallery.filter((entry) => entry.type === "image");
+
+  photoViewer.setItems(photos);
+
+  // Closed on another photo than this one: go to that photo's page
+  afterViewerClose = () => {
+    if (shownInViewer && shownInViewer.id !== item.id) {
+      location.replace(photoLink(exhibition, shownInViewer));
+    }
+  };
 
   photoTitle.textContent = item.name || exhibition.title;
   setCredit(item.artist ? [item.artist] : exhibition.artists || []);
@@ -85,7 +87,9 @@ function renderPhoto(exhibition, item, index) {
       priority: true,
     });
     image.alt = item.alt || item.name || "";
-    image.addEventListener("click", () => openPhotoViewer(item));
+    image.addEventListener("click", () =>
+      photoViewer.open(photos.findIndex((photo) => photo.id === item.id)),
+    );
     photoFigure.appendChild(image);
   }
 
@@ -102,7 +106,7 @@ function renderPhoto(exhibition, item, index) {
     nextLink.hidden = false;
 
     document.addEventListener("keydown", (event) => {
-      if (!photoViewer.hidden || event.target.tagName === "VIDEO") {
+      if (photoViewer.isOpen() || event.target.tagName === "VIDEO") {
         return;
       }
 
@@ -113,18 +117,6 @@ function renderPhoto(exhibition, item, index) {
       }
     });
   }
-
-  photoViewer.addEventListener("click", closePhotoViewer);
-  document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") {
-      closePhotoViewer();
-    }
-  });
-  document.addEventListener("fullscreenchange", () => {
-    if (!document.fullscreenElement) {
-      closePhotoViewer();
-    }
-  });
 }
 
 async function startPhoto() {
@@ -169,6 +161,9 @@ async function startPhoto() {
   }
 
   renderPhoto(exhibition, exhibition.gallery[index], index);
+
+  // Prints of this photo below the navigation (shop.js)
+  setupPhotoShop(exhibition, exhibition.gallery[index], document.querySelector(".photo_page"));
 }
 
 startPhoto();

@@ -491,6 +491,26 @@ video {
   gap: 0.6rem;
 }
 
+/* Pause / play of the slideshow (WCAG 2.2.2) */
+.slideshow_pause {
+  grid-column: 1 / -1;
+  justify-self: center;
+  margin: 0.4rem 0 0;
+  padding: 0.2rem 0.5rem;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.slideshow_pause:hover,
+.slideshow_pause:focus-visible {
+  color: var(--text);
+}
+
 .dot {
   width: 6px;
   height: 6px;
@@ -615,6 +635,11 @@ main {
   scroll-snap-align: start;
 }
 
+/* Link of a gallery image to its photo page (a plain click opens the fullscreen view) */
+.photo_link {
+  display: block;
+}
+
 /* Fullscreen view: clicking an image shows it filling the screen */
 
 .exhibition_slideshow img,
@@ -631,6 +656,9 @@ main {
   justify-content: center;
   background: var(--bg);
   cursor: zoom-out;
+  touch-action: none;       /* every finger movement belongs to the swipe (viewer.js) */
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .viewer img {
@@ -639,6 +667,94 @@ main {
   aspect-ratio: auto;
   object-fit: contain;      /* whole image, nothing cropped */
   background: none;
+  -webkit-user-drag: none;
+  transition: transform 0.22s ease-out, opacity 0.22s ease-out;
+}
+
+/* ‹ › in the fullscreen view: big enough to tap, quiet on the photo */
+.viewer_nav {
+  position: absolute;
+  top: 50%;
+  z-index: 1;
+  transform: translateY(-50%);
+  min-width: 3rem;
+  min-height: 3rem;
+  padding: 0.5rem;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 2.5rem;
+  line-height: 1;
+  text-shadow: 0 0 6px #000;
+  cursor: pointer;
+}
+
+.viewer_prev {
+  left: 0.25rem;
+}
+
+.viewer_next {
+  right: 0.25rem;
+}
+
+.viewer_nav:hover,
+.viewer_nav:focus-visible {
+  color: var(--text);
+}
+
+/* "3 / 12" */
+.viewer_counter {
+  position: absolute;
+  bottom: 0.75rem;
+  left: 0;
+  right: 0;
+  margin: 0;
+  text-align: center;
+  font-size: 0.8rem;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  text-shadow: 0 0 6px #000;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .viewer img {
+    transition: none;
+  }
+}
+
+/* Phones: the cover as one large image instead of the slideshow (exhibition.js) */
+.mobile_cover {
+  margin: 0 0 var(--gap);
+}
+
+.mobile_cover img,
+.mobile_cover video {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 85svh;
+  aspect-ratio: auto;        /* its own shape, not the 3:2 box of the slideshow */
+}
+
+.mobile_cover img {
+  cursor: zoom-in;
+}
+
+@media (min-width: 601px) {
+  .mobile_cover {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .exhibition_slideshow {
+    display: none;
+  }
+
+  .viewer_nav {
+    font-size: 2rem;
+  }
 }
 
 .viewer_close,
@@ -1291,4 +1407,465 @@ main {
 .photo_nav_link {
   text-decoration: underline;
   text-underline-offset: 0.2em;
+}
+
+/* ---------- 13. Shop (release 3.0): prints, cart, forms ---------- */
+
+/* "Cart (2)" in the header, left of the menu button (only while the cart has items) */
+.header_inner > a.cart_link {
+  position: absolute;
+  top: 0;
+  right: 3.25rem;
+  margin: 0;
+  font-size: 0.85rem;
+  letter-spacing: 0.1em;
+  line-height: 1.76rem;
+  color: var(--text);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.header_inner:has(.cart_link) {
+  padding-right: 9rem;
+}
+
+/* Shop pages have five footer links: on phones they may wrap onto two lines */
+.site_footer nav:has(> a:nth-child(5)) {
+  flex-wrap: wrap;
+  row-gap: 0.75rem;
+}
+
+/* Buttons: the same plain style as the other buttons of the site */
+.shop_button {
+  padding: 0.45rem 1rem;
+  border: 1px solid var(--muted);
+  background: none;
+  font: inherit;
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.shop_button:hover,
+.shop_button:focus-visible {
+  border-color: var(--text);
+}
+
+.shop_button:disabled {
+  border-color: #333;
+  color: var(--muted);
+  cursor: default;
+}
+
+.shop_button_primary {
+  border-color: var(--text);
+  background: var(--text);
+  color: var(--bg);
+}
+
+.shop_button_primary:hover,
+.shop_button_primary:focus-visible {
+  background: #fff;
+}
+
+.shop_button_primary:disabled {
+  background: none;
+}
+
+/* "Prints from €120.00 ›" below a gallery photo */
+/* "incl. VAT, plus shipping" below the "Prints from …" teaser */
+.print_button_note {
+  display: block;
+  font-size: 0.75rem;
+  letter-spacing: 0;
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.print_button {
+  display: inline-block;
+  margin: 0.4rem 0 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 0.85rem;
+  letter-spacing: 0.1em;
+  color: var(--text);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  cursor: pointer;
+}
+
+/* List of prints (dialog and photo page) */
+.print_offers {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.print_offer {
+  padding: 1rem 0;
+  border-top: 1px solid #222;
+}
+
+.print_offer p {
+  margin: 0.15rem 0;
+}
+
+.print_offer_title {
+  color: var(--text);
+}
+
+.print_offer_specs,
+.print_offer_details,
+.print_offer_note,
+.print_offer_stock,
+.print_safety,
+.print_links {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.print_offer_details {
+  white-space: pre-line;
+}
+
+.print_offer_row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1.25rem;
+  margin-top: 0.6rem;
+}
+
+.print_offer_stock.sold_out {
+  color: #c66;
+}
+
+.print_offer_feedback {
+  font-size: 0.85rem;
+}
+
+.print_offer_feedback a,
+.print_links a,
+.shop_form a,
+.cart_page a {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.print_links {
+  margin: 1rem 0 0;
+}
+
+/* Admin preview of a closed shop: prints shown with the buttons disabled */
+.print_preview_note {
+  margin: 0 0 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #ffd54a;
+  font-size: 0.85rem;
+  color: #ffd54a;
+}
+
+/* Dialog with the prints of a gallery photo */
+.print_dialog {
+  width: min(720px, calc(100vw - 2rem));
+  max-height: calc(100svh - 2rem);
+  padding: 1.5rem;
+  border: 1px solid #333;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.print_dialog::backdrop {
+  background: rgba(0, 0, 0, 0.8);
+}
+
+.print_dialog_close {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.75rem;
+  border: 0;
+  background: none;
+  font-size: 1.75rem;
+  line-height: 1;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.print_dialog_body {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 1.5rem;
+}
+
+.print_dialog_image {
+  width: 100%;
+  height: auto;
+  aspect-ratio: auto;
+}
+
+.print_dialog_title {
+  margin: 0 2rem 0.75rem 0;
+  font-size: 1rem;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+}
+
+/* Photo page: prints below the navigation */
+.photo_prints {
+  width: min(100%, 720px);
+  margin: 3rem auto 0;
+}
+
+/* Forms (price request, withdrawal) */
+.shop_form {
+  display: grid;
+  gap: 0.75rem;
+  max-width: 34rem;
+  margin: 1rem 0 0;
+}
+
+.shop_form label {
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.shop_form input,
+.shop_form textarea,
+.cart_country select,
+.cart_line_controls select {
+  padding: 0.45rem 0.6rem;
+  border: 1px solid #444;
+  background: #0d0d0d;
+  font: inherit;
+  color: var(--text);
+}
+
+.shop_form input:focus-visible,
+.shop_form textarea:focus-visible,
+.cart_page select:focus-visible {
+  outline: 1px solid var(--text);
+  border-color: var(--text);
+}
+
+.shop_form .shop_hp {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.shop_form_title,
+.shop_form_done {
+  margin: 0;
+  color: var(--text);
+}
+
+.shop_form_note {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.form_message,
+.cart_message,
+.cart_problem {
+  margin: 0;
+  color: #e88;
+}
+
+.shop_form button {
+  justify-self: start;
+}
+
+/* Withdrawal function on /withdrawal */
+.withdrawal_box {
+  max-width: 70ch;
+  margin: 1rem 0 2.5rem;
+  padding: 1rem 1.25rem 1.25rem;
+  border: 1px solid #333;
+}
+
+.withdrawal_box h2 {
+  margin-top: 0;
+}
+
+/* Cart page */
+.cart_status {
+  color: var(--muted);
+}
+
+.cart_lines {
+  margin: 0 0 2rem;
+  padding: 0;
+  list-style: none;
+}
+
+.cart_line {
+  display: grid;
+  grid-template-columns: 120px 1fr auto;
+  gap: 1rem 1.5rem;
+  padding: 1.25rem 0;
+  border-top: 1px solid #222;
+}
+
+.cart_line.has_problem {
+  padding-left: 0.75rem;
+  border-left: 2px solid #e88;
+}
+
+.cart_line_image {
+  width: 120px;
+  height: auto;
+  aspect-ratio: auto;
+}
+
+.cart_line_text p {
+  max-width: 60ch;
+  margin: 0.15rem 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+  white-space: pre-line;
+}
+
+.cart_line_title {
+  color: var(--text);
+}
+
+.cart_line_controls {
+  display: grid;
+  justify-items: end;
+  align-content: start;
+  gap: 0.5rem;
+}
+
+.cart_line_price {
+  margin: 0;
+  white-space: nowrap;
+}
+
+.cart_remove {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 0.8rem;
+  color: var(--muted);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.cart_summary {
+  max-width: 40rem;
+}
+
+.cart_country {
+  display: grid;
+  gap: 0.25rem;
+  max-width: 20rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.cart_totals {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.4rem 0;
+  margin: 1.5rem 0 0.5rem;
+}
+
+.cart_totals dt,
+.cart_totals dd {
+  margin: 0;
+}
+
+.cart_totals dd {
+  padding-left: 1rem;
+  text-align: right;
+}
+
+.cart_total_label,
+.cart_total {
+  padding-top: 0.5rem;
+  border-top: 1px solid #333;
+  font-size: 1.1rem;
+}
+
+.cart_muted {
+  color: var(--muted);
+}
+
+.cart_small {
+  font-size: 0.8rem;
+}
+
+.cart_info {
+  margin: 1.5rem 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.cart_info p {
+  margin: 0.4rem 0;
+}
+
+.cart_info strong {
+  font-weight: 400;
+  color: var(--text);
+}
+
+#cart_checkout {
+  margin-top: 0.5rem;
+  padding: 0.7rem 1.5rem;
+  font-size: 1rem;
+}
+
+@media (max-width: 600px) {
+  .header_inner:has(.cart_link) {
+    padding-right: 8rem;
+  }
+
+  .print_dialog {
+    padding: 1.25rem 1rem;
+  }
+
+  .print_dialog_body {
+    grid-template-columns: 1fr;
+  }
+
+  .print_dialog_image {
+    max-width: 200px;
+  }
+
+  .cart_line {
+    grid-template-columns: 80px 1fr;
+  }
+
+  .cart_line_image {
+    width: 80px;
+  }
+
+  .cart_line_controls {
+    grid-column: 1 / -1;
+    grid-template-columns: auto 1fr auto;
+    justify-items: start;
+    align-items: center;
+  }
+}
+
+/* "Report this content" below a photo (Digital Services Act) */
+.report_line {
+  margin: 1rem 0 0;
+  text-align: center;
+  font-size: 0.85rem;
+}
+
+.report_line a {
+  color: var(--muted);
 }

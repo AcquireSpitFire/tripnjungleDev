@@ -3,6 +3,11 @@
 Payload 3 (admin + REST API) with SQLite; Next.js serves the frontend. The site starts empty:
 all exhibitions, posters, photos and videos come from the admin panel.
 
+This README is about running and using the site. For working on the code:
+[ARCHITECTURE.md](ARCHITECTURE.md) (how it is built, where to change what),
+[CONTRIBUTING.md](CONTRIBUTING.md) (setup, security checklist, schema changes, tests) and
+[CHANGELOG.md](CHANGELOG.md) (releases and what to do when updating).
+
 ## Running locally
 
 ```
@@ -48,9 +53,11 @@ In the admin under **Exhibitions**:
 ## Accounts and roles
 
 Accounts are managed by admins under **Accounts**. Everybody changes their own name and password via
-the avatar (top right). There is no e-mail sending yet (comes with the shop release), so “Forgot
-password” does not work: an admin sets the first password and tells the person; they change it after
-logging in. Passwords need at least 12 characters; 5 wrong attempts lock the account for 15 minutes.
+the avatar (top right). An admin sets the first password and tells the person; they change it after
+logging in. “Forgot password” on the login page sends a reset link once e-mail is set up (`SMTP_HOST`,
+`SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM`; without them e-mails only appear in the log). Passwords need at least 12 characters. Too many wrong
+tries from one address pause the login there for 15 minutes; the account itself is never locked, so
+logging in from another network still works.
 
 **Log out**: in the admin with the “Log out” button (top right, next to the account name and role);
 on the website, logged-in accounts find “Admin” and “Log out” at the end of the menu. Logging out
@@ -59,7 +66,7 @@ ends the session on the server, not only in the browser.
 | Role | May |
 |---|---|
 | **Admin** | Everything: accounts, site settings, all sections. The very first account always becomes admin. |
-| **Manager** | Everything in the sections ticked under “Sections” (one manager account per sub page; today: Exhibitions). No accounts, no site settings. |
+| **Manager** | Everything in the sections ticked under “Sections” (one manager account per sub page): *Exhibitions* (exhibitions, media, artists, prints, prices and watermark of an exhibition) and *Shop* (orders and price requests with the buyers' data). No accounts, no site settings. |
 | **Artist** | Linked to an artist profile (“Artist profile”). Creates exhibitions (always *Planning* + *Locked*, credited to the own profile), edits the exhibitions that credit the profile and the profile itself. Cannot publish, delete or change IDs. |
 | **Editor** | Edits the content of the exhibitions they are assigned to (texts, captions, alt texts, photos and their order). Cannot publish, create, delete or change IDs. |
 
@@ -72,6 +79,28 @@ ends the session on the server, not only in the browser.
 - Their own uploads can be changed or deleted only while they are still locked; once a photo is public,
   only managers change it.
 - “Created by” / “Last changed by” in the sidebar show who did what; visitors never see account details.
+
+**Contributor terms and responsibility** (every account except admins – artists, editors, managers):
+
+- After the first login (and whenever the text changes) the account has to accept the **contributor
+  terms**: click the account (top right) → read the text → “I have read and accept these terms”. Until
+  then it cannot upload files or change exhibitions and artist profiles (checked on the server); a red
+  notice in the admin says so. Only the account itself can accept – an admin cannot do it for others.
+- The terms make the uploader responsible for their uploads: they confirm holding all rights (copyright,
+  consent of the people shown) and that nothing is unlawful, and they indemnify the operator against claims
+  of third parties if they are at fault, also through negligence (e.g. not checking a file). An indemnity
+  regardless of any fault would usually not hold in standard terms (§ 879 Abs. 3 ABGB / § 307 BGB).
+  Criminal responsibility always lies with the uploader. The operator still has to remove unlawful
+  content as soon as they learn about it (DSA Art. 6) – no agreement changes that. Have the text checked.
+- **Every upload** additionally needs the checkbox **“Rights confirmed”**. Several files at once (bulk
+  upload, “Add several photos at once”): **“Edit all” → choose “Rights confirmed” → tick it once** for all
+  files. Admin uploads do not need it.
+- **Proof** that admins see: on the account – date, version and a copy of the accepted text; on every
+  upload – “Rights confirmed on” and “Rights confirmed by” (e-mail and account id, kept even if the account
+  is deleted). Neither can be changed afterwards.
+- Text: Site settings → **Contributor terms** (empty = standard text in `src/lib/contributor-terms.ts`).
+  The standard text names the operator and follows the country of the legal notice, so filling in or
+  changing these also asks every account to accept again.
 
 ## Artists
 
@@ -97,25 +126,163 @@ Every photo has a QR code in its row under “Images and videos” (after saving
   `localhost` or a Railway address), and the exhibition must be *Locked with link* or *Public* by the
   time visitors scan – otherwise the page says “not available yet”.
 
+## Shop
+
+Prints of the photos are sold directly in the exhibitions; there is no separate shop page.
+
+**Offering a print:** Exhibitions → Images and videos → a photo → **Prints for sale** → add a row:
+name (e.g. “Fine art print A3”), width/height in cm, paper/material, further details (edition, signed,
+frame …), *Copies for sale in total* (empty = no limit) and the **price**:
+
+- *No price* (default): nothing is shown, the photo is just shown – no button, no watermark. Also the way
+  to pause an offer without losing its details. A fixed price without an amount counts as *No price*.
+- *Fixed price* (EUR, the final price for the buyer): “Add to cart”.
+- *Price on request*: “Request price” form; the request is stored under Shop → Price requests and
+  e-mailed to the shop address. Answer by e-mail.
+
+Only managers of the section Exhibitions (and admins) set prints and prices; artists and editors cannot
+change them. Only photos can be sold, not videos.
+
+Visitors see “Prints from €… ›” below the photo (exhibition page: a dialog) or the list of prints (photo
+page) with size, material, details, price with VAT note, and how many copies are left (“3 of 5 left”,
+“Sold out”). Top right, “Cart (n)” appears as soon as something is in the cart.
+
+**Watermark:** every photo with a fixed price or price on request is shown with a light watermark,
+wherever it appears on the website (gallery, cover, poster, photo page, link previews, Stripe). The
+watermark is burned into the web images (`/media-wm/…`); visitors cannot load the files without it.
+Logged-in accounts (admin, preview) still see the photos without the watermark. Settings under Site
+settings → Shop → Watermark: image (PNG with transparency, e.g. a white logo; empty = the built-in
+“TRIPNJUNGLE” lettering), opacity, size and position (center, bottom right, tiled). Each exhibition can
+choose its own image (sidebar → *Watermark*). The watermark is never printed. Setting a photo back to
+*No price* removes the watermark again.
+
+**Cart** (`/cart`): every item with photo, print, size, material, details, artist, exhibition, quantity
+and price; country of delivery → shipping costs, delivery time, total, VAT note; seller, payment methods,
+right of withdrawal and terms. “Continue to payment” opens the Stripe payment page; the order becomes
+binding with “Pay” there. Afterwards the buyer lands on `/order/thanks` and gets the order confirmation by
+e-mail (items, prices, address, terms and the instructions on withdrawal).
+
+**Copies left** are counted from the orders: paid, shipped, payment pending and checkouts still running
+(held for 35 minutes) count; cancelled, expired and refunded orders free their copies again. Nothing is
+written into the exhibition, so editing an exhibition never changes the stock. To sell a copy elsewhere,
+lower *Copies for sale in total*.
+
+**Orders** (Shop → Orders; admins and managers with the section *Shop*): *Checkout started* →
+*Paid – to ship* → set **Shipped** (with tracking number/link) and the buyer gets an e-mail. *Cancelled*
+and *Refunded* free the copies; the refund itself is made in the Stripe dashboard. Amounts, items and
+addresses cannot be changed. Only admins delete orders; keep them for the retention period (Austria
+7 years, Germany up to 10 years). Payments with a delayed method (SEPA) stay *Payment pending* until
+Stripe confirms them. Problems (e-mail not sent, amount differs) are noted in *Internal note*.
+
+**Withdrawal:** `/withdrawal` shows the instructions, the model form and the withdrawal function required
+since 19 June 2026 (name, order number, e-mail, “Confirm withdrawal”) – every page links it in the footer
+(“Withdraw from contract here”), every order confirmation too, and the form also works without JavaScript.
+The order then shows “Withdrawal received” (a second withdrawal is added below, the date of the first
+stays); the buyer and the shop get an e-mail.
+
+**Shop status:** the top of Site settings → Shop shows whether the shop is open for visitors and what is
+still missing (switch, Stripe keys, **e-mail sending**, shipping zone; legal notice, manufacturer, shipping
+outside the EU and VAT as recommendations). While the
+shop is closed, visitors see no prices at all – check the prints with **“Preview (with your login)”** in
+the exhibition: there they appear with a note “the shop is closed” and the buttons disabled.
+
+**Site settings → Shop:** shop open (only takes effect with the Stripe keys and at least one shipping
+zone), e-mail for orders (empty = e-mail of the legal notice), VAT (*small business* with the standard note
+of the country, or *prices include VAT* with the rate), **shipping zones** (countries, cost per order, free
+from, delivery time), a note for the cart, watermark, **terms** (`/terms`) and **instructions on
+withdrawal** (`/withdrawal`) – both empty = standard texts filled in from the legal notice; have them
+checked before going live – and the e-mail provider for the privacy policy (section 7 there).
+
+**Setup (once):**
+
+1. Stripe account (stripe.com): activate payments, choose the payment methods under Settings → Payment
+   methods (card, Apple/Google Pay, EPS, SEPA …); Checkout shows the active ones.
+2. Railway → Variables: `STRIPE_SECRET_KEY` (first `sk_test_…`, later `sk_live_…`) and
+   `STRIPE_WEBHOOK_SECRET`: Stripe → Developers → Webhooks → add endpoint
+   `https://your-domain.com/shop/webhook` with the events `checkout.session.completed`,
+   `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed` and
+   `checkout.session.expired`, then copy its signing secret (`whsec_…`). Test and live mode have
+   different keys and webhooks.
+3. E-mail: `SMTP_HOST`, `SMTP_PORT` (587), `SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM`
+   (e.g. `shop@your-domain.com`), `EMAIL_FROM_NAME`. **The shop only opens with `SMTP_HOST`**: buyers must
+   get the order confirmation with terms and withdrawal instructions by e-mail (durable medium). Until you
+   have your own address, an existing mailbox with an app password works (e.g. `smtp.gmail.com`, 587).
+   Set up SPF/DKIM for the sender domain at the mail provider, otherwise confirmations land in spam.
+4. Site settings → Legal notice complete; → Shop: shipping zones, VAT, shop e-mail, watermark, e-mail
+   provider. Check `/terms`, `/withdrawal` and `/privacy` (no yellow marks). Then tick *Shop is open*.
+5. Test order in Stripe test mode with the card `4242 4242 4242 4242`: the order appears as *Paid*, the
+   e-mails arrive, the copies left go down; set *Shipped*. Then switch the keys to live mode.
+
+Locally, `stripe listen --forward-to localhost:3000/shop/webhook` (Stripe CLI) forwards the webhooks and
+prints the `whsec_…` for `.env`.
+
+**Legal routines for the shop** (have the texts checked by a lawyer before going live):
+
+- **Product safety (GPSR):** the manufacturer with postal and e-mail address is shown with every print, in
+  the cart and in the order confirmation (Site settings → Shop → Product safety; empty = the operator of the
+  legal notice). Put the same details and the print (exhibition, photo, print name) on a label on the back
+  of each print or on its packaging.
+- **Price on request:** before you agree on a sale by e-mail, send the price incl. VAT note and shipping
+  costs, the terms (`/terms`) and the instructions on withdrawal (`/withdrawal`); confirm the agreed sale
+  by e-mail again. Payment and shipping as agreed.
+- **Outside the EU:** buyers are told automatically that import duties and taxes may apply (cart and
+  Stripe page). Add a customs declaration (CN22/CN23) to the parcel.
+- **Deleting data:** price requests – delete them once settled (Shop → Price requests); orders – keep them
+  for the retention period (Austria 7 years, Germany up to 10 years), then delete them (admins); the
+  record of a withdrawal stays with its order.
+- **Accessibility:** as a micro-enterprise (fewer than 10 people, at most €2 million turnover) the shop is
+  not bound by the accessibility acts (BaFG in Austria, BFSG in Germany); the basics are done anyway
+  (pause button of the slideshow, forms without JavaScript, alt texts).
+- **Illegal content (Digital Services Act):** the legal notice names the contact point and how to report
+  content; every photo page has “Report this content”. Check reports without delay, remove unlawful
+  content and tell the reporter and the uploader what you decided and why.
+
+**Later – print on demand:** the order items keep a full snapshot (photo, print, size, material,
+quantity, address), so a print lab API can be added as a step after “paid” without changing the shop.
+
 ## Security notes
 
-- **Login**: at most 10 login/password requests per IP address in 15 minutes (`src/proxy.ts`, then
-  “429 Too Many Requests”), plus Payload's lock of 15 minutes after 5 wrong passwords per account.
+- **Login** (`src/proxy.ts`, then “429 Too Many Requests”): 5 tries per address and account and
+  20 per address in 15 minutes, 50 per account and hour from all addresses together; “Forgot password”
+  3 times per account and hour. Accounts are **not locked** after wrong passwords: a lock would let
+  anybody keep the admin out with a few tries – an address that is blocked only blocks itself.
   Sessions are stored on the server (logging out ends them), cookies are `httpOnly`, `SameSite=Strict`
   and `secure` on https.
 - **Startup**: the server refuses to start with a `PAYLOAD_SECRET` shorter than 32 characters
   (`openssl rand -hex 32` gives 64) and warns in production without `PAYLOAD_PUBLIC_SERVER_URL`.
 - **Photos**: visitors only get the generated WebP sizes. Original photos (with camera data such as
-  GPS position and time) are only delivered to logged-in accounts. Locked media are never delivered
-  to visitors; `/api/media` itself is not public (the site gets media through exhibitions/artists).
+  GPS position and time) are only delivered to logged-in accounts. Images too small for a generated
+  size (at most 600 px wide) are delivered as uploaded, so they are saved without metadata on upload.
+  Locked media are never delivered to visitors; `/api/media` itself is not public (the site gets media
+  through exhibitions/artists). Who confirmed the rights of an upload (e-mail) is only visible in the
+  admin area. Next's image optimizer (`/_next/image`) is switched off: it would keep copies of files
+  whose delivery depends on the login.
 - **Caching**: media files are only cached by the browser (`private`, one week), never by shared
   caches, because what may be delivered depends on the login. Pages are cached publicly and never
   contain anything account-specific.
 - **“Locked with link”**: lists (`/api/exhibitions`) show such exhibitions like locked ones (poster and
-  details); the content only comes with a lookup of exactly that ID.
+  details); the content only comes with a lookup of exactly that ID. The ID is part of those public
+  lists, so the address is **not a secret**: use it only for previews that anybody may see.
 - **API limits**: visitors, artists and editors get at most 100 results per request; `depth` is at most 2.
 - **Uploads**: only JPEG, PNG, WebP, AVIF, GIF, MP4, WebM and QuickTime (checked from the file content,
-  no SVG); files are served with a sandbox CSP.
+  no SVG); files are served with a sandbox CSP. Files only come from the own computer (“paste URL” is
+  off, so the server never fetches addresses for an account). Payload's preview image endpoint
+  (`/api/og`) is off.
+- **Rate limits** (`src/proxy.ts`): the path is normalized first (`/api/users/l%6Fgin` counts as
+  `/api/users/login`); IPv6 addresses count per /64 network, which one connection usually owns.
+- **Shop**: prices, names and copies left always come from the server (the browser only sends which
+  print and how many); prints of locked or planned exhibitions cannot be bought. Card data never reaches
+  this server (Stripe Checkout). Webhooks are only accepted with a valid Stripe signature and are
+  processed once even when Stripe repeats them. The shop routes (`/shop/*`) only accept requests from the
+  site itself (Origin header) and are limited per IP address in `src/proxy.ts` (checkout 10, price
+  requests 5, withdrawals 5 per 15 minutes). Price requests are only e-mailed to the shop and the
+  withdrawal acknowledgement only to the address stored with the order: the forms cannot send e-mails to
+  strangers. Orders and price requests are only visible to admins and managers of the section *Shop*.
+  Artists and editors cannot change prints, and cannot put another photo into a gallery item that has
+  prints. Watermark images can only be changed or deleted by managers. A second withdrawal for the same
+  order is added below the first one; the date of the first stays.
+- **Watermark**: for photos for sale, visitors get only the watermarked copies (`/media-wm/…`, made
+  with sharp, without EXIF); the plain files of such photos answer 404 to them.
 - `npm run test:access` checks all of this against a temporary database.
 
 Accepted on purpose (known, low risk):
@@ -130,7 +297,15 @@ Accepted on purpose (known, low risk):
 - Videos keep their metadata (removing it needs ffmpeg).
 - On a completely empty database, the first account created becomes admin – create it right after
   the first deploy.
-- The login rate limit counts per server process; with several instances it multiplies.
+- The login rate limit counts per server process; with several instances it multiplies. The same holds
+  for the lock that stops two checkouts from taking the last copy: run the site as one instance.
+- A checkout holds its copies for 35 minutes even if nobody pays. One connection can have at most 2
+  running checkouts with limited copies (stored only as an anonymous key, removed when the checkout
+  ends), and going back from the Stripe page frees the copies at once. A unique print may still show
+  “Sold out” for a while and come back. Many buyers on one network (e.g. the Wi-Fi at an opening)
+  share that limit of 2 at the same moment.
+- Admins and the preview see photos for sale without the watermark (they are logged in). A watermark
+  makes copying harder, it does not make it impossible.
 
 ## Site settings (About, legal notice, privacy)
 
@@ -187,10 +362,8 @@ One-time setup, about an hour. Everything else happens in the admin afterwards.
 Every further push to the connected branch triggers a build and deploy automatically. `npm start` first
 runs the database migrations (`src/migrations`) and then starts the server.
 
-**Updating to release 2.0** (accounts, artists, QR codes): download a backup of `tripnjungle.db` first.
-The migrations run on the next start: field names become English (data is kept), all existing accounts
-become admins, artists/editors/QR settings are added. Then set `PAYLOAD_PUBLIC_SERVER_URL` to the real
-domain before printing any QR code, and create the manager/artist/editor accounts under Accounts.
+**Updating to a new release:** see [CHANGELOG.md](CHANGELOG.md) – it lists for every release what the
+migrations change and what to set up afterwards. Always download a backup first.
 
 **Backup:** Railway does not keep permanent volume backups automatically. Daily snapshots can be enabled
 under Volume → Backups (paid). In addition, download `tripnjungle.db` and `media/` from the volume now
@@ -203,46 +376,10 @@ For your own server (VPS) the same applies: Node 24, `.env` as above, `npm ci &&
 
 ## Changing the schema
 
-After changes to the collections: `npm run migrate:create` creates a new migration in
-`src/migrations`; it runs automatically on the next `npm start`. Locally (`npm run dev`) the schema is
-adjusted directly.
-
-**Renames** (a field or array gets a new name): `migrate:create` asks in the terminal whether a table or
-column was renamed or newly created and cannot run without an interactive terminal; if it treats it as
-new, the data is lost. In that case write the migration by hand with `ALTER TABLE … RENAME …` and create
-the schema snapshot with
-`PAYLOAD_MIGRATING=true npx tsx --env-file=.env scripts/write-schema-snapshot.ts <yyyymmdd_hhmmss_name>`
-(example: `src/migrations/20261122_230000_english_field_names.ts`). Back up the database first and test
-the migration on a copy.
-
-**Check:** `npm run migrate:create` adds references to other collections (e.g. `created_by_id`) without
-their delete rule; add `ON DELETE SET NULL` (single reference) or `ON DELETE CASCADE` (`*_rels` tables) by
-hand as in the generated `.json` snapshot, see the migrations of release 2.0.
-
-**Permissions:** `npm run test:access` checks the roles (accounts, exhibitions, media, artists, editors,
-QR codes, the security rules above) against a temporary database. Run it after every change to access rules.
+Migrations, renames, delete rules and repairing a local database: [CONTRIBUTING.md → Changing the
+schema](CONTRIBUTING.md#changing-the-schema). `npm run test:access` checks all access rules, the shop,
+the watermark, SEO and the legal pages against a temporary database – run it after every change.
 
 ## Files
 
-- `src/access/roles.ts` – roles and all permission helpers
-- `src/proxy.ts` – rate limit for login and password requests
-- `src/lib/query-limits.ts` – page-size cap for visitors, artists and editors
-- `src/collections/Exhibitions.ts` – fields, access, artists/editors, hooks
-- `src/collections/Media.ts` – uploads (`MEDIA_DIR`), image sizes, public only with `locked: false`
-- `src/collections/Artists.ts` – artist profiles; `src/app/artist/[slug]/route.ts` – the artist page
-- `src/collections/Users.ts` – accounts, roles, login security
-- `src/lib/media-lock.ts` – keeps `locked` of the media in sync with exhibitions and portraits
-- `src/lib/qr.ts`, `src/endpoints/exhibition-qr.ts` – QR PNG/PDF; `src/components/QrCodeField.tsx`,
-  `ExhibitionQrCodes.tsx` – the QR buttons in the admin; `src/app/p/[id]/route.ts` – short link
-- `src/globals/Site.ts` – Site settings (About, legal notice, privacy); `src/lib/site.ts` prepares them for the templates
-- `src/templates/*.html` – the pages; `src/app/**/route.ts` serves them with title, description,
-  Open Graph and JSON-LD (`/`, `/exhibitions`, `/events`, `/archive`, `/about`, `/imprint`, `/privacy`,
-  `/exhibition/<id>`, `/exhibition/<id>/photo/<photo id>`, `/artist/<id>`)
-- `src/app/sitemap.xml`, `src/app/robots.txt` – SEO
-- `src/migrations/` – database migrations for production
-- `public/` – CSS, JS, favicon, OG image; `public/js/data.js` talks to the API and picks the image size
-- `scripts/regenerate-sizes.ts` – regenerate image sizes for existing media (`npm run media:regenerate -- --yes`; without `--yes` it only shows which database and folder it would change)
-- `scripts/set-locked.ts` – lock/unlock an exhibition from the command line (for testing; needs `--yes`)
-- `scripts/write-schema-snapshot.ts` – schema snapshot for hand-written migrations (see above)
-- `scripts/check-access.ts` – permission checks (`npm run test:access`)
-- `tripnjungle.db`, `media/`, `.env` – local, not in git
+Folder map and “where do I change what”: [ARCHITECTURE.md](ARCHITECTURE.md#folder-map).

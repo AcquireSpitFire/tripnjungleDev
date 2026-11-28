@@ -2,7 +2,6 @@ import type { CollectionConfig, FieldAccess, Where } from 'payload'
 
 import {
   canManageExhibitions,
-  clearAccessCache,
   exhibitionManagersOnlyField,
   getAccessibleExhibitionIds,
   getArtistProfileId,
@@ -12,17 +11,22 @@ import {
 } from '../access/roles'
 import { exhibitionQrEndpoint } from '../endpoints/exhibition-qr'
 import { auditFields, auditHook } from '../lib/audit'
+import { requireAcceptedTerms } from '../lib/contributor-terms'
 import { limitPublicQueries } from '../lib/query-limits'
-import { assertMediaMayBeAdded, mediaIdsOf, syncMediaLocks } from '../lib/media-lock'
-import {
-  contentIsOpen,
-  getRelease,
-  getVisibility,
-  requestedSlug,
-  toId,
-  type Ref,
-} from '../lib/visibility'
+import { SLUG_RULE, isSlug } from '../lib/slug'
+import { contentIsOpen, getVisibility, requestedSlug } from '../lib/visibility'
 import { getYouTubeId } from '../lib/youtube'
+import {
+  appendBulkUploads,
+  artistCreatesPlanned,
+  checkAddedMedia,
+  deriveVisibility,
+  keepPrintsWithTheirPhoto,
+  syncMediaAfterChange,
+  syncMediaAfterDelete,
+  withDerivedValues,
+} from './exhibitions/hooks'
+import { printsField } from './exhibitions/prints-field'
 
 // An exhibition.
 //
@@ -107,7 +111,8 @@ export const Exhibitions: CollectionConfig = {
       return publicWhere
     },
     create: ({ req }) =>
-      canManageExhibitions(req.user) || (isArtist(req.user) && getArtistProfileId(req.user) !== null),
+      canManageExhibitions(req.user) ||
+      (isArtist(req.user) && getArtistProfileId(req.user) !== null),
     update: async ({ req }) => {
       if (canManageExhibitions(req.user)) {
         return true
@@ -123,107 +128,20 @@ export const Exhibitions: CollectionConfig = {
   hooks: {
     // Page size for visitors/artists/editors at most 100 (src/lib/query-limits.ts)
     beforeOperation: [limitPublicQueries],
+    // In this order; what each one does: src/collections/exhibitions/hooks.ts
     beforeChange: [
+      // Artists, editors and managers only after accepting the contributor terms
+      requireAcceptedTerms,
+      keepPrintsWithTheirPhoto,
       auditHook(),
-      ({ data, operation, req }) => {
-        // An artist creates: credited to their own profile, nothing goes public without a manager
-        if (operation === 'create' && !canManageExhibitions(req.user) && isArtist(req.user)) {
-          data.artists = [getArtistProfileId(req.user)]
-          data.release = 'planning'
-          data.visibility = 'locked'
-        }
-
-        return data
-      },
-      async ({ data, originalDoc, req }) => {
-        // Partial updates lack fields in data; then the stored state applies
-        const visibility = getVisibility({
-          visibility: data.visibility ?? originalDoc?.visibility,
-          locked: data.locked ?? originalDoc?.locked,
-        })
-
-        data.visibility = visibility
-        data.release = data.release ?? originalDoc?.release ?? 'scheduled'
-        data.locked = visibility !== 'public'
-
-        // Bulk upload: append the files as new rows to "gallery", then empty the field
-        const bulk = ((data.bulkMedia as Ref[] | undefined) || [])
-          .map(toId)
-          .filter((id): id is number | string => id !== null)
-
-        if (bulk.length) {
-          const rows: { file?: Ref; name?: string | null; alt?: string | null }[] = [
-            ...(data.gallery ?? originalDoc?.gallery ?? []),
-          ]
-          const present = new Set(rows.map((row) => String(toId(row.file))))
-
-          for (const id of bulk) {
-            if (!present.has(String(id))) {
-              // Copy the alt text entered in the upload dialog into the row
-              const media = await req.payload
-                .findByID({ collection: 'media', id, depth: 0, req, overrideAccess: true })
-                .catch(() => null)
-
-              rows.push({ file: id, name: '', alt: media?.alt || '' })
-              present.add(String(id))
-            }
-          }
-
-          data.gallery = rows
-        }
-
-        data.bulkMedia = []
-
-        // Artists/editors may only add media that are public already or their own uploads.
-        // Posters and content are compared separately: posters are public sooner (outside
-        // "planning"), so a locked gallery photo must not become a poster either.
-        const posters = (data.posters ?? originalDoc?.posters) as Ref[] | undefined
-        const content = {
-          frontPage: 'frontPage' in data ? data.frontPage : originalDoc?.frontPage,
-          gallery: data.gallery ?? originalDoc?.gallery,
-        }
-
-        await assertMediaMayBeAdded(
-          req,
-          mediaIdsOf({ posters }),
-          mediaIdsOf({ posters: originalDoc?.posters }),
-          'exhibitions',
-        )
-        await assertMediaMayBeAdded(
-          req,
-          mediaIdsOf(content),
-          mediaIdsOf({ frontPage: originalDoc?.frontPage, gallery: originalDoc?.gallery }),
-          'exhibitions',
-        )
-
-        return data
-      },
+      artistCreatesPlanned,
+      deriveVisibility,
+      appendBulkUploads,
+      checkAddedMedia,
     ],
-    afterRead: [
-      ({ doc }) => {
-        // Deliver old entries (columns still empty) with derived values
-        doc.visibility = getVisibility(doc)
-        doc.release = getRelease(doc)
-
-        return doc
-      },
-    ],
-    afterChange: [
-      async ({ doc, previousDoc, req }) => {
-        // Media used now and media removed by this change: both may change their lock state
-        clearAccessCache(req)
-        await syncMediaLocks(req, [...mediaIdsOf(doc), ...mediaIdsOf(previousDoc)])
-        return doc
-      },
-    ],
-    afterDelete: [
-      async ({ doc, req }) => {
-        // The deleted exhibition no longer counts, its media are locked unless used elsewhere
-        clearAccessCache(req)
-        await syncMediaLocks(req, mediaIdsOf(doc))
-        return doc
-      },
-    ],
+    afterRead: [withDerivedValues],
+    afterChange: [syncMediaAfterChange],
+    afterDelete: [syncMediaAfterDelete],
   },
   fields: [
     {
@@ -236,12 +154,10 @@ export const Exhibitions: CollectionConfig = {
       // Set when creating; changing it later breaks links and printed QR codes
       access: { update: exhibitionManagersOnlyField },
       admin: {
-        description: 'Lowercase letters, numbers and hyphens only, e.g. exhibition-3. Used in the URL.',
+        description:
+          'Lowercase letters, numbers and hyphens only, e.g. exhibition-3. Used in the URL.',
       },
-      validate: (value: unknown) =>
-        typeof value === 'string' && /^[a-z0-9-]+$/.test(value)
-          ? true
-          : 'Lowercase letters, numbers and hyphens only.',
+      validate: (value: unknown) => (isSlug(value) ? true : SLUG_RULE),
     },
     {
       // Accounts that may change the content of this exhibition (not publish it)
@@ -278,6 +194,25 @@ export const Exhibitions: CollectionConfig = {
       admin: {
         position: 'sidebar',
         components: { Field: '/components/ExhibitionQrCodes#ExhibitionQrCodes' },
+      },
+    },
+    {
+      // Overrides the watermark of Site settings → Shop for the photos for sale in this
+      // exhibition. The image itself stays locked: the server reads it from disk.
+      name: 'watermark',
+      label: 'Watermark (optional)',
+      type: 'upload',
+      relationTo: 'media',
+      filterOptions: readableMediaOnly,
+      access: {
+        read: loggedInField,
+        create: exhibitionManagersOnlyField,
+        update: exhibitionManagersOnlyField,
+      },
+      admin: {
+        position: 'sidebar',
+        description:
+          'PNG with transparency, laid lightly over the photos for sale in this exhibition. Empty = the watermark of Site settings → Shop.',
       },
     },
     {
@@ -376,7 +311,7 @@ export const Exhibitions: CollectionConfig = {
       admin: {
         isClearable: false,
         description:
-          'Locked: poster and details are visible, the exhibition itself (cover, images, videos) is not. Locked with link: like locked, but whoever knows the address /exhibition/<ID> sees the exhibition. Public: visible to everyone, also in the slideshow and Exhibitions.',
+          'Locked: poster and details are visible, the exhibition itself (cover, images, videos) is not. Locked with link: like locked, but whoever opens the address /exhibition/<ID> sees the exhibition. The address is not secret (the ID appears in the public lists): only for previews that anybody may see. Public: visible to everyone, also in the slideshow and Exhibitions.',
       },
     },
     {
@@ -407,7 +342,8 @@ export const Exhibitions: CollectionConfig = {
       hasMany: true,
       maxRows: 10,
       admin: {
-        description: 'Posters for the home page, Events and Archive. Public, except in the release “Planning”.',
+        description:
+          'Posters for the home page, Events and Archive. Public, except in the release “Planning”.',
       },
     },
     {
@@ -483,6 +419,7 @@ export const Exhibitions: CollectionConfig = {
           relationTo: 'artists',
           admin: { description: 'Leave empty if it is by the artists of the exhibition.' },
         },
+        printsField,
       ],
     },
     ...auditFields(),

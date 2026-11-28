@@ -1,6 +1,6 @@
 // Intro video before an exhibition.
 //
-// Only links with data-intro (posters, see createPosterElement in data.js)
+// Only links with data-intro (posters, see createPosterElement in elements.js)
 // are intercepted. Instead of jumping straight to the exhibition, an
 // overlay opens with the YouTube video of the exhibition (field "video").
 // Below it is the "Continue to exhibition" button. When the video ends,
@@ -8,7 +8,7 @@
 // to the exhibition.
 //
 // Privacy: before the first contact with YouTube/Google the visitor has to
-// agree (notice card in the overlay, see createYouTubeNotice in data.js).
+// agree (notice card in the overlay, see createYouTubeNotice in consent.js).
 // The consent is remembered in the browser. Only with stored consent is
 // the YouTube API preloaded while idle or when touching a poster.
 //
@@ -22,6 +22,9 @@
 //
 // Note on quality: 1080p is requested (vq + setPlaybackQuality), but
 // YouTube decides itself what it actually plays.
+//
+// Needs:    data.js, elements.js, consent.js; window.pauseSlideshow/resumeSlideshow (script.js, if there)
+// Provides: –
 
 (function () {
   let overlayElement = null;
@@ -158,13 +161,13 @@
       } else {
         box.appendChild(
           createYouTubeNotice({
-            cover: exhibition.posters?.[0] || resolveFrontPage(exhibition).frontPage,
+            cover: exhibition.posters?.[0] || exhibition.frontPage,
             onPlay: () => {
               box.innerHTML = "";
               box.appendChild(createPlayerTarget());
               startPlayer(exhibition, videoId);
             },
-          })
+          }),
         );
       }
 
@@ -331,7 +334,13 @@
   // added to the DOM later
   document.addEventListener("click", (event) => {
     // Still allow new tabs via Ctrl/Cmd/middle click
-    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey) {
+    if (
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey
+    ) {
       return;
     }
 
@@ -361,7 +370,7 @@
           loadYouTubeApi();
         }
       },
-      { capture: true, passive: true }
+      { capture: true, passive: true },
     );
   });
 

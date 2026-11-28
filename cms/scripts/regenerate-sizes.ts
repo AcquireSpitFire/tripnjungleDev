@@ -14,7 +14,10 @@ const dirname = path.dirname(fileURLToPath(import.meta.url))
 const mediaDir = path.resolve(dirname, '..', process.env.MEDIA_DIR || 'media')
 
 async function run() {
-  requireConfirmation('Regenerate the image sizes of all media (overwrites the generated files)', mediaDir)
+  requireConfirmation(
+    'Regenerate the image sizes of all media (overwrites the generated files)',
+    mediaDir,
+  )
 
   const payload = await getPayload({ config })
   const { docs } = await payload.find({ collection: 'media', limit: 1000, overrideAccess: true })

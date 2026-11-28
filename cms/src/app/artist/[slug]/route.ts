@@ -6,9 +6,12 @@
 import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 
-import { escapeHtml, htmlResponse, jsonForScript, renderTemplate, summarize } from '@/lib/render-template'
-import { SITE_NAME, absolute, asMedia, findPublicExhibitions, getServerUrl, imageUrl } from '@/lib/seo'
-import { getSiteSettings, mailLink, mailtoHref, paragraphs } from '@/lib/site'
+import { escapeHtml, htmlResponse, renderTemplate, summarize } from '@/lib/render-template'
+import { jsonLdScript, mediaOgImage, ogImageValues } from '@/lib/page'
+import { absolute, asMedia, findPublicExhibitions, imageUrl } from '@/lib/seo'
+import { SITE_NAME, serverUrl } from '@/lib/site-identity'
+import { getSiteSettings, htmlMailLink, htmlParagraphs, mailtoHref } from '@/lib/site-settings'
+import { isSlug } from '@/lib/slug'
 import type { Artist, Media } from '@/payload-types'
 
 export const dynamic = 'force-dynamic'
@@ -61,7 +64,10 @@ function linksHtml(artist: Artist): string {
   }
 
   return `<ul class="artist_links">${links
-    .map(([label, url]) => `<li><a href="${escapeHtml(url)}" rel="noopener noreferrer" target="_blank">${label} ↗</a></li>`)
+    .map(
+      ([label, url]) =>
+        `<li><a href="${escapeHtml(url)}" rel="noopener noreferrer" target="_blank">${label} ↗</a></li>`,
+    )
     .join('')}</ul>`
 }
 
@@ -81,24 +87,25 @@ function contactHtml(artist: Artist, siteContact: string | null | undefined): st
     }
 
     if (phone) {
-      parts.push(`<a href="tel:${escapeHtml(phone.replace(/[^\d+]/g, ''))}">${escapeHtml(phone)}</a>`)
+      parts.push(
+        `<a href="tel:${escapeHtml(phone.replace(/[^\d+]/g, ''))}">${escapeHtml(phone)}</a>`,
+      )
     }
 
     return parts.length ? `<h2>Contact</h2><p>${parts.join('<br>')}</p>` : ''
   }
 
-  return `<h2>Contact</h2><p>Inquiries via ${SITE_NAME}: ${mailLink(siteContact, 'Contact e-mail')}</p>`
+  return `<h2>Contact</h2><p>Inquiries via ${SITE_NAME}: ${htmlMailLink(siteContact, 'Contact e-mail')}</p>`
 }
 
 export async function GET(_request: Request, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
   const payload = await getPayload({ config: configPromise })
-  const base = getServerUrl(payload)
+  const base = serverUrl()
 
   const common = {
-    siteName: SITE_NAME,
-    siteUrl: base,
-    ogImage: base + '/og-default.jpg',
+    ...ogImageValues(),
+    ogType: 'profile',
     jsonLd: '',
   }
 
@@ -116,7 +123,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
       { status: 404, cache: 'no-store' },
     )
 
-  if (!/^[a-z0-9-]+$/.test(slug)) {
+  if (!isSlug(slug)) {
     return notFound()
   }
 
@@ -152,19 +159,22 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
 
   const settings = await getSiteSettings(payload)
   const portrait = asMedia(artist.portrait)
-  const exhibitions = (await findPublicExhibitions(payload, { artists: { in: [artist.id] } })).filter(
-    (exhibition) => exhibition.locked === false,
-  )
+  const exhibitions = (
+    await findPublicExhibitions(payload, { artists: { in: [artist.id] } })
+  ).filter((exhibition) => exhibition.locked === false)
   const canonical = base + '/artist/' + encodeURIComponent(artist.slug)
   const description =
-    summarize(artist.shortText) || `${artist.name} – artist on ${SITE_NAME}: photo and video exhibitions.`
+    summarize(artist.shortText) ||
+    `${artist.name} – artist on ${SITE_NAME}: photo and video exhibitions.`
 
   const exhibitionsHtml = exhibitions.length
     ? `<h2>Exhibitions</h2><ul class="artist_exhibitions">${exhibitions
         .map(
           (exhibition) =>
             `<li><a href="/exhibition/${encodeURIComponent(exhibition.slug)}">${escapeHtml(exhibition.title)}</a>` +
-            (exhibition.theme ? ` <span class="artist_exhibition_theme">${escapeHtml(exhibition.theme)}</span>` : '') +
+            (exhibition.theme
+              ? ` <span class="artist_exhibition_theme">${escapeHtml(exhibition.theme)}</span>`
+              : '') +
             '</li>',
         )
         .join('')}</ul>`
@@ -172,7 +182,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
 
   const sameAs = [httpsUrl(artist.website), httpsUrl(artist.instagram)].filter(Boolean)
   const image = absolute(base, imageUrl(portrait, 'large'))
-  const jsonLd = `<script type="application/ld+json">${jsonForScript({
+  const jsonLd = jsonLdScript({
     '@context': 'https://schema.org',
     '@type': 'Person',
     name: artist.name,
@@ -180,7 +190,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
     description: summarize(artist.shortText) || undefined,
     image: image || undefined,
     sameAs: sameAs.length ? sameAs : undefined,
-  })}</script>`
+  })
 
   return htmlResponse(
     renderTemplate('artist.html', {
@@ -189,13 +199,13 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
       heading: artist.name,
       description,
       canonical,
-      ogImage: image || common.ogImage,
+      ...ogImageValues(mediaOgImage(portrait, artist.name)),
       robots: 'index, follow',
       jsonLd,
       artistBody:
         [
           portraitHtml(portrait, artist.name),
-          paragraphs(artist.shortText),
+          htmlParagraphs(artist.shortText),
           linksHtml(artist),
           contactHtml(artist, settings.contactEmail),
           exhibitionsHtml,

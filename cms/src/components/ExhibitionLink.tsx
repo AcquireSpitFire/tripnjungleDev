@@ -46,7 +46,12 @@ export function ExhibitionLink() {
           style={{ flex: 1, minWidth: 0 }}
           aria-label="Link to the exhibition"
         />
-        <button type="button" className="btn btn--style-secondary btn--size-small" onClick={copy} style={{ margin: 0 }}>
+        <button
+          type="button"
+          className="btn btn--style-secondary btn--size-small"
+          onClick={copy}
+          style={{ margin: 0 }}
+        >
           {copied ? 'Copied ✓' : 'Copy'}
         </button>
       </div>
@@ -63,7 +68,8 @@ export function ExhibitionLink() {
         Preview (with your login) ↗
       </a>
       <p className="field-description" style={{ marginTop: '0.5rem' }}>
-        Shows the saved state including locked and planned content. Visitors see what the visibility allows.
+        Shows the saved state including locked and planned content. Visitors see what the visibility
+        allows.
       </p>
     </div>
   )

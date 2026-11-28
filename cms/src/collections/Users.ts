@@ -1,4 +1,17 @@
-import { APIError, ValidationError, type AccessResult, type CollectionConfig, type PayloadRequest } from 'payload'
+import {
+  APIError,
+  ValidationError,
+  type AccessResult,
+  type CollectionConfig,
+  type PayloadRequest,
+} from 'payload'
+
+import {
+  acceptContributorTermsEndpoint,
+  contributorTermsEndpoint,
+} from '../endpoints/contributor-terms'
+import { serverOnly } from '../fields/server-only'
+import { serverUrl } from '../lib/site-identity'
 
 import {
   ROLE_OPTIONS,
@@ -16,13 +29,12 @@ import {
 //   - The very first account always becomes admin; afterwards only admins create accounts.
 //   - Only admins change roles and sections, also not on their own account.
 //   - The last admin can neither be deleted nor demoted.
-//   - 5 failed logins lock the account for 15 minutes; sessions are stored on the
-//     server, so logging out or locking takes effect immediately.
+//   - Accounts are never locked after wrong passwords (anybody could otherwise lock the admin
+//     out); the login is limited per address and account instead (src/proxy.ts).
+//   - Sessions are stored on the server, so logging out takes effect immediately.
 //   - Passwords need at least 12 characters.
 
 const MIN_PASSWORD_LENGTH = 12
-
-const serverURL = process.env.PAYLOAD_PUBLIC_SERVER_URL || 'http://localhost:3000'
 
 async function countOtherAdmins(req: PayloadRequest, excludeId: number | string) {
   const { totalDocs } = await req.payload.count({
@@ -35,7 +47,8 @@ async function countOtherAdmins(req: PayloadRequest, excludeId: number | string)
   return totalDocs
 }
 
-const lastAdminMessage = 'At least one admin account has to remain. Make another account admin first.'
+const lastAdminMessage =
+  'At least one admin account has to remain. Make another account admin first.'
 
 export const Users: CollectionConfig = {
   slug: 'users',
@@ -52,14 +65,14 @@ export const Users: CollectionConfig = {
     hidden: ({ user }) => !isAdmin(user),
   },
   auth: {
-    maxLoginAttempts: 5,
-    lockTime: 15 * 60 * 1000,
+    // No account lock: see the comment at the top and src/proxy.ts
+    maxLoginAttempts: 0,
     tokenExpiration: 2 * 60 * 60,
     useSessions: true,
     cookies: {
       sameSite: 'Strict',
       // Only over HTTPS (a local "npm start" on http://localhost still works)
-      secure: serverURL.startsWith('https://'),
+      secure: serverUrl().startsWith('https://'),
     },
   },
   access: {
@@ -96,6 +109,7 @@ export const Users: CollectionConfig = {
     delete: ({ req }) => isAdmin(req.user),
     unlock: ({ req }) => isAdmin(req.user),
   },
+  endpoints: [contributorTermsEndpoint, acceptContributorTermsEndpoint],
   hooks: {
     // Before every operation that sets a password: create, update and reset (a field hook
     // would not see the new password on reset, Payload hashes it before the field hooks)
@@ -107,10 +121,19 @@ export const Users: CollectionConfig = {
 
         const password = (args as { data?: { password?: unknown } }).data?.password
 
-        if (typeof password === 'string' && password.length > 0 && password.length < MIN_PASSWORD_LENGTH) {
+        if (
+          typeof password === 'string' &&
+          password.length > 0 &&
+          password.length < MIN_PASSWORD_LENGTH
+        ) {
           throw new ValidationError({
             collection: 'users',
-            errors: [{ path: 'password', message: `The password needs at least ${MIN_PASSWORD_LENGTH} characters.` }],
+            errors: [
+              {
+                path: 'password',
+                message: `The password needs at least ${MIN_PASSWORD_LENGTH} characters.`,
+              },
+            ],
           })
         }
 
@@ -120,7 +143,11 @@ export const Users: CollectionConfig = {
     beforeChange: [
       async ({ data, operation, originalDoc, req }) => {
         if (operation === 'create') {
-          const { totalDocs } = await req.payload.count({ collection: 'users', overrideAccess: true, req })
+          const { totalDocs } = await req.payload.count({
+            collection: 'users',
+            overrideAccess: true,
+            req,
+          })
 
           // First account: always admin (whoever opens /admin first after the deploy)
           if (totalDocs === 0) {
@@ -145,7 +172,13 @@ export const Users: CollectionConfig = {
     ],
     beforeDelete: [
       async ({ id, req }) => {
-        const user = await req.payload.findByID({ collection: 'users', id, depth: 0, overrideAccess: true, req })
+        const user = await req.payload.findByID({
+          collection: 'users',
+          id,
+          depth: 0,
+          overrideAccess: true,
+          req,
+        })
 
         if (user?.role === 'admin' && (await countOtherAdmins(req, id)) === 0) {
           throw new APIError(lastAdminMessage, 400, null, true)
@@ -195,6 +228,51 @@ export const Users: CollectionConfig = {
         condition: (data) => data?.role === 'artist',
         description:
           'The profile this account belongs to. The account may edit this profile and every exhibition that credits it.',
+      },
+    },
+    {
+      // Text of the terms and the "I accept" button (only on the own account; src/lib/contributor-terms.ts)
+      name: 'contributorTerms',
+      type: 'ui',
+      admin: {
+        position: 'sidebar',
+        condition: (data) => data?.role !== 'admin',
+        components: { Field: '/components/ContributorTerms#ContributorTerms' },
+      },
+    },
+    // Proof of the acceptance: set only by POST /api/users/contributor-terms/accept
+    {
+      name: 'termsAcceptedAt',
+      label: 'Contributor terms accepted on',
+      type: 'date',
+      access: serverOnly,
+      admin: {
+        position: 'sidebar',
+        readOnly: true,
+        date: { pickerAppearance: 'dayAndTime' },
+        condition: (data) => data?.role !== 'admin' && Boolean(data?.termsAcceptedAt),
+      },
+    },
+    {
+      name: 'termsAcceptedVersion',
+      label: 'Accepted version',
+      type: 'text',
+      access: serverOnly,
+      admin: {
+        position: 'sidebar',
+        readOnly: true,
+        condition: (data) => data?.role !== 'admin' && Boolean(data?.termsAcceptedVersion),
+      },
+    },
+    {
+      name: 'termsAcceptedText',
+      label: 'Accepted text (copy)',
+      type: 'textarea',
+      access: serverOnly,
+      admin: {
+        position: 'sidebar',
+        readOnly: true,
+        condition: (data) => data?.role !== 'admin' && Boolean(data?.termsAcceptedText),
       },
     },
   ],

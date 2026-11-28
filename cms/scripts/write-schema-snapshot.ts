@@ -20,7 +20,6 @@ async function run() {
   process.env.PAYLOAD_MIGRATING = 'true'
 
   const payload = await getPayload({ config })
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = payload.db as any
   const { generateDrizzleJson } = db.requireDrizzleKit()
   const snapshot = await generateDrizzleJson(db.schema)

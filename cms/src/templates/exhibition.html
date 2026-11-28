@@ -1,36 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>{{title}}</title>
-	<meta name="description" content="{{description}}">
-	<meta name="robots" content="{{robots}}">
-	<link rel="canonical" href="{{canonical}}">
-	<meta property="og:site_name" content="{{siteName}}">
-	<meta property="og:type" content="article">
-	<meta property="og:title" content="{{title}}">
-	<meta property="og:description" content="{{description}}">
-	<meta property="og:url" content="{{canonical}}">
-	<meta property="og:image" content="{{ogImage}}">
-	<meta name="twitter:card" content="summary_large_image">
-	<meta name="twitter:title" content="{{title}}">
-	<meta name="twitter:description" content="{{description}}">
-	<meta name="twitter:image" content="{{ogImage}}">
-	<meta name="theme-color" content="#000000">
-	<link rel="icon" href="/favicon.svg" type="image/svg+xml">
-	<link rel="manifest" href="/manifest.webmanifest">
-	<link rel="stylesheet" href="/css/style.css">
-	{{{jsonLd}}}
+{{> head}}
 </head>
 <body>
 	<header>
 		<div class="header_inner">
 			<a href="/">‹ Back to overview</a>
-			<h1 id="title">Tripnjungle</h1>
-			<p id="theme"></p>
+			<h1 id="title">{{heading}}</h1>
+			<p id="theme">{{theme}}</p>
 			<p id="artists" class="artist_credit" hidden></p>
 		</div>
+{{> nav}}
 	</header>
 
 	<main>
@@ -47,7 +28,7 @@
 
 		</div>
 
-		<p id="description"></p>
+		<p id="description">{{descriptionText}}</p>
 
 		<div id="gallery" class="gallery"></div>
 
@@ -64,22 +45,20 @@
 		</section>
 	</main>
 
-	<footer class="site_footer">
-		<nav aria-label="Footer">
-			<a href="/about">About</a>
-			<a href="/imprint">Legal notice</a>
-			<a href="/privacy">Privacy</a>
-		</nav>
-	</footer>
+{{> footer}}
 
 	<!-- Fullscreen view: opens when an image is clicked -->
 	<div id="viewer" class="viewer" hidden>
 		<button id="viewer_close" class="viewer_close" aria-label="Close">×</button>
+		<button class="viewer_nav viewer_prev" aria-label="Previous photo">‹</button>
 		<img id="viewer_image" alt="">
+		<button class="viewer_nav viewer_next" aria-label="Next photo">›</button>
+		<p class="viewer_counter" aria-live="polite"></p>
 	</div>
 
-	<script defer src="/js/data.js"></script>
-	<script defer src="/js/nav.js"></script>
+{{> scripts}}
+	<script defer src="/js/slideshow.js"></script>
+	<script defer src="/js/viewer.js"></script>
 	<script defer src="/js/intro.js"></script>
 	<script defer src="/js/exhibition.js"></script>
 </body>

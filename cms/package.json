@@ -1,7 +1,7 @@
 {
   "name": "tripnjungle-cms",
   "version": "1.0.0",
-  "description": "Tripnjungle: Payload-Admin (SQLite) + statisches Frontend aus public/",
+  "description": "Tripnjungle: Payload CMS (SQLite) with the website pages, the admin and the print shop",
   "private": true,
   "license": "MIT",
   "type": "module",
@@ -16,10 +16,14 @@
     "migrate:create": "cross-env NODE_OPTIONS=--no-deprecation payload migrate:create",
     "payload": "cross-env NODE_OPTIONS=--no-deprecation payload",
     "start": "cross-env NODE_OPTIONS=--no-deprecation payload migrate && cross-env NODE_OPTIONS=--no-deprecation next start",
-    "test:access": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/check-access.ts"
+    "format": "prettier --write src scripts public/js",
+    "format:check": "prettier --check src scripts public/js",
+    "test:access": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/check-access.ts",
+    "db:repair-dev": "cross-env NODE_OPTIONS=--no-deprecation tsx --env-file=.env scripts/repair-dev-schema.ts"
   },
   "dependencies": {
     "@payloadcms/db-sqlite": "3.93.0",
+    "@payloadcms/email-nodemailer": "3.93.0",
     "@payloadcms/next": "3.93.0",
     "@payloadcms/ui": "3.93.0",
     "cross-env": "^7.0.3",
@@ -31,7 +35,8 @@
     "qrcode": "1.5.4",
     "react": "19.2.6",
     "react-dom": "19.2.6",
-    "sharp": "^0.35.5"
+    "sharp": "^0.35.5",
+    "stripe": "23.1.0"
   },
   "devDependencies": {
     "@types/node": "22.19.9",
@@ -44,5 +49,8 @@
   },
   "engines": {
     "node": "^22.23.4 || >=24.22.1"
+  },
+  "overrides": {
+    "nodemailer": "10.5.0"
   }
 }

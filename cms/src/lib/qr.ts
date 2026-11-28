@@ -10,6 +10,8 @@
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from 'pdf-lib'
 import QRCode from 'qrcode'
 
+import { SITE_NAME } from './site-identity'
+
 export type QrLabelFormat = 'a6' | 'a5' | 'square100'
 
 export type QrPdfSettings = {
@@ -74,7 +76,13 @@ function safeText(font: PDFFont, text: string): string {
 }
 
 // Splits text into at most maxLines lines that fit the width; the last one ends with "…"
-function wrap(font: PDFFont, text: string, size: number, width: number, maxLines: number): string[] {
+function wrap(
+  font: PDFFont,
+  text: string,
+  size: number,
+  width: number,
+  maxLines: number,
+): string[] {
   const words = safeText(font, text).split(' ').filter(Boolean)
   const lines: string[] = []
   let current = ''
@@ -152,7 +160,11 @@ function drawQr(page: PDFPage, url: string, x: number, y: number, size: number) 
   }
 }
 
-export async function buildQrPdf(labels: QrLabel[], settings: QrPdfSettings, title: string): Promise<Uint8Array> {
+export async function buildQrPdf(
+  labels: QrLabel[],
+  settings: QrPdfSettings,
+  title: string,
+): Promise<Uint8Array> {
   const pdf = await PDFDocument.create()
   const regular = await pdf.embedFont(StandardFonts.Helvetica)
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold)
@@ -169,8 +181,8 @@ export async function buildQrPdf(labels: QrLabel[], settings: QrPdfSettings, tit
   const gray = rgb(0.35, 0.35, 0.35)
 
   pdf.setTitle(safeText(regular, title))
-  pdf.setCreator('Tripnjungle')
-  pdf.setProducer('Tripnjungle')
+  pdf.setCreator(SITE_NAME)
+  pdf.setProducer(SITE_NAME)
 
   for (const label of labels) {
     const page = pdf.addPage([width, height])

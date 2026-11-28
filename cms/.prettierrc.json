@@ -2,5 +2,15 @@
   "singleQuote": true,
   "trailingComma": "all",
   "printWidth": 100,
-  "semi": false
+  "semi": false,
+  "endOfLine": "auto",
+  "overrides": [
+    {
+      "files": "public/js/*.js",
+      "options": {
+        "singleQuote": false,
+        "semi": true
+      }
+    }
+  ]
 }

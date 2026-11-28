@@ -1,3 +1,9 @@
+# Working on this code
+
+Read [ARCHITECTURE.md](ARCHITECTURE.md) (structure, data model, shop, where to change what) and
+[CONTRIBUTING.md](CONTRIBUTING.md) (security checklist, schema changes, tests, commits) first.
+Run `npm run test:access`, `npx tsc --noEmit` and `npm run build` before every commit.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 ## This is NOT the Next.js you know

@@ -11,7 +11,9 @@ export function ExhibitionQrCodes() {
   const visibility = useFormFields(([fields]) => fields.visibility?.value)
   const release = useFormFields(([fields]) => fields.release?.value)
 
-  const count = ((initialData?.gallery || []) as { file?: unknown }[]).filter((row) => refId(row.file)).length
+  const count = ((initialData?.gallery || []) as { file?: unknown }[]).filter((row) =>
+    refId(row.file),
+  ).length
 
   if (!id) {
     return null
@@ -38,10 +40,15 @@ export function ExhibitionQrCodes() {
         </p>
       )}
       <p className="field-description" style={{ marginTop: '0.5rem' }}>
-        One label per page. Size and texts: Site settings → QR codes. Single codes are in each photo row.
+        One label per page. Size and texts: Site settings → QR codes. Single codes are in each photo
+        row.
       </p>
       {warnings.map((warning) => (
-        <p key={warning} className="field-description" style={{ margin: '0.5rem 0 0', color: 'var(--theme-warning-500)' }}>
+        <p
+          key={warning}
+          className="field-description"
+          style={{ margin: '0.5rem 0 0', color: 'var(--theme-warning-500)' }}
+        >
           {warning}
         </p>
       ))}

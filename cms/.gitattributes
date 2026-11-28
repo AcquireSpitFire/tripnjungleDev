@@ -1,0 +1,5 @@
+# Generated files: collapsed in diffs on GitHub, never edited by hand
+src/payload-types.ts linguist-generated=true
+src/migrations/*.ts linguist-generated=true
+src/migrations/*.json linguist-generated=true
+src/app/(payload)/admin/importMap.js linguist-generated=true

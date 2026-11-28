@@ -6,8 +6,10 @@ import {
   getArtistProfileId,
   isArtist,
 } from '../access/roles'
+import { requireAcceptedTerms } from '../lib/contributor-terms'
 import { assertMediaMayBeAdded, syncMediaLocks } from '../lib/media-lock'
 import { limitPublicQueries } from '../lib/query-limits'
+import { SLUG_RULE, isSlug } from '../lib/slug'
 import { toId } from '../lib/visibility'
 
 // Artist profiles: credited on exhibitions and photos, each with a small page
@@ -35,7 +37,8 @@ const httpsUrl = (value: unknown) =>
 const contactRead: FieldAccess = ({ req, doc }) =>
   Boolean(req.user) || (doc?.contactVia === 'artist' && doc?.contactConsent === true)
 
-const isProfile = (data: Record<string, unknown> | undefined) => (data?.pageType || 'profile') === 'profile'
+const isProfile = (data: Record<string, unknown> | undefined) =>
+  (data?.pageType || 'profile') === 'profile'
 const contactViaArtist = (data: Record<string, unknown> | undefined) =>
   isProfile(data) && data?.contactVia === 'artist'
 
@@ -48,7 +51,8 @@ export const Artists: CollectionConfig = {
   admin: {
     useAsTitle: 'name',
     defaultColumns: ['name', 'slug', 'pageType', 'updatedAt'],
-    description: 'People who make the photos and exhibitions. Each artist has a page at /artist/<slug>.',
+    description:
+      'People who make the photos and exhibitions. Each artist has a page at /artist/<slug>.',
   },
   access: {
     // Names and profiles are public credits
@@ -69,6 +73,8 @@ export const Artists: CollectionConfig = {
     // Page size for visitors/artists/editors at most 100 (src/lib/query-limits.ts)
     beforeOperation: [limitPublicQueries],
     beforeChange: [
+      // Artist accounts and managers only after accepting the contributor terms
+      requireAcceptedTerms,
       async ({ data, originalDoc, req }) => {
         // A portrait becomes public: artist accounts may only choose public media or their own uploads
         const next = toId('portrait' in data ? data.portrait : originalDoc?.portrait)
@@ -87,7 +93,10 @@ export const Artists: CollectionConfig = {
     afterChange: [
       async ({ doc, previousDoc, req }) => {
         // The portrait is public as long as a profile uses it
-        await syncMediaLocks(req, [toId(doc.portrait), toId(previousDoc?.portrait)].filter((id) => id !== null))
+        await syncMediaLocks(
+          req,
+          [toId(doc.portrait), toId(previousDoc?.portrait)].filter((id) => id !== null),
+        )
         return doc
       },
     ],
@@ -121,10 +130,7 @@ export const Artists: CollectionConfig = {
       admin: {
         description: 'Lowercase letters, numbers and hyphens, e.g. tom. The page is /artist/<ID>.',
       },
-      validate: (value: unknown) =>
-        typeof value === 'string' && /^[a-z0-9-]+$/.test(value)
-          ? true
-          : 'Lowercase letters, numbers and hyphens only.',
+      validate: (value: unknown) => (isSlug(value) ? true : SLUG_RULE),
     },
     {
       name: 'portrait',

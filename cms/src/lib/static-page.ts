@@ -3,17 +3,22 @@
 import configPromise from '@payload-config'
 import { getPayload, type Payload } from 'payload'
 
-import { htmlResponse, jsonForScript, renderTemplate } from './render-template'
-import { SITE_DESCRIPTION, SITE_NAME, getServerUrl } from './seo'
-import { getSiteSettings, type SiteSettings } from './site'
+import { htmlResponse, renderTemplate } from './render-template'
+import { jsonLdScript, ogImageValues } from './page'
+import { SITE_DESCRIPTION, SITE_NAME, serverUrl } from './site-identity'
+import { getSiteSettings, type SiteSettings } from './site-settings'
 
 type StaticPage = {
   template: string
   path: string
   title: string
   // If missing, the site description from the Site settings applies
-  description?: string
+  description?: string | ((settings: SiteSettings) => string)
   robots?: string
+  // Cache-Control; default: public for 5 minutes (pages with something of one visitor: no-store)
+  cache?: string
+  // "summary" for text pages (small preview without the large image)
+  twitterCard?: 'summary'
   jsonLd?: (base: string, description: string) => unknown
   // Additional placeholders, computed from the Site settings
   values?: (settings: SiteSettings, payload: Payload) => Record<string, string>
@@ -22,22 +27,24 @@ type StaticPage = {
 export async function renderStaticPage(page: StaticPage): Promise<Response> {
   const payload = await getPayload({ config: configPromise })
   const settings = await getSiteSettings(payload)
-  const base = getServerUrl(payload)
-  const description = page.description || settings.siteDescription?.trim() || SITE_DESCRIPTION
+  const base = serverUrl()
+  const description =
+    (typeof page.description === 'function' ? page.description(settings) : page.description) ||
+    settings.siteDescription?.trim() ||
+    SITE_DESCRIPTION
   const data = page.jsonLd?.(base, description)
 
   return htmlResponse(
     renderTemplate(page.template, {
-      siteName: SITE_NAME,
-      siteUrl: base,
       title: page.title,
       description,
       canonical: base + page.path,
-      ogImage: base + '/og-default.jpg',
+      ...ogImageValues(),
       robots: page.robots || 'index, follow',
-      jsonLd: data ? `<script type="application/ld+json">${jsonForScript(data)}</script>` : '',
+      ...(page.twitterCard ? { twitterCard: page.twitterCard } : {}),
+      jsonLd: jsonLdScript(data),
       ...(page.values?.(settings, payload) ?? {}),
     }),
-    { cache: 'public, s-maxage=300, stale-while-revalidate=86400' },
+    { cache: page.cache || 'public, s-maxage=300, stale-while-revalidate=86400' },
   )
 }

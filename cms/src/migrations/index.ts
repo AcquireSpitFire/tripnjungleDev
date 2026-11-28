@@ -7,6 +7,12 @@ import * as migration_20261122_233429_roles_accounts from './20261122_233429_rol
 import * as migration_20261122_234526_artists from './20261122_234526_artists';
 import * as migration_20261122_235148_exhibition_editors from './20261122_235148_exhibition_editors';
 import * as migration_20261122_235813_qr_settings from './20261122_235813_qr_settings';
+import * as migration_20261125_183903_shop from './20261125_183903_shop';
+import * as migration_20261125_202413_contributor_terms from './20261125_202413_contributor_terms';
+import * as migration_20261125_202951_rights_confirmation from './20261125_202951_rights_confirmation';
+import * as migration_20261126_190945_login_without_lock from './20261126_190945_login_without_lock';
+import * as migration_20261126_191747_checkout_holds from './20261126_191747_checkout_holds';
+import * as migration_20261127_124907_legal_product_safety from './20261127_124907_legal_product_safety';
 
 export const migrations = [
   {
@@ -52,6 +58,36 @@ export const migrations = [
   {
     up: migration_20261122_235813_qr_settings.up,
     down: migration_20261122_235813_qr_settings.down,
-    name: '20261122_235813_qr_settings'
+    name: '20261122_235813_qr_settings',
+  },
+  {
+    up: migration_20261125_183903_shop.up,
+    down: migration_20261125_183903_shop.down,
+    name: '20261125_183903_shop',
+  },
+  {
+    up: migration_20261125_202413_contributor_terms.up,
+    down: migration_20261125_202413_contributor_terms.down,
+    name: '20261125_202413_contributor_terms',
+  },
+  {
+    up: migration_20261125_202951_rights_confirmation.up,
+    down: migration_20261125_202951_rights_confirmation.down,
+    name: '20261125_202951_rights_confirmation',
+  },
+  {
+    up: migration_20261126_190945_login_without_lock.up,
+    down: migration_20261126_190945_login_without_lock.down,
+    name: '20261126_190945_login_without_lock',
+  },
+  {
+    up: migration_20261126_191747_checkout_holds.up,
+    down: migration_20261126_191747_checkout_holds.down,
+    name: '20261126_191747_checkout_holds',
+  },
+  {
+    up: migration_20261127_124907_legal_product_safety.up,
+    down: migration_20261127_124907_legal_product_safety.down,
+    name: '20261127_124907_legal_product_safety'
   },
 ];

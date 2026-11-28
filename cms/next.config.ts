@@ -9,12 +9,11 @@ const dirname = path.dirname(__filename)
 const nextConfig: NextConfig = {
   // No "X-Powered-By: Next.js" (tells attackers what to try)
   poweredByHeader: false,
+  // No image optimizer (/_next/image): the site does not use next/image (the media sizes are
+  // generated on upload), and an optimizer would keep its own copies of files whose delivery
+  // depends on the login (locked media, originals).
   images: {
-    localPatterns: [
-      {
-        pathname: '/api/media/file/**',
-      },
-    ],
+    unoptimized: true,
   },
   // The pages live as templates in src/templates and are served with meta data by
   // route handlers (src/app/**/route.ts); public/ only contains CSS, JS and images.
@@ -51,7 +50,31 @@ const nextConfig: NextConfig = {
         headers: [{ key: 'Content-Security-Policy', value: "sandbox; default-src 'none'" }],
       },
       {
+        // The exhibition data is open to search engines (robots.txt) so they can render the pages,
+        // but the JSON itself is no page for the search results
+        source: '/api/exhibitions/:path*',
+        headers: [{ key: 'X-Robots-Tag', value: 'noindex' }],
+      },
+      {
+        source: '/api/exhibitions',
+        headers: [{ key: 'X-Robots-Tag', value: 'noindex' }],
+      },
+      {
+        // Watermarked copies of photos for sale (src/app/media-wm/[file]/route.ts): same sandbox
+        source: '/media-wm/:path*',
+        headers: [{ key: 'Content-Security-Policy', value: "sandbox; default-src 'none'" }],
+      },
+      {
+        // The pages link CSS and JS with ?v=<deploy> (src/lib/render-template.ts): a new deploy
+        // gives new addresses, so these files may be kept for a year
         source: '/:path(css|js)/:file*',
+        has: [{ type: 'query', key: 'v' }],
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
+      },
+      {
+        // Without the version (e.g. opened by hand): short, so a change shows up soon
+        source: '/:path(css|js)/:file*',
+        missing: [{ type: 'query', key: 'v' }],
         headers: [
           { key: 'Cache-Control', value: 'public, max-age=3600, stale-while-revalidate=86400' },
         ],

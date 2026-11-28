@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+{{> head}}
+</head>
+<body>
+	<header>
+		<div class="header_inner">
+			<p class="site_name"><a href="/">Tripnjungle</a></p>
+			<h1 class="page_title">Right of withdrawal</h1>
+		</div>
+{{> nav}}
+	</header>
+
+	<!-- From Admin → Site settings → Shop (empty = EU model instructions, src/lib/shop/legal.ts) -->
+	<main class="text_page legal_page">
+		<p class="legal_sub">Widerrufsbelehrung · Last updated {{updated}}</p>
+
+		<!-- Withdrawal function (Art. 11a Directive 2011/83/EU): sent by public/js/withdrawal-form.js,
+		     without JavaScript as an ordinary form post to /withdrawal -->
+		<section class="withdrawal_box" aria-labelledby="withdraw_title">
+			<h2 id="withdraw_title">Withdraw from your contract here</h2>
+			{{{withdrawalResult}}}
+			<form id="withdrawal_form" class="shop_form" method="post" action="/withdrawal" novalidate>
+				<label>Your name <input name="name" autocomplete="name" required maxlength="120"></label>
+				<label>Order number <input name="orderNumber" placeholder="TJ-2026-00012" required maxlength="40"></label>
+				<label>E-mail address used for the order <input name="email" type="email" autocomplete="email" required maxlength="254"></label>
+				<label>Statement (optional) <textarea name="statement" rows="3" maxlength="2000">I hereby withdraw from my contract of sale for the goods of this order.</textarea></label>
+				<p class="form_message" role="alert" hidden></p>
+				<button type="submit" class="shop_button shop_button_primary">Confirm withdrawal</button>
+			</form>
+		</section>
+
+		{{{withdrawalHtml}}}
+	</main>
+
+{{> footer}}
+
+{{> scripts}}
+	<script defer src="/js/withdrawal-form.js"></script>
+</body>
+</html>

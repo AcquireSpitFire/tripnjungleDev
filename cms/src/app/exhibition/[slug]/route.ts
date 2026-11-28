@@ -1,80 +1,110 @@
-// /exhibition/<id>: serves src/templates/exhibition.html with title, description,
-// preview image and JSON-LD of the exhibition. The content is still rendered by
-// public/js/exhibition.js in the browser (from sessionStorage or the API).
+// /exhibition/<id>: serves src/templates/exhibition.html with title, theme and description
+// (rendered on the server, so they are there without JavaScript), meta data, the preview image
+// and JSON-LD. Slideshow, gallery and video are rendered by public/js/exhibition.js in the
+// browser (from sessionStorage or the API).
+//
+// Only what visitors may see goes into the HTML: findPublicExhibitions loads the exhibition as an
+// anonymous visitor, so a locked one has no cover and no gallery here (and no image addresses).
 import configPromise from '@payload-config'
 import { getPayload } from 'payload'
 
-import { htmlResponse, jsonForScript, renderTemplate, summarize } from '@/lib/render-template'
+import { escapeHtml, htmlResponse, renderTemplate, summarize } from '@/lib/render-template'
+import { jsonLdScript, mediaOgImage, ogImageValues } from '@/lib/page'
 import {
-  SITE_DESCRIPTION,
-  SITE_NAME,
-  absolute,
   artistsJsonLd,
   asMedia,
   eventJsonLd,
   findPublicExhibitions,
-  getServerUrl,
+  hasUpcomingDate,
   imageUrl,
-  isUpcoming,
+  absolute,
+  isImage,
 } from '@/lib/seo'
+import { SITE_DESCRIPTION, SITE_NAME, serverUrl } from '@/lib/site-identity'
+import { isSlug } from '@/lib/slug'
+import type { Exhibition, Media } from '@/payload-types'
 
 export const dynamic = 'force-dynamic'
+
+// The first image of the slideshow is the most important one of the page (LCP): the browser may
+// fetch it before the scripts run. Same size choice as the slideshow (public/js/elements.js).
+function preloadFirstImage(exhibition: Exhibition): string {
+  const first = [
+    asMedia(exhibition.frontPage),
+    ...(exhibition.gallery || []).map((row) => asMedia(row.file)),
+  ].find((media): media is Media => Boolean(media))
+
+  if (!isImage(first)) {
+    return ''
+  }
+
+  const sizes = (first.sizes || {}) as Record<
+    string,
+    { url?: string | null; width?: number | null } | undefined
+  >
+  const candidates = ['thumb', 'medium', 'large']
+    .map((name) => sizes[name])
+    .filter((size): size is { url: string; width: number } => Boolean(size?.url && size.width))
+  const href = imageUrl(first, 'medium')
+
+  if (!href) {
+    return ''
+  }
+
+  const srcset = candidates.map((size) => `${size.url} ${size.width}w`).join(', ')
+
+  return (
+    `<link rel="preload" as="image" href="${escapeHtml(href)}" fetchpriority="high"` +
+    (srcset
+      ? ` imagesrcset="${escapeHtml(srcset)}" imagesizes="(max-width: 600px) 100vw, min(1200px, 90vw)"`
+      : '') +
+    '>'
+  )
+}
 
 export async function GET(_request: Request, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
   const payload = await getPayload({ config: configPromise })
-  const base = getServerUrl(payload)
+  const base = serverUrl()
 
-  const common = {
-    siteName: SITE_NAME,
-    siteUrl: base,
-    ogImageDefault: base + '/og-default.jpg',
-  }
-
-  if (!/^[a-z0-9-]+$/i.test(slug)) {
-    return htmlResponse(
+  const notFound = () =>
+    htmlResponse(
       renderTemplate('exhibition.html', {
-        ...common,
+        ogType: 'article',
         title: 'Exhibition not found – ' + SITE_NAME,
         description: SITE_DESCRIPTION,
         canonical: base + '/exhibition/' + encodeURIComponent(slug),
-        ogImage: common.ogImageDefault,
+        ...ogImageValues(),
         robots: 'noindex',
-        jsonLd: '',
+        heading: 'Exhibition not found',
+        descriptionText: 'This exhibition does not exist (anymore).',
       }),
       { status: 404, cache: 'no-store' },
     )
+
+  if (!isSlug(slug)) {
+    return notFound()
   }
 
   const [exhibition] = await findPublicExhibitions(payload, { slug: { equals: slug } })
 
   if (!exhibition) {
-    return htmlResponse(
-      renderTemplate('exhibition.html', {
-        ...common,
-        title: 'Exhibition not found – ' + SITE_NAME,
-        description: SITE_DESCRIPTION,
-        canonical: base + '/exhibition/' + encodeURIComponent(slug),
-        ogImage: common.ogImageDefault,
-        robots: 'noindex',
-        jsonLd: '',
-      }),
-      { status: 404, cache: 'no-store' },
-    )
+    return notFound()
   }
 
   const locked = exhibition.locked !== false
   // "Locked with link": the page is served, but should not show up anywhere
   const linkOnly = exhibition.visibility === 'link'
+  const canView = !locked || linkOnly
   const canonical = base + '/exhibition/' + encodeURIComponent(exhibition.slug)
-  const poster = asMedia(exhibition.posters?.[0])
-  const frontPage = asMedia(exhibition.frontPage)
-  const ogImage =
-    (!linkOnly && absolute(base, imageUrl(poster) || imageUrl(frontPage))) || common.ogImageDefault
   const description = summarize(
-    exhibition.description ||
-      [exhibition.theme, SITE_DESCRIPTION].filter(Boolean).join(' – '),
+    exhibition.description || [exhibition.theme, SITE_DESCRIPTION].filter(Boolean).join(' – '),
   )
+  // Link-only pages show no image to link previews (the address is shared on purpose)
+  const ogImage = linkOnly
+    ? null
+    : mediaOgImage(asMedia(exhibition.posters?.[0]), 'Poster: ' + exhibition.title) ||
+      mediaOgImage(asMedia(exhibition.frontPage), exhibition.title)
 
   const graph: Record<string, unknown>[] = []
 
@@ -96,23 +126,27 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
   }
 
   // Link-only pages are noindex and carry no structured data of their own
-  if (isUpcoming(exhibition) && !linkOnly) {
+  if (hasUpcomingDate(exhibition) && !linkOnly) {
     graph.push(eventJsonLd(exhibition, base))
   }
 
-  const jsonLd = graph.length
-    ? `<script type="application/ld+json">${jsonForScript({ '@context': 'https://schema.org', '@graph': graph })}</script>`
-    : ''
-
   return htmlResponse(
     renderTemplate('exhibition.html', {
-      ...common,
+      ogType: 'article',
       title: `${exhibition.title}${exhibition.theme ? ' – ' + exhibition.theme : ''} – ${SITE_NAME}`,
       description,
       canonical,
-      ogImage,
+      ...ogImageValues(ogImage),
       robots: linkOnly ? 'noindex, nofollow' : locked ? 'noindex, follow' : 'index, follow',
-      jsonLd,
+      jsonLd: graph.length
+        ? jsonLdScript({ '@context': 'https://schema.org', '@graph': graph })
+        : '',
+      headExtra: canView ? preloadFirstImage(exhibition) : '',
+      heading: exhibition.title,
+      theme: exhibition.theme || '',
+      descriptionText: canView
+        ? exhibition.description || ''
+        : 'This exhibition is not available yet.',
     }),
   )
 }

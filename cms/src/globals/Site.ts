@@ -1,11 +1,52 @@
-import type { GlobalConfig } from 'payload'
+import type { GlobalAfterChangeHook, GlobalConfig } from 'payload'
 
 import { isAdmin } from '../access/roles'
+import { shopStatusEndpoint } from '../endpoints/shop-status'
+import { syncMediaLocks } from '../lib/media-lock'
+import { toId } from '../lib/visibility'
+import { aboutTab } from './site/about'
+import { contributorTermsTab } from './site/contributor-terms'
+import { legalNoticeTab } from './site/legal-notice'
+import { privacyTab } from './site/privacy'
+import { qrTab } from './site/qr'
+import { shopTab } from './site/shop'
 
-// Site-wide settings: About text, contact, legal notice, privacy policy.
-// Read by the route handlers (/about, /imprint, /privacy) and inserted into
-// the templates. Only admins may read and change them via the API and the
-// admin panel; the pages themselves load them on the server.
+// Site-wide settings: About text, contact, legal notice, privacy policy, shop, contributor terms,
+// QR labels – one tab each in src/globals/site/. Read by the route handlers (/about, /imprint,
+// /privacy, …) and inserted into the templates. Only admins may read and change them via the API
+// and the admin panel; the pages themselves load them on the server.
+
+// A new watermark (image, opacity, size, position): every photo for sale gets a new key and so
+// new watermarked files (src/lib/watermark.ts)
+const resyncWatermarkedMedia: GlobalAfterChangeHook = async ({ doc, previousDoc, req }) => {
+  const watermarkOf = (site: typeof doc) =>
+    JSON.stringify([
+      toId(site?.watermarkImage),
+      site?.watermarkOpacity,
+      site?.watermarkSize,
+      site?.watermarkPosition,
+    ])
+
+  if (watermarkOf(doc) !== watermarkOf(previousDoc)) {
+    const { docs } = await req.payload.find({
+      collection: 'media',
+      where: { forSale: { equals: true } },
+      depth: 0,
+      pagination: false,
+      overrideAccess: true,
+      select: {},
+      req,
+    })
+
+    await syncMediaLocks(
+      req,
+      docs.map((medium) => medium.id),
+    )
+  }
+
+  return doc
+}
+
 export const Site: GlobalConfig = {
   slug: 'site',
   label: 'Site settings',
@@ -13,165 +54,19 @@ export const Site: GlobalConfig = {
     read: ({ req }) => isAdmin(req.user),
     update: ({ req }) => isAdmin(req.user),
   },
+  endpoints: [shopStatusEndpoint],
+  hooks: {
+    afterChange: [resyncWatermarkedMedia],
+  },
   admin: {
     hidden: ({ user }) => !isAdmin(user),
     description:
-      'Texts for About, the legal notice (Impressum), the privacy policy and the QR labels. Fill in everything before going live.',
+      'Texts for About, the legal notice (Impressum), the privacy policy, the shop and the QR labels. Fill in everything before going live.',
   },
   fields: [
     {
       type: 'tabs',
-      tabs: [
-        {
-          label: 'About',
-          fields: [
-            {
-              name: 'siteDescription',
-              type: 'text',
-              label: 'Site description (search engines, max. 160 characters)',
-              maxLength: 160,
-            },
-            {
-              name: 'aboutText',
-              type: 'textarea',
-              label: 'About text',
-              admin: { description: 'Blank line = new paragraph.' },
-            },
-            {
-              name: 'contactEmail',
-              type: 'email',
-              label: 'Contact e-mail shown on About',
-            },
-          ],
-        },
-        {
-          label: 'Legal notice',
-          description:
-            'Impressum: who runs this website. Required by law as soon as the site is not purely private.',
-          fields: [
-            {
-              name: 'jurisdiction',
-              type: 'select',
-              label: 'Country of the operator',
-              defaultValue: 'de',
-              required: true,
-              options: [
-                { label: 'Germany (§ 5 DDG, § 18 MStV)', value: 'de' },
-                { label: 'Austria (§ 5 ECG, § 25 MedienG)', value: 'at' },
-              ],
-            },
-            { name: 'operatorName', type: 'text', label: 'Name (person or company)' },
-            { name: 'operatorStreet', type: 'text', label: 'Street and number (no P.O. box)' },
-            { name: 'operatorCity', type: 'text', label: 'Postal code and city' },
-            { name: 'operatorCountry', type: 'text', label: 'Country' },
-            { name: 'operatorEmail', type: 'email', label: 'E-mail' },
-            {
-              name: 'operatorPhone',
-              type: 'text',
-              label: 'Phone',
-              admin: { description: 'A second fast contact channel besides e-mail is expected by law.' },
-            },
-            {
-              name: 'businessPurpose',
-              type: 'text',
-              label: 'Business purpose (Austria: Unternehmensgegenstand)',
-              defaultValue: 'Photo and video exhibitions',
-            },
-            {
-              name: 'legalExtra',
-              type: 'textarea',
-              label: 'Further details',
-              admin: {
-                description:
-                  'Only if applicable: legal form, commercial register and number, VAT ID, supervisory authority, chamber. One item per line.',
-              },
-            },
-            {
-              name: 'responsiblePerson',
-              type: 'text',
-              label: 'Responsible for content (Germany, § 18 Abs. 2 MStV)',
-              admin: {
-                description: 'Name; the address above applies. Leave empty to use the operator name.',
-              },
-            },
-            {
-              name: 'imprintExtra',
-              type: 'textarea',
-              label: 'Additional text at the end of the legal notice',
-            },
-          ],
-        },
-        {
-          label: 'Privacy',
-          description:
-            'Privacy policy. The site itself only uses server logs, YouTube (after consent) and local storage.',
-          fields: [
-            {
-              name: 'hostName',
-              type: 'text',
-              label: 'Hosting provider (company name)',
-              admin: { description: 'e.g. Railway Corporation or Hetzner Online GmbH' },
-            },
-            { name: 'hostAddress', type: 'text', label: 'Hosting provider address' },
-            {
-              name: 'hostLocation',
-              type: 'text',
-              label: 'Where the server is located',
-              admin: { description: 'e.g. Amsterdam, Netherlands (EU)' },
-            },
-            {
-              name: 'hostOutsideEu',
-              type: 'checkbox',
-              label: 'The hosting provider is a company outside the EU/EEA (e.g. USA)',
-              defaultValue: false,
-            },
-            {
-              name: 'hostPrivacyUrl',
-              type: 'text',
-              label: 'Link to the privacy policy of the hosting provider',
-            },
-            {
-              name: 'privacyExtra',
-              type: 'textarea',
-              label: 'Additional text at the end of the privacy policy',
-            },
-          ],
-        },
-        {
-          label: 'QR codes',
-          description:
-            'Printable QR labels for the photos (Exhibitions → Images and videos → QR code). Each code leads to the photo page via a short link that keeps working when addresses change.',
-          fields: [
-            {
-              name: 'qrFormat',
-              type: 'select',
-              label: 'Label size',
-              defaultValue: 'a6',
-              options: [
-                { label: 'A6 (105 × 148 mm)', value: 'a6' },
-                { label: 'A5 (148 × 210 mm)', value: 'a5' },
-                { label: 'Square 10 × 10 cm', value: 'square100' },
-              ],
-              admin: { isClearable: false },
-            },
-            {
-              type: 'row',
-              fields: [
-                { name: 'qrShowTitle', type: 'checkbox', label: 'Show photo name', defaultValue: true },
-                { name: 'qrShowArtist', type: 'checkbox', label: 'Show artist', defaultValue: true },
-                { name: 'qrShowExhibition', type: 'checkbox', label: 'Show exhibition', defaultValue: true },
-              ],
-            },
-            {
-              name: 'qrFooter',
-              type: 'text',
-              label: 'Small text at the bottom',
-              defaultValue: 'Scan to view online',
-              maxLength: 80,
-            },
-          ],
-        },
-      ],
+      tabs: [aboutTab, legalNoticeTab, privacyTab, shopTab, contributorTermsTab, qrTab],
     },
   ],
 }

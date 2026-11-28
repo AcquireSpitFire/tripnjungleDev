@@ -1,24 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>{{title}}</title>
-	<meta name="description" content="{{description}}">
-	<meta name="robots" content="{{robots}}">
-	<link rel="canonical" href="{{canonical}}">
-	<meta property="og:site_name" content="{{siteName}}">
-	<meta property="og:type" content="website">
-	<meta property="og:title" content="{{title}}">
-	<meta property="og:description" content="{{description}}">
-	<meta property="og:url" content="{{canonical}}">
-	<meta property="og:image" content="{{ogImage}}">
-	<meta name="twitter:card" content="summary">
-	<meta name="theme-color" content="#000000">
-	<link rel="icon" href="/favicon.svg" type="image/svg+xml">
-	<link rel="manifest" href="/manifest.webmanifest">
-	<link rel="stylesheet" href="/css/style.css">
-	{{{jsonLd}}}
+{{> head}}
 </head>
 <body>
 	<header>
@@ -26,6 +9,7 @@
 			<p class="site_name"><a href="/">Tripnjungle</a></p>
 			<h1 class="page_title">Legal notice</h1>
 		</div>
+{{> nav}}
 	</header>
 
 	<!-- All details come from Admin → Site settings → Legal notice -->
@@ -51,21 +35,18 @@
 		<h2>Copyright</h2>
 		<p>All photos, videos and texts on this website are protected by copyright. Unless stated otherwise, the rights belong to the operator named above. Any use beyond private viewing requires written permission.</p>
 
+		<h2>Contact point and reporting illegal content</h2>
+		<p>Single point of contact for authorities, the European Commission and users (Art. 11 and 12 Digital Services Act): {{{contactPoint}}}. Languages: German and English.</p>
+		<p>To report content on this website that you consider illegal (Art. 16 Digital Services Act), write to this address with: the address (URL) of the content, why you consider it illegal, your name and e-mail address (not needed for reports about child sexual abuse material), and a statement that you make the report in good faith and that it is accurate and complete. Every photo page has a “Report this content” link that prepares such an e-mail. We confirm receipt, check the report without delay and tell you what we decided.</p>
+
 		<h2>Liability for links</h2>
 		<p>This website embeds videos from YouTube and may link to external websites. The operator has no influence on their content; the respective providers are responsible for it.</p>
 
 		{{{imprintExtra}}}
 	</main>
 
-	<footer class="site_footer">
-		<nav aria-label="Footer">
-			<a href="/">Home</a>
-			<a href="/about">About</a>
-			<a href="/privacy">Privacy</a>
-		</nav>
-	</footer>
+{{> footer}}
 
-	<script defer src="/js/data.js"></script>
-	<script defer src="/js/nav.js"></script>
+{{> scripts}}
 </body>
 </html>
